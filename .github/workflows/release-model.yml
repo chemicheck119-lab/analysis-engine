@@ -1,0 +1,492 @@
+name: 모델 릴리스 번들 검증
+
+on:
+  workflow_dispatch:
+    inputs:
+      push_ghcr:
+        description: 검증을 통과한 불변 SHA 태그 이미지를 GHCR에 푸시합니다.
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: model-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  LOCAL_IMAGE: chemicheck119-model-api:release-${{ github.sha }}
+  SMOKE_CONTAINER: chemicheck119-release-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+  CHEMIGUARD119_GIT_COMMIT: ${{ github.sha }}
+  CHEMIGUARD119_RULE_POLICY: PUBLIC_SOURCE_PILOT_V1
+
+jobs:
+  build-verify-release:
+    name: 학습·무결성·컨테이너 검증
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Python 3.11 설정
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11.15"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            requirements-production.txt
+
+      - name: 릴리스 소스 commit·clean 상태 검사
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: 릴리스 데이터 번들 다운로드·검증·안전 추출
+        shell: bash
+        env:
+          DATA_BUNDLE_URL: ${{ secrets.CHEMIGUARD119_DATA_BUNDLE_URL }}
+          DATA_BUNDLE_SHA256: ${{ secrets.CHEMIGUARD119_DATA_BUNDLE_SHA256 }}
+        run: |
+          set -euo pipefail
+          bundle_path="$RUNNER_TEMP/chemicheck119-data-bundle.tar.gz"
+
+          python - <<'PY'
+          import os
+          import re
+          from urllib.parse import urlparse
+
+          url = os.environ.get("DATA_BUNDLE_URL", "").strip()
+          digest = os.environ.get("DATA_BUNDLE_SHA256", "").strip().lower()
+          parsed = urlparse(url)
+          if (
+              parsed.scheme != "https"
+              or not parsed.netloc
+              or parsed.username
+              or parsed.password
+              or any(character.isspace() for character in url)
+          ):
+              raise SystemExit("CHEMIGUARD119_DATA_BUNDLE_URL은 인증정보가 없는 HTTPS URL이어야 합니다.")
+          if re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+              raise SystemExit("CHEMIGUARD119_DATA_BUNDLE_SHA256은 64자리 SHA-256이어야 합니다.")
+          PY
+
+          curl --fail --silent --show-error --location \
+            --proto '=https' --proto-redir '=https' --tlsv1.2 \
+            --retry 3 --retry-all-errors \
+            --output "$bundle_path" \
+            "$DATA_BUNDLE_URL"
+
+          BUNDLE_PATH="$bundle_path" python - <<'PY'
+          import hashlib
+          import os
+          import shutil
+          import tarfile
+          from pathlib import Path, PurePosixPath
+
+          required = {
+              "01_KOSHA_물질안전보건자료.csv",
+              "02_CAMEO_화학물질_반응성.csv",
+              "03_CAMEO_화학물질_반응성그룹_매핑.csv",
+              "04_CAMEO_반응성그룹_목록.csv",
+              "05_CAMEO_반응성그룹_호환성_고유조합.csv",
+              "06_울산소방_화학물정보.csv",
+              "13_ICIS_2024_화학물질_취급현황.csv",
+              "19_ICIS_2024_시설후보_통합모델입력.csv",
+          }
+          bundle = Path(os.environ["BUNDLE_PATH"])
+          expected_digest = os.environ["DATA_BUNDLE_SHA256"].strip().lower()
+          if not bundle.is_file() or bundle.stat().st_size <= 0:
+              raise SystemExit("다운로드한 데이터 번들이 비어 있습니다.")
+          if bundle.stat().st_size > 1_000_000_000:
+              raise SystemExit("압축 데이터 번들 크기가 1GB 제한을 초과했습니다.")
+          with bundle.open("rb") as handle:
+              actual_digest = hashlib.file_digest(handle, "sha256").hexdigest()
+          if actual_digest != expected_digest:
+              raise SystemExit("데이터 번들 SHA-256이 Secret과 일치하지 않습니다.")
+
+          target = Path("data/raw")
+          target.mkdir(parents=True, exist_ok=True)
+          extracted: set[str] = set()
+          total_size = 0
+          max_member_size = 1_000_000_000
+          max_total_size = 2_000_000_000
+          pointer_prefix = b"version https://git-lfs.github.com/spec/v1"
+
+          try:
+              archive = tarfile.open(bundle, mode="r:gz")
+          except (tarfile.TarError, OSError) as error:
+              raise SystemExit("데이터 번들이 유효한 tar.gz가 아닙니다.") from error
+
+          with archive:
+              members = archive.getmembers()
+              if len(members) > 32:
+                  raise SystemExit("데이터 번들의 항목 수가 제한을 초과했습니다.")
+              for member in members:
+                  path = PurePosixPath(member.name)
+                  if path.is_absolute() or ".." in path.parts:
+                      raise SystemExit(f"안전하지 않은 번들 경로: {member.name}")
+                  if member.isdir():
+                      continue
+                  if not member.isfile() or len(path.parts) != 1:
+                      raise SystemExit(f"번들은 루트의 일반 CSV 파일만 허용합니다: {member.name}")
+                  if path.name not in required:
+                      raise SystemExit(f"허용되지 않은 번들 파일: {member.name}")
+                  if path.name in extracted:
+                      raise SystemExit(f"중복된 번들 파일: {member.name}")
+                  if member.size <= 0 or member.size > max_member_size:
+                      raise SystemExit(f"번들 파일 크기가 허용 범위를 벗어났습니다: {member.name}")
+                  total_size += member.size
+                  if total_size > max_total_size:
+                      raise SystemExit("데이터 번들의 압축 해제 크기가 제한을 초과했습니다.")
+
+                  source = archive.extractfile(member)
+                  if source is None:
+                      raise SystemExit(f"번들 파일을 읽을 수 없습니다: {member.name}")
+                  destination = target / path.name
+                  with source, destination.open("xb") as output:
+                      shutil.copyfileobj(source, output)
+                  with destination.open("rb") as handle:
+                      if handle.read(200).lstrip().startswith(pointer_prefix):
+                          raise SystemExit(f"실제 CSV 대신 Git LFS 포인터가 포함되었습니다: {member.name}")
+                  extracted.add(path.name)
+
+          missing = sorted(required - extracted)
+          if missing:
+              raise SystemExit(f"데이터 번들 필수 CSV 누락: {missing}")
+          print(f"데이터 번들 검증·추출 완료: {len(extracted)}개 CSV")
+          PY
+
+      - name: 운영 API 키 Secret 검사
+        shell: bash
+        env:
+          MODEL_API_KEY: ${{ secrets.CHEMIGUARD119_API_KEY }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+
+          key = os.environ.get("MODEL_API_KEY", "")
+          lowered = key.lower()
+          placeholder_tokens = (
+              "교체",
+              "change-me",
+              "changeme",
+              "replace-me",
+              "placeholder",
+              "example",
+          )
+          if len(key) < 32:
+              raise SystemExit("CHEMIGUARD119_API_KEY Secret은 32자 이상이어야 합니다.")
+          if key != key.strip() or any(character.isspace() for character in key):
+              raise SystemExit("CHEMIGUARD119_API_KEY Secret에는 공백을 사용할 수 없습니다.")
+          if any(token in lowered for token in placeholder_tokens):
+              raise SystemExit("예시용 placeholder API 키는 모델 릴리스에 사용할 수 없습니다.")
+          print("운영 API 키 형식 검사 통과")
+          PY
+
+      - name: 고정 운영 의존성과 테스트 도구 설치
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --requirement requirements-production.txt
+          python -m pip install --no-deps --editable .
+          python -m pip install "httpx2==2.7.0" "pytest==8.4.2"
+          python -m pip check
+
+      - name: 전체 단위·계약 테스트
+        shell: bash
+        run: python -m pytest
+
+      - name: 모델링 파이프라인과 배포 artifact 생성
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p outputs/release outputs/modeling
+          chemiguard119 pipeline \
+            --data-dir "$GITHUB_WORKSPACE/data/raw" \
+            --db "$GITHUB_WORKSPACE/artifacts/chemiguard119.sqlite" \
+            --resolver-model "$GITHUB_WORKSPACE/artifacts/resolver.joblib" \
+            --retriever-model "$GITHUB_WORKSPACE/artifacts/retriever.joblib" \
+            --config-dir "$GITHUB_WORKSPACE/config" \
+            --resolver-evaluation "$GITHUB_WORKSPACE/data/evaluation/resolver_regression_queries.csv" \
+            --retriever-evaluation "$GITHUB_WORKSPACE/data/evaluation/retrieval_regression_queries.csv" \
+            --report-dir "$GITHUB_WORKSPACE/outputs/modeling" \
+            --include-hash \
+            --json | tee outputs/release/pipeline-command.json
+
+      - name: Runtime manifest SHA-256 추출·교차검증
+        id: runtime-manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from hashlib import sha256
+          from pathlib import Path
+          import json
+          import os
+
+          manifest_path = Path("artifacts/runtime_manifest.json")
+          pipeline_report_path = Path("outputs/modeling/pipeline_latest.json")
+          required_artifacts = (
+              Path("artifacts/chemiguard119.sqlite"),
+              Path("artifacts/resolver.joblib"),
+              Path("artifacts/retriever.joblib"),
+              manifest_path,
+          )
+          missing = [str(path) for path in required_artifacts if not path.is_file()]
+          if missing:
+              raise SystemExit(f"필수 runtime artifact 누락: {missing}")
+
+          manifest_bytes = manifest_path.read_bytes()
+          digest = sha256(manifest_bytes).hexdigest()
+          if len(digest) != 64:
+              raise SystemExit("runtime manifest SHA-256 형식 오류")
+
+          manifest = json.loads(manifest_bytes)
+          pipeline_report = json.loads(pipeline_report_path.read_text(encoding="utf-8"))
+          if manifest.get("git_commit") != os.environ["GITHUB_SHA"]:
+              raise SystemExit("runtime manifest의 git_commit이 릴리스 commit과 다릅니다.")
+          declared = (
+              pipeline_report.get("stages", {})
+              .get("release_manifest", {})
+              .get("manifest_sha256")
+          )
+          if pipeline_report.get("status") != "COMPLETED" or declared != digest:
+              raise SystemExit("pipeline 보고서와 runtime manifest SHA-256이 일치하지 않습니다.")
+
+          Path("artifacts/runtime_manifest.sha256").write_text(
+              f"{digest}  runtime_manifest.json\n",
+              encoding="utf-8",
+          )
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"sha256={digest}\n")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as environment:
+              environment.write(f"RUNTIME_MANIFEST_SHA256={digest}\n")
+          print(f"runtime manifest SHA-256: {digest}")
+          PY
+
+      - name: 호스트에서 운영 릴리스 무결성 검증
+        shell: bash
+        env:
+          CHEMIGUARD119_ENVIRONMENT: production
+          CHEMIGUARD119_RUNTIME_MANIFEST_SHA256: ${{ steps.runtime-manifest.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from chemiguard119.paths import (
+              CONFIG_DIR,
+              DEFAULT_DB_PATH,
+              DEFAULT_RESOLVER_MODEL,
+              DEFAULT_RETRIEVER_MODEL,
+          )
+          from chemiguard119.release import verify_runtime_release
+
+          result = verify_runtime_release(
+              db_path=DEFAULT_DB_PATH,
+              resolver_model_path=DEFAULT_RESOLVER_MODEL,
+              retriever_model_path=DEFAULT_RETRIEVER_MODEL,
+              config_dir=CONFIG_DIR,
+          )
+          if result.get("status") != "VERIFIED":
+              raise SystemExit(f"운영 릴리스 검증 실패: {result}")
+          print("운영 릴리스 artifact·config·런타임 버전 검증 통과")
+          PY
+
+      - name: Trust anchor를 포함한 bundle 이미지 빌드
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RUNTIME_MANIFEST_SHA256" = "${{ steps.runtime-manifest.outputs.sha256 }}"
+          docker build \
+            --file Dockerfile.bundle \
+            --build-arg "RUNTIME_MANIFEST_SHA256=$RUNTIME_MANIFEST_SHA256" \
+            --build-arg "GIT_COMMIT=$GITHUB_SHA" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --label "kr.chemicheck119.runtime-manifest-sha256=$RUNTIME_MANIFEST_SHA256" \
+            --tag "$LOCAL_IMAGE" \
+            .
+
+      - name: 이미지 label과 외부 trust anchor 분리 검사
+        shell: bash
+        run: |
+          set -euo pipefail
+          embedded_anchor="$({
+            docker image inspect "$LOCAL_IMAGE" \
+              --format '{{range .Config.Env}}{{println .}}{{end}}'
+          } | sed -n 's/^CHEMIGUARD119_RUNTIME_MANIFEST_SHA256=//p')"
+          image_label="$(docker image inspect "$LOCAL_IMAGE" \
+            --format '{{index .Config.Labels "kr.chemicheck119.runtime-manifest-sha256"}}')"
+          embedded_commit="$({
+            docker image inspect "$LOCAL_IMAGE" \
+              --format '{{range .Config.Env}}{{println .}}{{end}}'
+          } | sed -n 's/^CHEMIGUARD119_GIT_COMMIT=//p')"
+          image_commit_label="$(docker image inspect "$LOCAL_IMAGE" \
+            --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
+          test -z "$embedded_anchor"
+          test -z "$embedded_commit"
+          test "$image_label" = "$RUNTIME_MANIFEST_SHA256"
+          test "$image_commit_label" = "$GITHUB_SHA"
+
+      - name: Bundle 컨테이너 실행 및 readiness smoke test
+        shell: bash
+        env:
+          MODEL_API_KEY: ${{ secrets.CHEMIGUARD119_API_KEY }}
+        run: |
+          set -euo pipefail
+          docker run --detach \
+            --name "$SMOKE_CONTAINER" \
+            --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+            --cap-drop ALL \
+            --security-opt no-new-privileges:true \
+            --memory 1g \
+            --cpus 2 \
+            --publish 127.0.0.1:18000:8000 \
+            --env "CHEMIGUARD119_API_KEY=$MODEL_API_KEY" \
+            --env "CHEMIGUARD119_RUNTIME_MANIFEST_SHA256=$RUNTIME_MANIFEST_SHA256" \
+            --env "CHEMIGUARD119_GIT_COMMIT=$GITHUB_SHA" \
+            "$LOCAL_IMAGE"
+
+          ready_file="$RUNNER_TEMP/chemicheck119-ready.json"
+          http_code="000"
+          for _attempt in $(seq 1 40); do
+            http_code="$(curl --silent --show-error \
+              --output "$ready_file" \
+              --write-out '%{http_code}' \
+              http://127.0.0.1:18000/health/ready || true)"
+            if [ "$http_code" = "200" ]; then
+              break
+            fi
+            sleep 2
+          done
+          if [ "$http_code" != "200" ]; then
+            docker logs "$SMOKE_CONTAINER"
+            exit 1
+          fi
+
+          READY_FILE="$ready_file" python - <<'PY'
+          from pathlib import Path
+          import json
+          import os
+
+          payload = json.loads(Path(os.environ["READY_FILE"]).read_text(encoding="utf-8"))
+          integrity = payload.get("integrity") or {}
+          checks = {
+              "status": payload.get("status") == "READY",
+              "ready": payload.get("ready") is True,
+              "integrity": integrity.get("status") == "VERIFIED",
+              "environment": integrity.get("environment") == "production",
+              "trust_anchor": integrity.get("manifest_sha256_verified") is True,
+              "git_commit": integrity.get("git_commit") == os.environ["GITHUB_SHA"],
+          }
+          failed = [name for name, passed in checks.items() if not passed]
+          if failed:
+              raise SystemExit(f"readiness 검증 실패: {failed}; payload={payload}")
+          print("실행 컨테이너 readiness·무결성 검증 통과")
+          PY
+
+          docker exec "$SMOKE_CONTAINER" python -c \
+            'import hashlib, os, pathlib; path=pathlib.Path("/opt/chemicheck119/artifacts/runtime_manifest.json"); actual=hashlib.sha256(path.read_bytes()).hexdigest(); expected=os.environ["CHEMIGUARD119_RUNTIME_MANIFEST_SHA256"]; assert actual == expected'
+
+          resolve_file="$RUNNER_TEMP/chemicheck119-resolve.json"
+          curl --fail --silent --show-error \
+            --header "X-API-Key: $MODEL_API_KEY" \
+            --header 'Content-Type: application/json' \
+            --data '{"query":"염산","top_k":1}' \
+            --output "$resolve_file" \
+            http://127.0.0.1:18000/api/v1/substances/resolve
+          RESOLVE_FILE="$resolve_file" python - <<'PY'
+          from pathlib import Path
+          import json
+          import os
+
+          payload = json.loads(Path(os.environ["RESOLVE_FILE"]).read_text(encoding="utf-8"))
+          if payload.get("rule_eligible") is not False:
+              raise SystemExit(f"인증 API 안전 계약 검사 실패: {payload}")
+          print("API 키 인증과 물질 후보 안전 계약 검사 통과")
+          PY
+
+      - name: Smoke 컨테이너 정리
+        if: always()
+        shell: bash
+        run: docker rm --force "$SMOKE_CONTAINER" 2>/dev/null || true
+
+      - name: 검증된 모델 릴리스 번들 보관
+        uses: actions/upload-artifact@v7
+        with:
+          name: chemicheck119-runtime-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 6
+          path: |
+            artifacts/chemiguard119.sqlite
+            artifacts/resolver.joblib
+            artifacts/retriever.joblib
+            artifacts/runtime_manifest.json
+            artifacts/runtime_manifest.sha256
+            config/cameo_crosswalk.csv
+            config/conflict_policy.json
+            config/pair_rules.csv
+            config/substance_overrides.csv
+            outputs/modeling/pipeline_latest.json
+            outputs/modeling/resolver_evaluation_latest.json
+            outputs/modeling/retriever_evaluation_latest.json
+            requirements-production.txt
+            Dockerfile.bundle
+
+      - name: GHCR 이미지 이름 준비
+        if: inputs.push_ghcr
+        id: ghcr
+        shell: bash
+        run: |
+          set -euo pipefail
+          repository_name="${GITHUB_REPOSITORY#*/}"
+          image_name="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${repository_name,,}-model-api"
+          echo "image=$image_name" >> "$GITHUB_OUTPUT"
+
+      - name: GHCR 로그인
+        if: inputs.push_ghcr
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 검증된 이미지 GHCR 푸시
+        if: inputs.push_ghcr
+        shell: bash
+        env:
+          GHCR_IMAGE: ${{ steps.ghcr.outputs.image }}
+        run: |
+          set -euo pipefail
+          remote_image="$GHCR_IMAGE:${GITHUB_SHA}-${RUNTIME_MANIFEST_SHA256}"
+          docker tag "$LOCAL_IMAGE" "$remote_image"
+          docker push "$remote_image"
+          echo "GHCR_IMAGE=$remote_image" >> "$GITHUB_ENV"
+
+      - name: 릴리스 검증 요약
+        if: success()
+        shell: bash
+        run: |
+          {
+            echo "## 케미체크119 모델 릴리스"
+            echo
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Runtime manifest SHA-256: \`$RUNTIME_MANIFEST_SHA256\`"
+            echo "- Bundle artifact: \`chemicheck119-runtime-$GITHUB_SHA\`"
+            if [ "${{ inputs.push_ghcr }}" = "true" ]; then
+              echo "- GHCR image: \`$GHCR_IMAGE\`"
+            else
+              echo "- GHCR push: 비활성화"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

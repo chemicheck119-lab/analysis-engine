@@ -1,0 +1,47 @@
+FROM python:3.11.15-slim
+
+ARG RUNTIME_MANIFEST_SHA256
+ARG GIT_COMMIT
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    CHEMIGUARD119_PROJECT_ROOT=/app \
+    CHEMIGUARD119_ARTIFACT_DIR=/opt/chemicheck119/artifacts \
+    CHEMIGUARD119_CONFIG_DIR=/opt/chemicheck119/config \
+    CHEMIGUARD119_API_HOST=0.0.0.0 \
+    CHEMIGUARD119_API_PORT=8000 \
+    CHEMIGUARD119_ENVIRONMENT=production
+
+WORKDIR /app
+
+RUN test "${#RUNTIME_MANIFEST_SHA256}" -eq 64 \
+    && test "${#GIT_COMMIT}" -eq 40 \
+    && addgroup --system --gid 10001 chemicheck \
+    && adduser --system --uid 10001 --ingroup chemicheck --home /nonexistent chemicheck
+
+COPY pyproject.toml README.md requirements-production.txt ./
+COPY src ./src
+RUN python -m pip install --requirement requirements-production.txt \
+    && python -m pip install --no-deps .
+
+COPY config /opt/chemicheck119/config
+COPY artifacts/chemiguard119.sqlite /opt/chemicheck119/artifacts/chemiguard119.sqlite
+COPY artifacts/resolver.joblib /opt/chemicheck119/artifacts/resolver.joblib
+COPY artifacts/retriever.joblib /opt/chemicheck119/artifacts/retriever.joblib
+COPY artifacts/runtime_manifest.json /opt/chemicheck119/artifacts/runtime_manifest.json
+
+RUN CHEMIGUARD119_RUNTIME_MANIFEST_SHA256="${RUNTIME_MANIFEST_SHA256}" \
+    CHEMIGUARD119_GIT_COMMIT="${GIT_COMMIT}" \
+    python -c "from chemiguard119.api import ModelRuntime; ModelRuntime.load()" \
+    && chown -R chemicheck:chemicheck /opt/chemicheck119 \
+    && find /opt/chemicheck119 -type d -exec chmod 0550 {} + \
+    && find /opt/chemicheck119 -type f -exec chmod 0440 {} +
+
+USER chemicheck
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"]
+
+CMD ["chemiguard119-api"]
