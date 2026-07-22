@@ -1,0 +1,16 @@
+{
+  "schema_version": "chemicheck119-conflict-policy-v1",
+  "policy_id": "PUBLIC_SOURCE_PILOT_V1",
+  "description": "현장 확인된 두 CAS를 NOAA/EPA CAMEO 공개 원자료에 연결해 비확률 서수 등급을 제공하는 파일럿 정책",
+  "eligible_crosswalk_statuses": [
+    "PUBLIC_SOURCE_VERIFIED"
+  ],
+  "required_verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+  "required_source_product": "NOAA/EPA CAMEO Chemicals",
+  "allow_direct_rules": false,
+  "require_two_responder_confirmed_cas": true,
+  "decision_support_only": true,
+  "expert_review_required": false,
+  "probability_output_allowed": false,
+  "final_decision_authority": "현장 지휘관 판단"
+}

@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chemiguard119"
+version = "0.3.0"
+description = "케미체크119 화학사고 대응충돌 검토 모델 API와 CLI"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "joblib>=1.3,<2",
+  "numpy>=1.26,<3",
+  "pydantic>=2.8,<3",
+  "scikit-learn>=1.4,<2",
+  "uvicorn>=0.30,<1",
+]
+
+[project.optional-dependencies]
+dev = ["httpx2==2.7.0", "pytest==8.4.2", "ruff==0.12.0"]
+data = ["pandas>=2.2,<4"]
+finetune = ["mlx-lm[train]>=0.31.3; platform_system == 'Darwin' and platform_machine == 'arm64'"]
+
+[project.scripts]
+chemiguard119 = "chemiguard119.cli:main"
+chemiguard119-api = "chemiguard119.api:run"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.format]
+quote-style = "double"

@@ -1,0 +1,10 @@
+cas_number,canonical_name_ko,canonical_name_en,formula,un_number,scenario_role,aliases
+7647-01-0,염화수소,Hydrogen chloride,HCl,1050,사고물질,염산|Hydrochloric acid|Hydrogen chloride|염화 수소
+7664-41-7,암모니아,Ammonia,NH3,1005,사고물질,암모니아수|무수암모니아
+7697-37-2,질산,Nitric acid,HNO3,2031,사고물질,질산 용액
+7681-52-9,차아염소산나트륨,Sodium hypochlorite,NaOCl,1791,시설보유물질,차아염소산 나트륨|차아염소산소다|NaClO
+1310-73-2,수산화나트륨,Sodium hydroxide,NaOH,1823,시설보유물질,가성소다|양잿물|수산화 나트륨
+64-17-5,에탄올,Ethanol,C2H5OH,1170,시설보유물질,에틸알코올|에틸 알코올|주정|EtOH
+67-64-1,아세톤,Acetone,C3H6O,1090,시설보유물질,디메틸케톤|프로파논|CH3COCH3
+108-88-3,톨루엔,Toluene,C7H8,1294,시설보유물질,메틸벤젠|톨루올|C6H5CH3
+7440-23-5,나트륨,Sodium,Na,1428,시설보유물질,금속 나트륨|Sodium metal
