@@ -1,0 +1,41 @@
+name: 모델 API 검증
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: model-api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.15"
+          cache: pip
+
+      - name: 패키지와 테스트 의존성 설치
+        run: python -m pip install -e ".[dev]"
+
+      - name: 단위·계약 테스트
+        run: python -m pytest
+
+      - name: Python 정적 검사와 형식 검사
+        run: |
+          python -m ruff check src tests scripts
+          python -m ruff format --check src tests scripts
+
+      - name: 운영 이미지 빌드 검증
+        run: docker build --tag chemicheck119-model-api:${{ github.sha }} .

@@ -1,0 +1,33 @@
+services:
+  model-api:
+    build:
+      context: .
+    image: chemicheck119-model-api:local
+    environment:
+      CHEMIGUARD119_ENVIRONMENT: production
+      CHEMIGUARD119_API_KEY: ${CHEMIGUARD119_API_KEY:?CHEMIGUARD119_API_KEY를 설정하세요}
+      CHEMIGUARD119_RUNTIME_MANIFEST_SHA256: ${CHEMIGUARD119_RUNTIME_MANIFEST_SHA256:?runtime manifest SHA-256을 설정하세요}
+      CHEMIGUARD119_GIT_COMMIT: ${CHEMIGUARD119_GIT_COMMIT:?40자리 릴리스 Git commit을 설정하세요}
+      CHEMIGUARD119_RULE_POLICY: ${CHEMIGUARD119_RULE_POLICY:-PUBLIC_SOURCE_PILOT_V1}
+      CHEMIGUARD119_API_HOST: 0.0.0.0
+      CHEMIGUARD119_API_PORT: 8000
+      CHEMIGUARD119_ARTIFACT_DIR: /opt/chemicheck119/artifacts
+      CHEMIGUARD119_CONFIG_DIR: /opt/chemicheck119/config
+    volumes:
+      - ./artifacts:/opt/chemicheck119/artifacts:ro
+      - ./config:/opt/chemicheck119/config:ro
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 768M
