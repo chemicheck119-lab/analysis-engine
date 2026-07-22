@@ -1,0 +1,43 @@
+{
+  "request_id": "REQ-EXAMPLE-0002",
+  "incident_id": "INC-EXAMPLE-0001",
+  "input": {
+    "type": "STRUCTURED_FORM",
+    "text": "차아염소산나트륨 저장탱크에서 누출이 의심되고 시설에 염산이 확인되었습니다.",
+    "occurred_at": "2026-01-15T14:20:00+09:00"
+  },
+  "location": {
+    "address": "경기 화성시 팔탄면",
+    "province": "경기도",
+    "latitude": 37.2181,
+    "longitude": 126.9417,
+    "facility_name": "예시 사업장"
+  },
+  "confirmed_incident_substance": {
+    "confirmation_id": "CFM-INC-0001",
+    "cas_number": "7681-52-9",
+    "display_name": "차아염소산나트륨",
+    "role": "INCIDENT",
+    "presence_status": "CONFIRMED_PRESENT",
+    "confirmation_basis": "CONTAINER_LABEL",
+    "observed_at": "2026-01-15T14:25:00+09:00"
+  },
+  "confirmed_facility_substance": {
+    "confirmation_id": "CFM-FAC-0001",
+    "cas_number": "7647-01-0",
+    "display_name": "염산",
+    "role": "FACILITY",
+    "presence_status": "CONFIRMED_PRESENT",
+    "confirmation_basis": "SITE_MSDS",
+    "observed_at": "2026-01-15T14:27:00+09:00"
+  },
+  "planned_actions": [
+    {
+      "raw_text": "누출구역 통제 검토"
+    },
+    {
+      "raw_text": "배수로 유입 차단 검토"
+    }
+  ],
+  "evidence_top_k": 5
+}
