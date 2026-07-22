@@ -9,4 +9,3 @@ query,expected_source,expected_cas,expected_cameo_id,review_status
 암모니아 응급조치,KOSHA,7664-41-7,,DRAFT_INTERNAL_REGRESSION
 질산 반응성,KOSHA,7697-37-2,,DRAFT_INTERNAL_REGRESSION
 수산화나트륨 취급 저장,KOSHA,1310-73-2,,DRAFT_INTERNAL_REGRESSION
-
