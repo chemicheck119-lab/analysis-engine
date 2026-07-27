@@ -221,6 +221,17 @@ chemiguard119 pipeline \
 audit → prepare → train resolver → train retriever → evaluate → release manifest
 ```
 
+공모전 시연 물질과 다음 공식 데이터 수집 대상을 정할 때는 별도의 지원 물질
+우선순위 파이프라인을 사용합니다. 이 순위는 위험 확률이나 업체의 현재 재고 확률이
+아닙니다.
+
+```bash
+python scripts/data/build_support_material_priority.py --help
+```
+
+자세한 입력과 해석 기준은
+[지원 물질 우선순위 문서](docs/SUPPORT_MATERIAL_PRIORITY.md)에 있습니다.
+
 원천 bundle은 Git에 넣지 않고 GitHub Actions Secret을 통해 릴리스 작업에만 복원합니다.
 Secret 이름과 bundle 계약은 [배포 가이드](docs/DEPLOYMENT.md)에 설명되어 있습니다.
 
