@@ -43,6 +43,7 @@ KOSHA·CAMEO 근거 검색
 | 물질 후보 검색 | 구현 | ICIS 중심 총 4,300개 물질 카탈로그 |
 | 신고문 구조화 | 구현 | 기본 결정적 파서, LM Studio는 선택 실험 |
 | 공식 근거 검색 | 구현 | KOSHA 상세 근거 9종과 CAMEO 근거 |
+| KOSHA 근거 확장 | 수집기 구현 | 공식 OpenAPI staging 수집·검토 필요, 현재 artifact는 9종 |
 | 유사 사고 사례 RAG | 미구현 | 검증된 사고–대응 사례 corpus와 출처·라벨 부족 |
 | 시설 물질 후보 | 구현 | ICIS·PRTR 공개 **과거 취급 이력** 검색 |
 | 물질 충돌 검토 | 공개 근거 파일럿 | 현재 공개 검증 crosswalk CAS 6개, `expert_reviewed=false` |
@@ -231,6 +232,9 @@ python scripts/data/build_support_material_priority.py --help
 
 자세한 입력과 해석 기준은
 [지원 물질 우선순위 문서](docs/SUPPORT_MATERIAL_PRIORITY.md)에 있습니다.
+우선순위 CAS를 KOSHA 공식 API에서 수집하는 방법은
+[KOSHA 수집·검토 문서](docs/KOSHA_COLLECTION.md)에 있습니다. 수집 결과를 곧바로
+운영 데이터로 승인하지 않으며, API 키는 환경변수로만 주입합니다.
 
 원천 bundle은 Git에 넣지 않고 GitHub Actions Secret을 통해 릴리스 작업에만 복원합니다.
 Secret 이름과 bundle 계약은 [배포 가이드](docs/DEPLOYMENT.md)에 설명되어 있습니다.
@@ -271,7 +275,7 @@ CAS·물질 형태를 직접 대조해 provenance로 기록한 매핑만 사용�
 | 데이터 | 파이프라인에서 하는 일 | 해석하면 안 되는 것 |
 |---|---|---|
 | ICIS | 4,300개 일반 물질 카탈로그와 별칭 후보 | 현장에 실제 존재한다는 확정 |
-| KOSHA MSDS | 상세 근거 9종 검색 | 전체 4,300개에 상세 MSDS가 있다는 주장 |
+| KOSHA MSDS | 현재 스냅샷의 상세 근거 9종 검색 | 전체 4,300개에 상세 MSDS가 있다는 주장 |
 | ICIS·PRTR 시설 이력 | 업체명·지역 기반 과거 취급 후보 | 현재 재고·보유량·저장 위치 |
 | CAMEO | 반응성 그룹 기반 충돌 스크리닝 | 사고 발생 확률 또는 현장 명령 |
 

@@ -30,9 +30,9 @@ from chemiguard119.utils import (
 csv.field_size_limit(100 * 1024 * 1024)
 
 
-SCHEMA_VERSION = "chemiguard119-preprocessing-1.2.0"
+SCHEMA_VERSION = "chemiguard119-preprocessing-1.3.0"
 
-EXPECTED_KOSHA_SUBSTANCE_COUNT = 9
+MINIMUM_KOSHA_SUBSTANCE_COUNT = 9
 EXPECTED_ICIS_VALID_CAS_COUNT = 4_299
 EXPECTED_ICIS_SPLIT_ALIAS_COUNT = 5_331
 EXPECTED_CAMEO_CHEMICAL_COUNT = 5_094
@@ -169,7 +169,7 @@ def _load_cameo_crosswalk(
             raise PreprocessingError(f"CAMEO 교차표의 CAS가 유효하지 않습니다: {cas!r}")
         if cas not in allowed_cas:
             raise PreprocessingError(
-                f"CAMEO 교차표에 KOSHA 핵심 9종 외 CAS가 있습니다: {cas}"
+                f"CAMEO 교차표에 KOSHA 상세 근거가 없는 CAS가 있습니다: {cas}"
             )
         if not chemical_id or not selected_form or not status:
             raise PreprocessingError(
@@ -227,6 +227,10 @@ def _load_kosha_master(
                 "un_number": (row.get("UN번호") or "").strip(),
             },
         )
+        if not existing["chemical_id"] or not existing["kosha_name"]:
+            raise PreprocessingError(
+                f"KOSHA {cas}의 화학물질ID 또는 국문명이 비어 있습니다."
+            )
         for key, column in {
             "chemical_id": "화학물질ID",
             "kosha_name": "화학물질명_국문",
@@ -239,17 +243,16 @@ def _load_kosha_master(
                     f"KOSHA {cas}의 {column} 값이 일관되지 않습니다."
                 )
 
-    if len(master) != EXPECTED_KOSHA_SUBSTANCE_COUNT:
+    if len(master) < MINIMUM_KOSHA_SUBSTANCE_COUNT:
         raise PreprocessingError(
-            "KOSHA 핵심 물질 수 불일치: "
-            f"expected={EXPECTED_KOSHA_SUBSTANCE_COUNT}, actual={len(master)}"
+            "KOSHA 상세 물질 수가 검증된 최소 기준보다 작습니다: "
+            f"minimum={MINIMUM_KOSHA_SUBSTANCE_COUNT}, actual={len(master)}"
         )
-    missing_overrides = sorted(set(master) - set(overrides))
     unexpected_overrides = sorted(set(overrides) - set(master))
-    if missing_overrides or unexpected_overrides:
+    if unexpected_overrides:
         raise PreprocessingError(
-            "KOSHA와 substance_overrides CAS 집합이 다릅니다. "
-            f"missing={missing_overrides}, unexpected={unexpected_overrides}"
+            "substance_overrides에 KOSHA 상세 근거가 없는 CAS가 있습니다. "
+            f"unexpected={unexpected_overrides}"
         )
     return master, rows
 
@@ -443,7 +446,7 @@ def _build_aliases(
                 priority=120,
             )
 
-        override = overrides[cas]
+        override = overrides.get(cas, {})
         for key, alias_type in (
             ("canonical_name_ko", "canonical_name_ko"),
             ("canonical_name_en", "canonical_name_en"),
@@ -653,17 +656,21 @@ def _insert_substances_and_aliases(
     substance_rows = []
     for cas in sorted(set(kosha_master) | set(icis_catalog)):
         override = overrides.get(cas, {})
+        kosha_material = kosha_master.get(cas, {})
         icis_material = icis_catalog.get(cas, {})
         has_kosha_detail = int(cas in kosha_master)
         substance_rows.append(
             (
                 cas,
                 override.get("canonical_name_ko", "")
+                or kosha_material.get("kosha_name", "")
                 or str(icis_material.get("preferred_name") or ""),
                 override.get("canonical_name_en", ""),
                 override.get("formula", ""),
-                override.get("un_number", ""),
-                override.get("scenario_role", ""),
+                override.get("un_number", "")
+                or kosha_material.get("un_number", ""),
+                override.get("scenario_role", "")
+                or kosha_material.get("scenario_role", ""),
                 (
                     "KOSHA_CORE_WITH_DETAIL"
                     if has_kosha_detail
@@ -764,7 +771,8 @@ def _load_kosha_evidence(
         title = " ".join(
             part
             for part in (
-                overrides[cas].get("canonical_name_ko", ""),
+                overrides.get(cas, {}).get("canonical_name_ko", "")
+                or kosha_master[cas].get("kosha_name", ""),
                 f"MSDS {source_row.get('MSDS_장번호', '').strip()}장",
                 (source_row.get("MSDS_항목명_국문") or "").strip(),
             )
@@ -1291,7 +1299,7 @@ def prepare_dataset(
 
     Args:
         data_dir: `01`~`06`, `13`, `19` 최종 CSV가 있는 디렉터리.
-        config_dir: `substance_overrides.csv`가 있는 디렉터리.
+        config_dir: 수동 별칭·CAMEO 공개 검증 설정 CSV가 있는 디렉터리.
         artifact_dir: 집계 CSV와 manifest JSON을 저장할 디렉터리.
         db_path: SQLite 출력 경로. 생략하면 artifact_dir 아래에 생성한다.
 
@@ -1456,7 +1464,7 @@ def prepare_dataset(
                     "CAMEO 호환성은 결정적 lookup이며 학습 라벨이 아닙니다.",
                     "PUBLIC_SOURCE_VERIFIED 교차표는 공개근거 CAMEO 스크리닝에 사용하며 전문가 승인을 뜻하지 않습니다.",
                     "ICIS 물질명은 일반 물질 식별 후보이며 현장 존재나 Rule 입력을 확정하지 않습니다.",
-                    "KOSHA 상세 근거 9종과 ICIS 일반 후보 카탈로그는 substance 범위 필드로 구분합니다.",
+                    "KOSHA 상세 근거 물질과 ICIS 일반 후보 카탈로그는 substance 범위 필드로 구분합니다.",
                     "시설 후보는 과거 취급 이력으로, 현재 존재·수량·저장위치를 확정하지 않습니다.",
                     "PRTR 결측은 NULL로 보존하며 배출·이동량을 재고량이나 사고확률로 해석하지 않습니다.",
                 ],
