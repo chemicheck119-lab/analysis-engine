@@ -296,20 +296,24 @@ LM Studio 백엔드는 다음 실험에만 사용할 수 있습니다.
 - `retrieval_regression_queries.csv`: KOSHA·CAMEO 근거의 기대 출처·CAS
 - `incident_parser_seed.jsonl`: 신고문 구조화 시드
 
-최근 내부 회귀 평가 스냅샷은 다음과 같았습니다.
+최근 내부 회귀 평가 스냅샷은 다음과 같았습니다. Retriever는 자동 CAS 힌트를 포함한
+전체 흐름과, 평가용 정답 CAS를 제공한 검색기 단독 진단 결과를 분리합니다.
 
 | 평가 | 케이스 | 결과 |
 |---|---:|---:|
 | Resolver 단일후보 확정 정확도 | 21 | 0.9524 |
 | Resolver Top-3 Recall | 21 | 1.0000 |
 | Resolver MRR | 21 | 1.0000 |
-| Retriever Recall@5 | 10 | 0.9000 |
-| Retriever Recall@8 | 10 | 0.9000 |
-| Retriever MRR@8 | 10 | 0.8500 |
+| Retriever 전체 흐름 Recall@5 | 10 | 0.9000 |
+| Retriever 전체 흐름 MRR@8 | 10 | 0.8500 |
+| Retriever 단독·정답 CAS 제공 Recall@5 | 10 | 1.0000 |
+| Retriever 단독·정답 CAS 제공 MRR@8 | 10 | 0.9000 |
+| 자동 CAS 힌트 Coverage | 10 | 0.8000 |
+| 자동 CAS 힌트 Precision when present | 10 | 1.0000 |
 
 이는 작은 내부 개발셋의 회귀 지표입니다. 현장 정확도, 전체 물질 성능, 사고 대응 성공률로
 인용하면 안 됩니다. 릴리스 워크플로가 같은 평가를 다시 실행하고 결과 파일을 artifact와 함께
-보관합니다.
+보관합니다. 지표 정의와 실패 분석은 [모델 평가](EVALUATION.md)를 참고하세요.
 
 ## 13. 파인튜닝 위치
 
@@ -369,5 +373,6 @@ chemiguard119 pipeline \
 - [README](../README.md)
 - [아키텍처](ARCHITECTURE.md)
 - [API](API.md)
+- [모델 평가](EVALUATION.md)
 - [배포](DEPLOYMENT.md)
 - [안전 및 한계](SAFETY_AND_LIMITATIONS.md)

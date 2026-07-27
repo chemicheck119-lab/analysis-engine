@@ -316,6 +316,7 @@ python -m pip check
 - [아키텍처](docs/ARCHITECTURE.md): 구성요소와 전체 처리 흐름
 - [API](docs/API.md): 백엔드·프론트 연동 계약
 - [데이터와 모델](docs/DATA_AND_MODEL.md): 출처, 전처리, 모델 역할과 평가
+- [모델 평가](docs/EVALUATION.md): 지표 정의, 기준선, 실패 원인 분리
 - [배포](docs/DEPLOYMENT.md): artifact, Secret, Docker, CI/CD, 롤백
 - [안전 및 한계](docs/SAFETY_AND_LIMITATIONS.md): 반드시 지켜야 할 해석 경계
 - [기여 가이드](CONTRIBUTING.md): 브랜치, 테스트, 커밋 규칙
