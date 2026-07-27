@@ -1,7 +1,7 @@
 cas_number,cameo_chemical_id,selected_form,verification_status,verification_method,evidence_url,source_product,source_version,checked_at_utc,notes
 7681-52-9,4503,SODIUM HYPOCHLORITE,PUBLIC_SOURCE_VERIFIED,EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET,https://cameochemicals.noaa.gov/chemical/4503,NOAA/EPA CAMEO Chemicals,3.1.0 rev 1,2026-07-22T00:00:00+00:00,CAMEO 공식 물질 페이지의 CAS와 물질 형태를 직접 대조함
 7647-01-0,3598,"HYDROCHLORIC ACID, SOLUTION",PUBLIC_SOURCE_VERIFIED,EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET,https://cameochemicals.noaa.gov/chemical/3598,NOAA/EPA CAMEO Chemicals,3.1.0 rev 1,2026-07-22T00:00:00+00:00,염산 수용액 형태에 한정하여 CAMEO 공식 물질 페이지의 CAS를 직접 대조함
-64-17-5,667,ETHANOL,CANDIDATE_UNVERIFIED,NAME_MATCH_ONLY,https://cameochemicals.noaa.gov/chemical/667,NOAA/EPA CAMEO Chemicals,3.1.0 rev 1,,이름 기반 후보이며 공개근거 파일럿 Rule 입력으로 사용하지 않음
-67-64-1,8,ACETONE,CANDIDATE_UNVERIFIED,NAME_MATCH_ONLY,https://cameochemicals.noaa.gov/chemical/8,NOAA/EPA CAMEO Chemicals,3.1.0 rev 1,,이름 기반 후보이며 공개근거 파일럿 Rule 입력으로 사용하지 않음
-108-88-3,4654,TOLUENE,CANDIDATE_UNVERIFIED,NAME_MATCH_ONLY,https://cameochemicals.noaa.gov/chemical/4654,NOAA/EPA CAMEO Chemicals,3.1.0 rev 1,,이름 기반 후보이며 공개근거 파일럿 Rule 입력으로 사용하지 않음
-7440-23-5,7794,SODIUM,CANDIDATE_UNVERIFIED,NAME_MATCH_ONLY,https://cameochemicals.noaa.gov/chemical/7794,NOAA/EPA CAMEO Chemicals,3.1.0 rev 1,,금속 상태를 포함한 형태가 확인되지 않은 이름 기반 후보
+64-17-5,667,ETHANOL,PUBLIC_SOURCE_VERIFIED,EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET,https://cameochemicals.noaa.gov/chemical/667,NOAA/EPA CAMEO Chemicals,3.1.0 rev 1,2026-07-28T00:00:00+00:00,CAMEO 공식 ETHANOL 페이지의 CAS 64-17-5와 물질 형태를 직접 대조함
+67-64-1,8,ACETONE,PUBLIC_SOURCE_VERIFIED,EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET,https://cameochemicals.noaa.gov/chemical/8,NOAA/EPA CAMEO Chemicals,3.1.0 rev 1,2026-07-28T00:00:00+00:00,CAMEO 공식 ACETONE 페이지의 CAS 67-64-1과 물질 형태를 직접 대조함
+108-88-3,4654,TOLUENE,PUBLIC_SOURCE_VERIFIED,EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET,https://cameochemicals.noaa.gov/chemical/4654,NOAA/EPA CAMEO Chemicals,3.1.0 rev 1,2026-07-28T00:00:00+00:00,CAMEO 공식 TOLUENE 페이지의 CAS 108-88-3과 물질 형태를 직접 대조함
+7440-23-5,7794,SODIUM,PUBLIC_SOURCE_VERIFIED,EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET,https://cameochemicals.noaa.gov/chemical/7794,NOAA/EPA CAMEO Chemicals,3.1.0 rev 1,2026-07-28T00:00:00+00:00,CAMEO 공식 SODIUM 페이지의 CAS 7440-23-5와 금속 형태 설명을 직접 대조함

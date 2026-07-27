@@ -45,7 +45,7 @@ KOSHA·CAMEO 근거 검색
 | 공식 근거 검색 | 구현 | KOSHA 상세 근거 9종과 CAMEO 근거 |
 | 유사 사고 사례 RAG | 미구현 | 검증된 사고–대응 사례 corpus와 출처·라벨 부족 |
 | 시설 물질 후보 | 구현 | ICIS·PRTR 공개 **과거 취급 이력** 검색 |
-| 물질 충돌 검토 | 공개 근거 파일럿 | 현재 공개 검증 crosswalk CAS 2개, `expert_reviewed=false` |
+| 물질 충돌 검토 | 공개 근거 파일럿 | 현재 공개 검증 crosswalk CAS 6개, `expert_reviewed=false` |
 | 생성형 파인튜닝 | 준비도 점검만 | 데이터 gate만 구현, 실제 학습·운영 적용 안 함 |
 | FastAPI·CLI | 구현 | API Key, health check, 구조화된 오류 응답 |
 | 배포 무결성 검사 | 구현 | manifest, SHA-256, Git commit, 런타임 버전 확인 |
