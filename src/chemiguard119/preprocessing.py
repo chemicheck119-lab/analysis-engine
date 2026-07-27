@@ -667,8 +667,7 @@ def _insert_substances_and_aliases(
                 or str(icis_material.get("preferred_name") or ""),
                 override.get("canonical_name_en", ""),
                 override.get("formula", ""),
-                override.get("un_number", "")
-                or kosha_material.get("un_number", ""),
+                override.get("un_number", "") or kosha_material.get("un_number", ""),
                 override.get("scenario_role", "")
                 or kosha_material.get("scenario_role", ""),
                 (

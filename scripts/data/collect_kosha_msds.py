@@ -39,8 +39,12 @@ def _parse_sections(value: str) -> tuple[int, ...]:
     try:
         sections = tuple(sorted({int(item.strip()) for item in value.split(",")}))
     except ValueError as error:
-        raise argparse.ArgumentTypeError("장번호는 쉼표로 구분한 정수여야 합니다.") from error
-    if not sections or any(section not in KOSHA_DETAIL_SECTIONS for section in sections):
+        raise argparse.ArgumentTypeError(
+            "장번호는 쉼표로 구분한 정수여야 합니다."
+        ) from error
+    if not sections or any(
+        section not in KOSHA_DETAIL_SECTIONS for section in sections
+    ):
         raise argparse.ArgumentTypeError("장번호는 1~16 범위여야 합니다.")
     return sections
 
@@ -127,7 +131,9 @@ def select_priority_cas(
             try:
                 rank = int(row.get("expansion_rank") or "")
             except ValueError as error:
-                raise ValueError(f"CAS {cas}의 expansion_rank가 정수가 아닙니다.") from error
+                raise ValueError(
+                    f"CAS {cas}의 expansion_rank가 정수가 아닙니다."
+                ) from error
             candidates.append((rank, cas))
     return [cas for _, cas in sorted(set(candidates))[:limit]]
 

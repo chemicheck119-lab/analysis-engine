@@ -65,9 +65,7 @@ def _summary_item(row: dict[str, Any]) -> dict[str, Any]:
         "coverage_tier": row["coverage_tier"],
         "fire_incident_rows": row["fire_incident_rows"],
         "facility_count": row["facility_count"],
-        "prtr_material_exact_record_count": row[
-            "prtr_material_exact_record_count"
-        ],
+        "prtr_material_exact_record_count": row["prtr_material_exact_record_count"],
         "kosha_msds_loaded": row["kosha_msds_loaded"],
         "cameo_public_verified": row["cameo_public_verified"],
         "missing_official_evidence": row["missing_official_evidence"],
@@ -95,11 +93,7 @@ def main() -> None:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
         writer.writeheader()
         writer.writerows(
-            {
-                key: _csv_value(value)
-                for key, value in row.items()
-            }
-            for row in rows
+            {key: _csv_value(value) for key, value in row.items()} for row in rows
         )
 
     tier_counts = Counter(row["coverage_tier"] for row in rows)

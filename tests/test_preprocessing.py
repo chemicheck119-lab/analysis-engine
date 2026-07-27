@@ -677,9 +677,7 @@ def test_prepare_dataset_accepts_reviewed_kosha_expansion_without_override(
 
     manifest = preprocessing.prepare_dataset(data_dir, config_dir, artifact_dir)
 
-    with sqlite3.connect(
-        artifact_dir / preprocessing.DEFAULT_DB_FILE
-    ) as connection:
+    with sqlite3.connect(artifact_dir / preprocessing.DEFAULT_DB_FILE) as connection:
         substance = connection.execute(
             """
             SELECT canonical_name_ko, un_number, catalog_scope,

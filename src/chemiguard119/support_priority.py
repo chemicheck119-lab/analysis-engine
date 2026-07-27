@@ -235,9 +235,17 @@ def _load_crosswalk(
 
 
 def _coverage_tier(item: SubstanceSignals) -> str:
-    if item.operational_signal and item.kosha_msds_loaded and item.cameo_public_verified:
+    if (
+        item.operational_signal
+        and item.kosha_msds_loaded
+        and item.cameo_public_verified
+    ):
         return "END_TO_END_READY"
-    if item.operational_signal and not item.kosha_msds_loaded and not item.cameo_public_verified:
+    if (
+        item.operational_signal
+        and not item.kosha_msds_loaded
+        and not item.cameo_public_verified
+    ):
         return "MSDS_AND_CAMEO_GAP"
     if item.operational_signal and not item.kosha_msds_loaded:
         return "MSDS_GAP"

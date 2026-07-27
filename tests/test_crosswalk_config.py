@@ -35,16 +35,13 @@ def test_public_crosswalk_contains_six_officially_checked_core_substances() -> N
 
 
 def test_every_public_verified_crosswalk_has_reproducible_provenance() -> None:
-    verified = [
-        row for row in _rows() if row["verification_status"] == PUBLIC_VERIFIED
-    ]
+    verified = [row for row in _rows() if row["verification_status"] == PUBLIC_VERIFIED]
 
     assert verified
     for row in verified:
         assert row["verification_method"] == EXACT_METHOD
         assert row["evidence_url"] == (
-            "https://cameochemicals.noaa.gov/chemical/"
-            f"{row['cameo_chemical_id']}"
+            f"https://cameochemicals.noaa.gov/chemical/{row['cameo_chemical_id']}"
         )
         assert row["source_product"] == "NOAA/EPA CAMEO Chemicals"
         assert row["source_version"]

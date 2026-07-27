@@ -81,7 +81,9 @@ def test_collect_exact_cas_and_selected_sections() -> None:
     assert all(row["EC번호"] == "200-659-6" for row in result["records"])
     assert all(row["국내기존화학물질번호"] == "KE-23193" for row in result["records"])
     assert all(row["공개여부"] == "Y" for row in result["records"])
-    assert all(row["원본데이터셋ID"] == "data.go.kr:15157612" for row in result["records"])
+    assert all(
+        row["원본데이터셋ID"] == "data.go.kr:15157612" for row in result["records"]
+    )
     assert len({row["레코드ID"] for row in result["records"]}) == 2
 
     search_query = urllib.parse.parse_qs(urllib.parse.urlsplit(urls[0]).query)

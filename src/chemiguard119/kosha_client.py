@@ -81,8 +81,7 @@ def _element_text(element: ET.Element, tag: str) -> str:
 
 def _item_dict(item: ET.Element) -> dict[str, str]:
     return {
-        child.tag.rsplit("}", 1)[-1]: (child.text or "").strip()
-        for child in list(item)
+        child.tag.rsplit("}", 1)[-1]: (child.text or "").strip() for child in list(item)
     }
 
 
@@ -309,9 +308,7 @@ class KoshaMsdsClient:
                         "CAS번호": cas,
                         "화학물질명_국문": selected.get("chemNameKor", "").strip(),
                         "MSDS_장번호": str(section),
-                        "MSDS_항목명_국문": item.get(
-                            "msdsItemNameKor", ""
-                        ).strip(),
+                        "MSDS_항목명_국문": item.get("msdsItemNameKor", "").strip(),
                         "상세내용": item.get("itemDetail", "").strip(),
                         "MSDS_항목코드": item.get("msdsItemCode", "").strip(),
                         "상위항목코드": item.get("upMsdsItemCode", "").strip(),
@@ -323,9 +320,7 @@ class KoshaMsdsClient:
                         "최종개정일": selected.get("lastDate", "").strip(),
                         "시나리오역할": "",
                         "검색기준_CAS번호": cas,
-                        "검색기준_화학물질명": selected.get(
-                            "chemNameKor", ""
-                        ).strip(),
+                        "검색기준_화학물질명": selected.get("chemNameKor", "").strip(),
                         "KOSHA확인값": selected.get("koshaConfirm", "").strip(),
                         "공개여부": selected.get("openYn", "").strip(),
                         "자료출처": KOSHA_SOURCE_PAGE,

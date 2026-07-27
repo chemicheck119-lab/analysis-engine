@@ -140,10 +140,7 @@ def test_priority_separates_demo_readiness_from_data_expansion(
     assert by_cas["7681-52-9"]["demo_rank"] == 1
     assert by_cas["67-64-1"]["coverage_tier"] == "MSDS_AND_CAMEO_GAP"
     assert by_cas["67-64-1"]["expansion_rank"] == 1
-    assert (
-        by_cas["67-64-1"]["expansion_rank"]
-        < by_cas["7681-52-9"]["expansion_rank"]
-    )
+    assert by_cas["67-64-1"]["expansion_rank"] < by_cas["7681-52-9"]["expansion_rank"]
     assert by_cas["67-64-1"]["missing_official_evidence"] == [
         "KOSHA_MSDS",
         "CAMEO_PUBLIC_CROSSWALK",
