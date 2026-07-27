@@ -1,0 +1,1151 @@
+{
+  "schema_version": "chemicheck119-support-priority-v1",
+  "ranking_method": "LEXICOGRAPHIC_NON_PROBABILITY_V1",
+  "input_files": [
+    {
+      "role": "facility",
+      "file": "19_ICIS_2024_시설후보_통합모델입력.csv",
+      "sha256": "c8e18f3e7138eb806559c4845f96bb71ed352c4e78e658f0e6ea2eb906ebb532"
+    },
+    {
+      "role": "kosha",
+      "file": "01_KOSHA_물질안전보건자료.csv",
+      "sha256": "12f785c268311884fbb3b798cd18515704c41df99558e43cdfc24f8f65c9d35c"
+    },
+    {
+      "role": "crosswalk",
+      "file": "cameo_crosswalk.csv",
+      "sha256": "50411363a840c88a0b371123f8e5ab265001ec6ca1bb70840eb93a79b79f617c"
+    },
+    {
+      "role": "fire_incident_1",
+      "file": "07_울산소방_화학사고별_유해물질판단.csv",
+      "sha256": "f013ebed301c5306178ad72f8dbbb62bdb5ecae1122ae3dfe7d1050f7ea0d765"
+    }
+  ],
+  "substance_count": 176,
+  "coverage_tier_counts": {
+    "CAMEO_GAP": 3,
+    "END_TO_END_READY": 5,
+    "EVIDENCE_READY_LOW_OPERATIONAL_SIGNAL": 1,
+    "MSDS_AND_CAMEO_GAP": 167
+  },
+  "data_quality": {
+    "fire_incident_sources": [
+      {
+        "file": "07_울산소방_화학사고별_유해물질판단.csv",
+        "total_rows": 1868,
+        "valid_cas_rows": 1656,
+        "invalid_or_blank_cas_rows": 212,
+        "invalid_cas_policy": "EXCLUDE_AND_REPORT"
+      }
+    ]
+  },
+  "top_k": 30,
+  "top_demo_candidates": [
+    {
+      "demo_rank": 1,
+      "expansion_rank": 171,
+      "cas_number": "64-17-5",
+      "chemical_names": [
+        "에탄올",
+        "에틸 알코올"
+      ],
+      "coverage_tier": "END_TO_END_READY",
+      "fire_incident_rows": 42,
+      "facility_count": 6147,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": true,
+      "cameo_public_verified": true,
+      "missing_official_evidence": []
+    },
+    {
+      "demo_rank": 2,
+      "expansion_rank": 172,
+      "cas_number": "67-64-1",
+      "chemical_names": [
+        "아세톤"
+      ],
+      "coverage_tier": "END_TO_END_READY",
+      "fire_incident_rows": 33,
+      "facility_count": 4988,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": true,
+      "cameo_public_verified": true,
+      "missing_official_evidence": []
+    },
+    {
+      "demo_rank": 3,
+      "expansion_rank": 173,
+      "cas_number": "108-88-3",
+      "chemical_names": [
+        "톨루엔"
+      ],
+      "coverage_tier": "END_TO_END_READY",
+      "fire_incident_rows": 31,
+      "facility_count": 7444,
+      "prtr_material_exact_record_count": 7445,
+      "kosha_msds_loaded": true,
+      "cameo_public_verified": true,
+      "missing_official_evidence": []
+    },
+    {
+      "demo_rank": 4,
+      "expansion_rank": 174,
+      "cas_number": "7647-01-0",
+      "chemical_names": [
+        "염산",
+        "염화 수소",
+        "염화수소"
+      ],
+      "coverage_tier": "END_TO_END_READY",
+      "fire_incident_rows": 15,
+      "facility_count": 3921,
+      "prtr_material_exact_record_count": 3921,
+      "kosha_msds_loaded": true,
+      "cameo_public_verified": true,
+      "missing_official_evidence": []
+    },
+    {
+      "demo_rank": 5,
+      "expansion_rank": 175,
+      "cas_number": "7440-23-5",
+      "chemical_names": [
+        "Sodium",
+        "금속 나트륨"
+      ],
+      "coverage_tier": "END_TO_END_READY",
+      "fire_incident_rows": 0,
+      "facility_count": 97,
+      "prtr_material_exact_record_count": 97,
+      "kosha_msds_loaded": true,
+      "cameo_public_verified": true,
+      "missing_official_evidence": []
+    },
+    {
+      "demo_rank": 6,
+      "expansion_rank": 176,
+      "cas_number": "7681-52-9",
+      "chemical_names": [
+        "차아염소산 나트륨"
+      ],
+      "coverage_tier": "EVIDENCE_READY_LOW_OPERATIONAL_SIGNAL",
+      "fire_incident_rows": 0,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": true,
+      "cameo_public_verified": true,
+      "missing_official_evidence": []
+    },
+    {
+      "demo_rank": 7,
+      "expansion_rank": 1,
+      "cas_number": "68334-30-5",
+      "chemical_names": [
+        "경유",
+        "디젤"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 190,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 8,
+      "expansion_rank": 2,
+      "cas_number": "8006-61-9",
+      "chemical_names": [
+        "가솔린, 천연",
+        "휘발유(가솔린)"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 58,
+      "facility_count": 60,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 9,
+      "expansion_rank": 3,
+      "cas_number": "67-56-1",
+      "chemical_names": [
+        "메탄올",
+        "메틸알코올"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 53,
+      "facility_count": 4998,
+      "prtr_material_exact_record_count": 4999,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 10,
+      "expansion_rank": 4,
+      "cas_number": "7664-93-9",
+      "chemical_names": [
+        "황산"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 48,
+      "facility_count": 4550,
+      "prtr_material_exact_record_count": 4550,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 11,
+      "expansion_rank": 5,
+      "cas_number": "108-05-4",
+      "chemical_names": [
+        "VAM",
+        "비닐 아세테이트",
+        "아세트산 비닐"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 46,
+      "facility_count": 430,
+      "prtr_material_exact_record_count": 430,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 12,
+      "expansion_rank": 6,
+      "cas_number": "71-43-2",
+      "chemical_names": [
+        "벤젠"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 45,
+      "facility_count": 495,
+      "prtr_material_exact_record_count": 495,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 13,
+      "expansion_rank": 7,
+      "cas_number": "68476-33-5",
+      "chemical_names": [
+        "벙커C유",
+        "연료, 잔사유"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 45,
+      "facility_count": 26,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 14,
+      "expansion_rank": 8,
+      "cas_number": "25190-06-1",
+      "chemical_names": [
+        "폴리테트라메틸렌 에테르 글리콜",
+        "폴리테트라하이드로퓨란"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 44,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 15,
+      "expansion_rank": 9,
+      "cas_number": "106-98-9",
+      "chemical_names": [
+        "1-부텐"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 41,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 16,
+      "expansion_rank": 10,
+      "cas_number": "8008-20-6",
+      "chemical_names": [
+        "등유",
+        "케로센",
+        "항공유"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 37,
+      "facility_count": 862,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 17,
+      "expansion_rank": 11,
+      "cas_number": "1330-20-7",
+      "chemical_names": [
+        "자일렌",
+        "크실렌"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 34,
+      "facility_count": 6297,
+      "prtr_material_exact_record_count": 6297,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 18,
+      "expansion_rank": 12,
+      "cas_number": "107-21-1",
+      "chemical_names": [
+        "에틸렌 글리콜"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 32,
+      "facility_count": 2453,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 19,
+      "expansion_rank": 13,
+      "cas_number": "9003-07-0",
+      "chemical_names": [
+        "폴리프로필렌"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 30,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 20,
+      "expansion_rank": 14,
+      "cas_number": "68476-77-7",
+      "chemical_names": [
+        "윤활유",
+        "정제윤활유"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 28,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 21,
+      "expansion_rank": 15,
+      "cas_number": "56-81-5",
+      "chemical_names": [
+        "글리세롤",
+        "글리세린(글리세롤)"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 24,
+      "facility_count": 2257,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 22,
+      "expansion_rank": 16,
+      "cas_number": "110-54-3",
+      "chemical_names": [
+        "노르말 헥산",
+        "헥산"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 24,
+      "facility_count": 1266,
+      "prtr_material_exact_record_count": 1266,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 23,
+      "expansion_rank": 17,
+      "cas_number": "115-07-1",
+      "chemical_names": [
+        "프로필렌"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 24,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 24,
+      "expansion_rank": 18,
+      "cas_number": "7704-34-9",
+      "chemical_names": [
+        "유황| 용융",
+        "황"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 23,
+      "facility_count": 1191,
+      "prtr_material_exact_record_count": 1191,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 25,
+      "expansion_rank": 19,
+      "cas_number": "1310-73-2",
+      "chemical_names": [
+        "수산화 나트륨",
+        "수산화나트륨"
+      ],
+      "coverage_tier": "CAMEO_GAP",
+      "fire_incident_rows": 22,
+      "facility_count": 9123,
+      "prtr_material_exact_record_count": 9124,
+      "kosha_msds_loaded": true,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 26,
+      "expansion_rank": 20,
+      "cas_number": "1333-74-0",
+      "chemical_names": [
+        "수소"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 21,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 27,
+      "expansion_rank": 21,
+      "cas_number": "96-76-4",
+      "chemical_names": [
+        "2,4-비스(1,1-다이메틸에틸)페놀",
+        "SONGNOX 2.4 DTBP"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 20,
+      "facility_count": 4,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 28,
+      "expansion_rank": 22,
+      "cas_number": "31570-04-4",
+      "chemical_names": [
+        "SONGNOX 1680",
+        "트리스(2,4-다이-t-뷰틸페닐)아인산염"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 19,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 29,
+      "expansion_rank": 23,
+      "cas_number": "7783-54-2",
+      "chemical_names": [
+        "삼불화 질소",
+        "삼불화질소"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 16,
+      "facility_count": 60,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 30,
+      "expansion_rank": 24,
+      "cas_number": "7664-41-7",
+      "chemical_names": [
+        "암모니아"
+      ],
+      "coverage_tier": "CAMEO_GAP",
+      "fire_incident_rows": 15,
+      "facility_count": 1077,
+      "prtr_material_exact_record_count": 1077,
+      "kosha_msds_loaded": true,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    }
+  ],
+  "top_expansion_candidates": [
+    {
+      "demo_rank": 7,
+      "expansion_rank": 1,
+      "cas_number": "68334-30-5",
+      "chemical_names": [
+        "경유",
+        "디젤"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 190,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 8,
+      "expansion_rank": 2,
+      "cas_number": "8006-61-9",
+      "chemical_names": [
+        "가솔린, 천연",
+        "휘발유(가솔린)"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 58,
+      "facility_count": 60,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 9,
+      "expansion_rank": 3,
+      "cas_number": "67-56-1",
+      "chemical_names": [
+        "메탄올",
+        "메틸알코올"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 53,
+      "facility_count": 4998,
+      "prtr_material_exact_record_count": 4999,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 10,
+      "expansion_rank": 4,
+      "cas_number": "7664-93-9",
+      "chemical_names": [
+        "황산"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 48,
+      "facility_count": 4550,
+      "prtr_material_exact_record_count": 4550,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 11,
+      "expansion_rank": 5,
+      "cas_number": "108-05-4",
+      "chemical_names": [
+        "VAM",
+        "비닐 아세테이트",
+        "아세트산 비닐"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 46,
+      "facility_count": 430,
+      "prtr_material_exact_record_count": 430,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 12,
+      "expansion_rank": 6,
+      "cas_number": "71-43-2",
+      "chemical_names": [
+        "벤젠"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 45,
+      "facility_count": 495,
+      "prtr_material_exact_record_count": 495,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 13,
+      "expansion_rank": 7,
+      "cas_number": "68476-33-5",
+      "chemical_names": [
+        "벙커C유",
+        "연료, 잔사유"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 45,
+      "facility_count": 26,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 14,
+      "expansion_rank": 8,
+      "cas_number": "25190-06-1",
+      "chemical_names": [
+        "폴리테트라메틸렌 에테르 글리콜",
+        "폴리테트라하이드로퓨란"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 44,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 15,
+      "expansion_rank": 9,
+      "cas_number": "106-98-9",
+      "chemical_names": [
+        "1-부텐"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 41,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 16,
+      "expansion_rank": 10,
+      "cas_number": "8008-20-6",
+      "chemical_names": [
+        "등유",
+        "케로센",
+        "항공유"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 37,
+      "facility_count": 862,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 17,
+      "expansion_rank": 11,
+      "cas_number": "1330-20-7",
+      "chemical_names": [
+        "자일렌",
+        "크실렌"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 34,
+      "facility_count": 6297,
+      "prtr_material_exact_record_count": 6297,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 18,
+      "expansion_rank": 12,
+      "cas_number": "107-21-1",
+      "chemical_names": [
+        "에틸렌 글리콜"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 32,
+      "facility_count": 2453,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 19,
+      "expansion_rank": 13,
+      "cas_number": "9003-07-0",
+      "chemical_names": [
+        "폴리프로필렌"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 30,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 20,
+      "expansion_rank": 14,
+      "cas_number": "68476-77-7",
+      "chemical_names": [
+        "윤활유",
+        "정제윤활유"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 28,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 21,
+      "expansion_rank": 15,
+      "cas_number": "56-81-5",
+      "chemical_names": [
+        "글리세롤",
+        "글리세린(글리세롤)"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 24,
+      "facility_count": 2257,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 22,
+      "expansion_rank": 16,
+      "cas_number": "110-54-3",
+      "chemical_names": [
+        "노르말 헥산",
+        "헥산"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 24,
+      "facility_count": 1266,
+      "prtr_material_exact_record_count": 1266,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 23,
+      "expansion_rank": 17,
+      "cas_number": "115-07-1",
+      "chemical_names": [
+        "프로필렌"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 24,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 24,
+      "expansion_rank": 18,
+      "cas_number": "7704-34-9",
+      "chemical_names": [
+        "유황| 용융",
+        "황"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 23,
+      "facility_count": 1191,
+      "prtr_material_exact_record_count": 1191,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 25,
+      "expansion_rank": 19,
+      "cas_number": "1310-73-2",
+      "chemical_names": [
+        "수산화 나트륨",
+        "수산화나트륨"
+      ],
+      "coverage_tier": "CAMEO_GAP",
+      "fire_incident_rows": 22,
+      "facility_count": 9123,
+      "prtr_material_exact_record_count": 9124,
+      "kosha_msds_loaded": true,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 26,
+      "expansion_rank": 20,
+      "cas_number": "1333-74-0",
+      "chemical_names": [
+        "수소"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 21,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 27,
+      "expansion_rank": 21,
+      "cas_number": "96-76-4",
+      "chemical_names": [
+        "2,4-비스(1,1-다이메틸에틸)페놀",
+        "SONGNOX 2.4 DTBP"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 20,
+      "facility_count": 4,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 28,
+      "expansion_rank": 22,
+      "cas_number": "31570-04-4",
+      "chemical_names": [
+        "SONGNOX 1680",
+        "트리스(2,4-다이-t-뷰틸페닐)아인산염"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 19,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 29,
+      "expansion_rank": 23,
+      "cas_number": "7783-54-2",
+      "chemical_names": [
+        "삼불화 질소",
+        "삼불화질소"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 16,
+      "facility_count": 60,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 30,
+      "expansion_rank": 24,
+      "cas_number": "7664-41-7",
+      "chemical_names": [
+        "암모니아"
+      ],
+      "coverage_tier": "CAMEO_GAP",
+      "fire_incident_rows": 15,
+      "facility_count": 1077,
+      "prtr_material_exact_record_count": 1077,
+      "kosha_msds_loaded": true,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 31,
+      "expansion_rank": 25,
+      "cas_number": "106-89-8",
+      "chemical_names": [
+        "에피클로로히드린"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 15,
+      "facility_count": 126,
+      "prtr_material_exact_record_count": 126,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 32,
+      "expansion_rank": 26,
+      "cas_number": "111-46-6",
+      "chemical_names": [
+        "다이에틸렌 글리콜",
+        "디에틸렌 글리콜"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 14,
+      "facility_count": 1258,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 33,
+      "expansion_rank": 27,
+      "cas_number": "7664-39-3",
+      "chemical_names": [
+        "플루오르화 수소"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 14,
+      "facility_count": 944,
+      "prtr_material_exact_record_count": 944,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 34,
+      "expansion_rank": 28,
+      "cas_number": "68476-85-7",
+      "chemical_names": [
+        "LPG (액화 석유 가스)",
+        "액화석유가스"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 13,
+      "facility_count": 864,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 35,
+      "expansion_rank": 29,
+      "cas_number": "7782-44-7",
+      "chemical_names": [
+        "산소"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 13,
+      "facility_count": 0,
+      "prtr_material_exact_record_count": 0,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    },
+    {
+      "demo_rank": 36,
+      "expansion_rank": 30,
+      "cas_number": "1310-58-3",
+      "chemical_names": [
+        "수산화 칼륨"
+      ],
+      "coverage_tier": "MSDS_AND_CAMEO_GAP",
+      "fire_incident_rows": 12,
+      "facility_count": 3276,
+      "prtr_material_exact_record_count": 3276,
+      "kosha_msds_loaded": false,
+      "cameo_public_verified": false,
+      "missing_official_evidence": [
+        "KOSHA_MSDS",
+        "CAMEO_PUBLIC_CROSSWALK"
+      ]
+    }
+  ],
+  "is_probability": false,
+  "interpretation": "공식 데이터 구축 순위이며 위험 확률이나 업체의 현재 재고 확률이 아님"
+}

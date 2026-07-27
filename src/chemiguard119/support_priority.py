@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 import csv
-from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Iterator
@@ -48,23 +47,23 @@ class SubstanceSignals:
         return self.fire_incident_rows > 0 or self.facility_count > 0
 
 
-def _read_rows(path: Path) -> Iterator[dict[str, str]]:
+def _read_rows(
+    path: Path,
+    *,
+    required: set[str] | None = None,
+) -> Iterator[dict[str, str]]:
     if not path.is_file():
         raise SupportPriorityError(f"입력 파일을 찾을 수 없습니다: {path}")
     with path.open(encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         if not reader.fieldnames:
             raise SupportPriorityError(f"CSV 헤더가 없습니다: {path}")
+        missing = sorted((required or set()) - set(reader.fieldnames))
+        if missing:
+            raise SupportPriorityError(
+                f"{path.name} 필수 컬럼 누락: {', '.join(missing)}"
+            )
         yield from reader
-
-
-def _require_columns(path: Path, rows: list[dict[str, str]], required: set[str]) -> None:
-    columns = set(rows[0]) if rows else set()
-    missing = sorted(required - columns)
-    if missing:
-        raise SupportPriorityError(
-            f"{path.name} 필수 컬럼 누락: {', '.join(missing)}"
-        )
 
 
 def _cas(value: str | None, *, source: Path, row_number: int) -> str:
@@ -113,6 +112,7 @@ def _signal(
 def _load_fire_incidents(
     paths: Iterable[Path],
     signals: dict[str, SubstanceSignals],
+    diagnostics: dict[str, Any],
 ) -> None:
     """CAS가 확인된 소방 사고 행을 집계한다.
 
@@ -120,37 +120,42 @@ def _load_fire_incidents(
     이 함수는 행 수를 사고 확률이나 전국 빈도로 변환하지 않는다.
     """
 
+    source_diagnostics: list[dict[str, Any]] = []
     for path in paths:
-        rows = list(_read_rows(path))
-        if not rows:
-            continue
-        _require_columns(path, rows, {"CAS번호"})
+        source_stats = {
+            "file": path.name,
+            "total_rows": 0,
+            "valid_cas_rows": 0,
+            "invalid_or_blank_cas_rows": 0,
+            "invalid_cas_policy": "EXCLUDE_AND_REPORT",
+        }
+        rows = _read_rows(path, required={"CAS번호"})
         for row_number, row in enumerate(rows, start=2):
-            cas_number = _cas(
-                row.get("CAS번호"),
-                source=path,
-                row_number=row_number,
-            )
+            source_stats["total_rows"] += 1
+            cas_number = normalize_cas(row.get("CAS번호"))
+            if not valid_cas_checksum(cas_number):
+                source_stats["invalid_or_blank_cas_rows"] += 1
+                continue
+            source_stats["valid_cas_rows"] += 1
             item = _signal(signals, cas_number)
             item.fire_incident_rows += 1
             for column in (
                 "화학물질명_한글",
                 "화학물질명_국문",
-                "기본화학물질명",
+                "일반명_한글",
             ):
                 name = _text(row.get(column))
                 if name:
                     item.names.add(name)
+        source_diagnostics.append(source_stats)
+    diagnostics["fire_incident_sources"] = source_diagnostics
 
 
 def _load_facilities(
     path: Path,
     signals: dict[str, SubstanceSignals],
 ) -> None:
-    rows = list(_read_rows(path))
-    if not rows:
-        return
-    _require_columns(path, rows, {"CAS번호", "업체명", "주소"})
+    rows = _read_rows(path, required={"CAS번호", "업체명", "주소"})
     for row_number, row in enumerate(rows, start=2):
         if (
             "정확CAS모델링사용여부" in row
@@ -196,10 +201,7 @@ def _load_kosha(
     path: Path,
     signals: dict[str, SubstanceSignals],
 ) -> None:
-    rows = list(_read_rows(path))
-    if not rows:
-        return
-    _require_columns(path, rows, {"CAS번호"})
+    rows = _read_rows(path, required={"CAS번호"})
     for row_number, row in enumerate(rows, start=2):
         cas_number = _cas(
             row.get("CAS번호"),
@@ -217,10 +219,10 @@ def _load_crosswalk(
     path: Path,
     signals: dict[str, SubstanceSignals],
 ) -> None:
-    rows = list(_read_rows(path))
-    if not rows:
-        return
-    _require_columns(path, rows, {"cas_number", "verification_status"})
+    rows = _read_rows(
+        path,
+        required={"cas_number", "verification_status"},
+    )
     for row_number, row in enumerate(rows, start=2):
         cas_number = _cas(
             row.get("cas_number"),
@@ -270,6 +272,7 @@ def _demo_key(item: SubstanceSignals) -> tuple[Any, ...]:
 def _expansion_key(item: SubstanceSignals) -> tuple[Any, ...]:
     missing_count = len(_missing_evidence(item))
     return (
+        -int(missing_count > 0),
         -int(item.operational_signal),
         -int(item.fire_incident_rows > 0),
         -item.fire_incident_rows,
@@ -286,11 +289,13 @@ def build_support_priority(
     kosha_path: Path,
     crosswalk_path: Path,
     fire_incident_paths: Iterable[Path] = (),
+    diagnostics: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """공식 데이터 신호를 집계해 두 가지 지원 물질 순위를 반환한다."""
 
     signals: dict[str, SubstanceSignals] = {}
-    _load_fire_incidents(fire_incident_paths, signals)
+    quality = diagnostics if diagnostics is not None else {}
+    _load_fire_incidents(fire_incident_paths, signals, quality)
     _load_facilities(facility_path, signals)
     _load_kosha(kosha_path, signals)
     _load_crosswalk(crosswalk_path, signals)
