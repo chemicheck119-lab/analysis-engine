@@ -10,6 +10,7 @@ from chemiguard119.retrieval import (
     _append_missing_cas_source_representatives,
     _rrf,
     _select_source_diverse_ids,
+    evaluate_retriever,
     load_retriever,
     search_evidence,
     train_retriever,
@@ -285,3 +286,73 @@ def test_search_keeps_each_same_cas_source_when_one_source_fills_candidate_limit
     assert {row["source"] for row in result["results"]} == {"KOSHA", "CAMEO"}
     assert result["results"][1]["rank_sources"]["exact"] == 3
     assert result["cas_link_warning"] is None
+
+
+def test_evaluation_separates_automatic_hint_from_retriever_quality(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    evaluation_path = tmp_path / "retrieval.csv"
+    evaluation_path.write_text(
+        "query,expected_source,expected_cas,expected_cameo_id,review_status\n"
+        "모호한 복합물질 질의,CAMEO,7681-52-9,4503,DRAFT_INTERNAL_REGRESSION\n"
+        "명확한 물질 질의,KOSHA,7647-01-0,,DRAFT_INTERNAL_REGRESSION\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(retrieval_module, "load_retriever", lambda _path: {})
+    monkeypatch.setattr(retrieval_module, "load_resolver", lambda _path: {"rows": []})
+    monkeypatch.setattr(
+        retrieval_module,
+        "select_evidence_cas_hint_from_text",
+        lambda query, _artifact: (None if query.startswith("모호한") else "7647-01-0"),
+    )
+
+    def fake_search(
+        query: str,
+        _db_path: Path,
+        _artifact: dict,
+        *,
+        cas_hint: str | None,
+        top_k: int,
+    ) -> dict:
+        assert top_k == 8
+        if query.startswith("모호한") and cas_hint == "7681-52-9":
+            results = [
+                {
+                    "source": "CAMEO",
+                    "cas_number": "7681-52-9",
+                    "cameo_chemical_id": "4503",
+                }
+            ]
+        elif query.startswith("명확한") and cas_hint == "7647-01-0":
+            results = [
+                {
+                    "source": "KOSHA",
+                    "cas_number": "7647-01-0",
+                    "cameo_chemical_id": None,
+                }
+            ]
+        else:
+            results = []
+        return {"results": results}
+
+    monkeypatch.setattr(retrieval_module, "search_evidence", fake_search)
+
+    report = evaluate_retriever(
+        tmp_path / "unused.sqlite",
+        tmp_path / "retriever.joblib",
+        tmp_path / "resolver.joblib",
+        evaluation_path,
+    )
+
+    assert report["metrics_version"] == "retriever-evaluation-v2"
+    assert report["end_to_end"]["recall_at_5"] == 0.5
+    assert report["retriever_with_oracle_cas"]["recall_at_5"] == 1.0
+    assert report["cas_hint"]["coverage"] == 0.5
+    assert report["cas_hint"]["exact_match_rate"] == 0.5
+    assert report["cas_hint"]["precision_when_present"] == 1.0
+    assert report["cas_hint"]["missing_count"] == 1
+    assert report["rows"][0]["cas_hint_status"] == "MISSING"
+    assert report["rows"][0]["end_to_end_rank"] is None
+    assert report["rows"][0]["oracle_cas_rank"] == 1
