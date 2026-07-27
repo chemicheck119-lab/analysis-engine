@@ -480,40 +480,120 @@ def evaluate_retriever(
         cases = list(csv.DictReader(handle))
     rows = []
     for case in cases:
-        cas_hint = select_evidence_cas_hint_from_text(case["query"], resolver)
-        result = search_evidence(
-            case["query"], db_path, artifact, cas_hint=cas_hint, top_k=8
+        automatic_cas_hint = select_evidence_cas_hint_from_text(case["query"], resolver)
+        end_to_end_result = search_evidence(
+            case["query"],
+            db_path,
+            artifact,
+            cas_hint=automatic_cas_hint,
+            top_k=8,
         )
-        rank = _gold_rank(result["results"], case)
+        end_to_end_rank = _gold_rank(end_to_end_result["results"], case)
+
+        expected_cas = normalize_cas(case.get("expected_cas", ""))
+        oracle_cas_hint = expected_cas if valid_cas_checksum(expected_cas) else None
+        oracle_cas_rank = None
+        if oracle_cas_hint:
+            oracle_cas_result = search_evidence(
+                case["query"],
+                db_path,
+                artifact,
+                cas_hint=oracle_cas_hint,
+                top_k=8,
+            )
+            oracle_cas_rank = _gold_rank(oracle_cas_result["results"], case)
+
+        if not oracle_cas_hint:
+            cas_hint_status = "NO_EXPECTED_CAS"
+        elif automatic_cas_hint is None:
+            cas_hint_status = "MISSING"
+        elif automatic_cas_hint == oracle_cas_hint:
+            cas_hint_status = "MATCH"
+        else:
+            cas_hint_status = "MISMATCH"
+
         rows.append(
             {
                 "query": case["query"],
-                "resolver_cas_hint": cas_hint,
+                "automatic_cas_hint": automatic_cas_hint,
+                "expected_cas_hint": oracle_cas_hint,
+                "cas_hint_status": cas_hint_status,
                 "expected_source": case["expected_source"],
                 "expected_cas": case.get("expected_cas"),
                 "expected_cameo_id": case.get("expected_cameo_id"),
-                "rank": rank,
+                "end_to_end_rank": end_to_end_rank,
+                "oracle_cas_rank": oracle_cas_rank,
+                # v1 보고서를 소비하는 내부 도구를 위한 호환 필드입니다.
+                "resolver_cas_hint": automatic_cas_hint,
+                "rank": end_to_end_rank,
             }
         )
+
+    def _recall(rank_key: str, limit: int, target_rows: list[dict[str, Any]]) -> float:
+        if not target_rows:
+            return 0.0
+        return float(
+            np.mean(
+                [bool(row[rank_key] and row[rank_key] <= limit) for row in target_rows]
+            )
+        )
+
+    def _mrr(rank_key: str, limit: int, target_rows: list[dict[str, Any]]) -> float:
+        if not target_rows:
+            return 0.0
+        return float(
+            np.mean(
+                [
+                    1 / row[rank_key]
+                    if row[rank_key] and row[rank_key] <= limit
+                    else 0.0
+                    for row in target_rows
+                ]
+            )
+        )
+
+    oracle_rows = [row for row in rows if row["expected_cas_hint"]]
+    hinted_rows = [row for row in rows if row["automatic_cas_hint"]]
+    matched_hint_count = sum(row["cas_hint_status"] == "MATCH" for row in rows)
+    end_to_end_recall_at_5 = _recall("end_to_end_rank", 5, rows)
+    end_to_end_recall_at_8 = _recall("end_to_end_rank", 8, rows)
+    end_to_end_mrr_at_8 = _mrr("end_to_end_rank", 8, rows)
     summary = {
+        "metrics_version": "retriever-evaluation-v2",
         "dataset": str(evaluation_path),
         "dataset_status": "DRAFT 내부 회귀셋으로 현장 성능 주장 금지",
         "case_count": len(rows),
-        "recall_at_5": float(
-            np.mean([bool(row["rank"] and row["rank"] <= 5) for row in rows])
-        )
-        if rows
-        else 0.0,
-        "recall_at_8": float(
-            np.mean([bool(row["rank"] and row["rank"] <= 8) for row in rows])
-        )
-        if rows
-        else 0.0,
-        "mrr_at_8": float(
-            np.mean([1 / row["rank"] if row["rank"] else 0.0 for row in rows])
-        )
-        if rows
-        else 0.0,
+        "end_to_end": {
+            "description": "자동 CAS 힌트를 포함한 실제 검색 흐름",
+            "recall_at_5": end_to_end_recall_at_5,
+            "recall_at_8": end_to_end_recall_at_8,
+            "mrr_at_8": end_to_end_mrr_at_8,
+        },
+        "retriever_with_oracle_cas": {
+            "description": "정답 CAS를 검색 필터로 제공한 Retriever 단독 상한선",
+            "eligible_case_count": len(oracle_rows),
+            "recall_at_5": _recall("oracle_cas_rank", 5, oracle_rows),
+            "recall_at_8": _recall("oracle_cas_rank", 8, oracle_rows),
+            "mrr_at_8": _mrr("oracle_cas_rank", 8, oracle_rows),
+        },
+        "cas_hint": {
+            "coverage": len(hinted_rows) / len(rows) if rows else 0.0,
+            "exact_match_rate": matched_hint_count / len(rows) if rows else 0.0,
+            "precision_when_present": (
+                matched_hint_count / len(hinted_rows) if hinted_rows else 0.0
+            ),
+            "missing_count": sum(row["cas_hint_status"] == "MISSING" for row in rows),
+            "mismatch_count": sum(row["cas_hint_status"] == "MISMATCH" for row in rows),
+        },
+        "metric_notice": (
+            "end_to_end는 Resolver의 자동 CAS 힌트까지 포함합니다. "
+            "retriever_with_oracle_cas는 평가용 정답 CAS를 주입한 검색기 단독 상한선이며 "
+            "운영 성능으로 해석하면 안 됩니다."
+        ),
+        # v1 보고서 소비자를 위한 호환 필드입니다. 신규 코드는 end_to_end를 사용합니다.
+        "recall_at_5": end_to_end_recall_at_5,
+        "recall_at_8": end_to_end_recall_at_8,
+        "mrr_at_8": end_to_end_mrr_at_8,
         "rows": rows,
     }
     if report_path:

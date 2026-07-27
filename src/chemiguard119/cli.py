@@ -226,12 +226,21 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
                 f"Top-3 {resolver.get('top3_recall', 0):.3f}, MRR {resolver.get('mrr', 0):.3f}"
             )
         if retriever:
+            end_to_end = retriever.get("end_to_end") or retriever
+            oracle = retriever.get("retriever_with_oracle_cas") or {}
             print(
-                "Retriever: "
-                f"Recall@5 {retriever.get('recall_at_5', 0):.3f}, "
-                f"Recall@8 {retriever.get('recall_at_8', 0):.3f}, "
-                f"MRR@8 {retriever.get('mrr_at_8', 0):.3f}"
+                "Retriever 전체 흐름: "
+                f"Recall@5 {end_to_end.get('recall_at_5', 0):.3f}, "
+                f"Recall@8 {end_to_end.get('recall_at_8', 0):.3f}, "
+                f"MRR@8 {end_to_end.get('mrr_at_8', 0):.3f}"
             )
+            if oracle:
+                print(
+                    "Retriever 단독(정답 CAS 제공): "
+                    f"Recall@5 {oracle.get('recall_at_5', 0):.3f}, "
+                    f"Recall@8 {oracle.get('recall_at_8', 0):.3f}, "
+                    f"MRR@8 {oracle.get('mrr_at_8', 0):.3f}"
+                )
         print("주의: 내부 회귀 평가셋이며 현장 성능 주장에 사용할 수 없습니다.")
     elif command == "pipeline":
         print(f"상태: {_short(payload.get('status'))}")
