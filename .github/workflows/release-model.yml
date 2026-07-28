@@ -416,6 +416,12 @@ jobs:
           print("API 키 인증과 물질 후보 안전 계약 검사 통과")
           PY
 
+          CHEMICHECK119_MODEL_API_KEY="$MODEL_API_KEY" \
+            PYTHONPATH=src \
+            python scripts/integration/smoke_model_api.py \
+              --base-url http://127.0.0.1:18000 \
+              --api-key-env CHEMICHECK119_MODEL_API_KEY
+
       - name: Smoke 컨테이너 정리
         if: always()
         shell: bash
