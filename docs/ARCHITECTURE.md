@@ -61,7 +61,7 @@ flowchart LR
 | API 스키마 | `src/chemiguard119/api_models.py` | Pydantic 요청·응답 계약 | 없음 |
 | 사고 오케스트레이터 | `src/chemiguard119/pipeline.py` | 각 단계를 순서대로 실행 | 게이트 통과 시 Rule 호출만 허용 |
 | 신고문 파서 | `src/chemiguard119/incident.py` | 물질 표현·역할·상황 구조화 | 없음 |
-| Resolver | `src/chemiguard119/resolver.py` | 물질·CAS 후보 검색 | 없음 |
+| Resolver | `src/chemiguard119/resolver.py` | 물질·CAS 후보 검색과 공유 exact span 경계 검사 | 없음 |
 | Retriever | `src/chemiguard119/retrieval.py` | 공식 근거의 하이브리드 검색 | 없음 |
 | 시설 이력 검색 | `src/chemiguard119/facility.py` | 과거 취급 이력 후보 조회 | 없음 |
 | Rule Engine | `src/chemiguard119/rules.py` | CAMEO 그룹 호환성 lookup | 공개 근거 파일럿 스크리닝 |
@@ -83,6 +83,11 @@ flowchart LR
 
 신고문에 정확한 CAS가 적혀 있어도 그것만으로 현장 존재가 확인된 것은 아닙니다. Resolver
 결과는 항상 후보이며 `rule_eligible=false`입니다.
+
+파서와 Resolver는 문장 안의 정확 별칭을 찾을 때 같은 원문 span matcher를 사용합니다.
+별칭 양옆에 다른 한글·영숫자가 붙으면 exact로 취급하지 않습니다. 이 경계가 없으면
+`염산염`을 `염산`으로 오인해 염산 CAS 문서만 검색할 수 있으므로, 불확실한 경우 CAS
+힌트를 보류하는 쪽을 선택합니다.
 
 ### 5.2 현장 확인
 

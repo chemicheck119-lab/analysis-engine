@@ -41,6 +41,7 @@ KOSHA·CAMEO 근거 검색
 | 기능 | 상태 | 현재 범위 |
 |---|---|---|
 | 물질 후보 검색 | 구현 | ICIS 중심 총 4,300개 물질 카탈로그 |
+| 자동 CAS 힌트 안전 회귀 | 구현 | 부분 문자열·모호 표현 12건, 위험 힌트 0건 |
 | 신고문 구조화 | 구현 | 기본 결정적 파서, LM Studio는 선택 실험 |
 | 공식 근거 검색 | 구현 | KOSHA 상세 근거 9종과 CAMEO 근거 |
 | KOSHA 근거 확장 | 수집기 구현 | 공식 OpenAPI staging 수집·검토 필요, 현재 artifact는 9종 |
@@ -305,6 +306,7 @@ CAS·물질 형태를 직접 대조해 provenance로 기록한 매핑만 사용�
 
 ```bash
 python -m pytest
+chemiguard119 evaluate --only resolver
 python -m ruff check src tests scripts
 python -m ruff format --check src tests scripts
 python -m compileall -q src scripts

@@ -5,7 +5,9 @@ from __future__ import annotations
 import csv
 import re
 import sqlite3
-from collections import defaultdict
+import time
+import unicodedata
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -20,13 +22,14 @@ from chemiguard119.utils import (
     compact_text,
     normalize_cas,
     normalize_text,
+    sha256_file,
     valid_cas_checksum,
     write_json,
 )
 
 
 MODEL_SCHEMA_VERSION = "resolver-char-tfidf-v2"
-RUNTIME_INDEX_VERSION = "resolver-runtime-index-v1"
+RUNTIME_INDEX_VERSION = "resolver-runtime-index-v2"
 RUNTIME_INDEX_KEY = "_runtime_index"
 
 ICIS_CANDIDATE_STATUS = "PUBLIC_CATALOG_CANDIDATE"
@@ -209,11 +212,32 @@ def build_resolver_runtime_index(
         ):
             group["eligible_surfaces"].add(alias)
 
+    # 긴 신고문마다 모든 별칭을 처음부터 끝까지 검색하지 않도록 첫 글자별
+    # runtime matcher를 만든다. 이는 joblib artifact에 저장되지 않는 파생
+    # 인덱스이므로 기존 모델 파일의 schema와 호환된다.
+    eligible_matchers_by_initial: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for normalized_alias, group in alias_groups.items():
+        for alias in sorted(group["eligible_surfaces"]):
+            parts = re.split(r"\s+", alias)
+            pattern = re.compile(
+                r"\s*".join(re.escape(part) for part in parts),
+                re.IGNORECASE,
+            )
+            initial = alias[0].casefold()
+            eligible_matchers_by_initial[initial].append(
+                {
+                    "normalized_alias": normalized_alias,
+                    "pattern": pattern,
+                    "cas_numbers": group["cas_numbers"],
+                }
+            )
+
     return {
         "version": RUNTIME_INDEX_VERSION,
         "cas_rows": dict(cas_rows),
         "exact_aliases": dict(exact_aliases),
         "alias_groups": alias_groups,
+        "eligible_matchers_by_initial": dict(eligible_matchers_by_initial),
     }
 
 
@@ -314,6 +338,112 @@ def _result(
 def _looks_like_cas(value: str) -> bool:
     normalized = normalize_cas(value)
     return "-" in normalized and bool(re.fullmatch(r"[0-9-]+", normalized))
+
+
+_KOREAN_POSTPOSITIONS = (
+    "에게서",
+    "에서는",
+    "으로",
+    "에서",
+    "에게",
+    "까지",
+    "부터",
+    "처럼",
+    "보다",
+    "이나",
+    "은",
+    "는",
+    "이",
+    "가",
+    "을",
+    "를",
+    "과",
+    "와",
+    "의",
+    "에",
+    "도",
+    "만",
+    "로",
+)
+
+
+def _is_alias_token_char(value: str) -> bool:
+    if not value:
+        return False
+    # 아래첨자 숫자·전각 Latin·Greek 문자도 화학식/물질명의 일부가 될 수 있다.
+    # ASCII와 완성형 한글만 검사하면 ``CO₂`` 안의 ``CO``를 독립된 별칭으로
+    # 오인하므로 Unicode 문자·숫자·결합문자를 모두 토큰 문자로 취급한다.
+    return unicodedata.category(value)[0] in {"L", "M", "N"}
+
+
+def _has_safe_alias_boundaries(
+    text: str,
+    start: int,
+    end: int,
+) -> bool:
+    if start > 0 and _is_alias_token_char(text[start - 1]):
+        return False
+    if end >= len(text) or not _is_alias_token_char(text[end]):
+        return True
+    # ``HCl이``·``chlorine은``처럼 별칭의 문자 종류와 관계없이 한국어 조사는
+    # 정상 문장 경계가 될 수 있다. 단, 조사 뒤에 다른 토큰 문자가 계속되면
+    # ``CO이산화물`` 같은 내포 표현일 수 있으므로 허용하지 않는다.
+    for particle in _KOREAN_POSTPOSITIONS:
+        if not text.startswith(particle, end):
+            continue
+        particle_end = end + len(particle)
+        if particle_end >= len(text) or not _is_alias_token_char(text[particle_end]):
+            return True
+    return False
+
+
+def find_exact_alias_spans(
+    text: str,
+    alias: str,
+) -> list[tuple[int, int, str]]:
+    """문장 안에서 독립된 정확 별칭의 원문 span만 반환한다.
+
+    한국어 조사 뒤에 공백이나 문장부호가 오는 경우는 허용한다. 반면
+    ``염산염`` 안의 ``염산``이나 ``톨루엔느`` 안의 ``톨루엔``처럼 다른
+    한글·영숫자에 붙은 부분 문자열은 정확 일치로 승격하지 않는다.
+    """
+
+    value = str(alias or "").strip()
+    if not text or len(value) < 2:
+        return []
+    candidates: list[tuple[int, int]]
+    if any(character.isspace() for character in value):
+        # 원천별 띄어쓰기 차이를 허용해야 하는 소수 별칭에만 정규식을 사용한다.
+        alias_pattern = r"\s*".join(re.escape(part) for part in re.split(r"\s+", value))
+        candidates = [
+            (match.start(), match.end())
+            for match in re.finditer(alias_pattern, text, re.IGNORECASE)
+        ]
+    else:
+        # 대다수 별칭은 문자열 인덱스로 찾는다. casefold가 원문 길이를 바꾸는
+        # 드문 Unicode 표현만 정규식 fallback을 사용해 원문 span을 보존한다.
+        folded_text = text.casefold()
+        folded_alias = value.casefold()
+        if len(folded_text) == len(text) and len(folded_alias) == len(value):
+            candidates = []
+            start = folded_text.find(folded_alias)
+            while start >= 0:
+                candidates.append((start, start + len(value)))
+                start = folded_text.find(folded_alias, start + 1)
+        else:
+            candidates = [
+                (match.start(), match.end())
+                for match in re.finditer(re.escape(value), text, re.IGNORECASE)
+            ]
+    return [
+        (start, end, text[start:end])
+        for start, end in candidates
+        if _has_safe_alias_boundaries(
+            text,
+            start,
+            end,
+        )
+    ]
 
 
 def resolve_substance(
@@ -523,30 +653,23 @@ def select_evidence_cas_hint_from_text(
     if direct_hint:
         return direct_hint
 
-    alias_groups: dict[str, dict[str, Any]] = _runtime_index(artifact)["alias_groups"]
+    runtime_index = _runtime_index(artifact)
+    matchers_by_initial: dict[str, list[dict[str, Any]]] = runtime_index[
+        "eligible_matchers_by_initial"
+    ]
 
     grouped: dict[tuple[int, int, str], set[str]] = defaultdict(set)
-    compact_query = compact_text(query)
-    for normalized_alias, alias_group in alias_groups.items():
-        for alias in sorted(alias_group["eligible_surfaces"]):
-            if re.fullmatch(r"[A-Za-z0-9]+", alias):
-                pattern = re.compile(
-                    rf"(?<![A-Za-z0-9]){re.escape(alias)}(?![A-Za-z0-9])",
-                    re.IGNORECASE,
-                )
-                matches = [
-                    (match.start(), match.end()) for match in pattern.finditer(query)
-                ]
-            else:
-                matches = []
-                start = compact_query.find(normalized_alias)
-                while start >= 0:
-                    matches.append((start, start + len(normalized_alias)))
-                    start = compact_query.find(normalized_alias, start + 1)
-            for start, end in matches:
-                grouped[(start, end, normalized_alias)].update(
-                    alias_group["cas_numbers"]
-                )
+    for start, character in enumerate(query):
+        for matcher in matchers_by_initial.get(character.casefold(), []):
+            match = matcher["pattern"].match(query, start)
+            if not match:
+                continue
+            end = match.end()
+            if not _has_safe_alias_boundaries(query, start, end):
+                continue
+            grouped[(start, end, matcher["normalized_alias"])].update(
+                matcher["cas_numbers"]
+            )
 
     selected_cas: set[str] = set()
     selected_spans: list[tuple[int, int]] = []
@@ -629,6 +752,213 @@ def evaluate_resolver(
             "unique_resolution_accuracy는 단일 exact 식별 성공만 계산합니다."
         ),
         "rows": rows,
+    }
+    if report_path:
+        write_json(report_path, summary)
+    return summary
+
+
+_SAFETY_EVALUATION_BEHAVIORS = {
+    "ALLOW_EXACT_HINT",
+    "WITHHOLD_AUTO_HINT",
+    "PRESERVE_AMBIGUITY",
+}
+
+
+def evaluate_resolver_hint_safety(
+    model_path: Path,
+    evaluation_path: Path,
+    report_path: Path | None = None,
+) -> dict[str, Any]:
+    """문장 내 자동 CAS 힌트의 안전 회귀셋을 별도로 평가한다.
+
+    이 평가는 후보 검색 정확도와 분리한다. 특히 부분 문자열·복합 표현에서
+    잘못된 CAS로 공식 근거 검색을 제한하지 않는지를 잠금 테스트한다.
+    """
+
+    artifact = load_resolver(model_path)
+    with evaluation_path.open(encoding="utf-8-sig", newline="") as handle:
+        cases = list(csv.DictReader(handle))
+    required_fields = {
+        "case_id",
+        "query",
+        "query_type",
+        "expected_behavior",
+        "expected_cas",
+        "review_status",
+        "source_type",
+        "source_reference",
+        "split",
+        "duplicate_group",
+    }
+    if not cases:
+        raise ValueError("Resolver 안전 평가 데이터가 비어 있습니다.")
+    missing_fields = required_fields - set(cases[0])
+    if missing_fields:
+        raise ValueError(
+            "Resolver 안전 평가 컬럼이 부족합니다: " + ", ".join(sorted(missing_fields))
+        )
+
+    rows: list[dict[str, Any]] = []
+    seen_case_ids: set[str] = set()
+    for case in cases:
+        case_id = str(case.get("case_id") or "").strip()
+        query = str(case.get("query") or "").strip()
+        behavior = str(case.get("expected_behavior") or "").strip().upper()
+        if not case_id or case_id in seen_case_ids:
+            raise ValueError(f"비어 있거나 중복된 case_id입니다: {case_id!r}")
+        if not query:
+            raise ValueError(f"{case_id}: query가 비어 있습니다.")
+        if behavior not in _SAFETY_EVALUATION_BEHAVIORS:
+            raise ValueError(f"{case_id}: 지원하지 않는 expected_behavior={behavior}")
+        seen_case_ids.add(case_id)
+
+        expected_cas = {
+            normalize_cas(value)
+            for value in str(case.get("expected_cas") or "").split("|")
+            if value.strip()
+        }
+        invalid_expected = sorted(
+            value for value in expected_cas if not valid_cas_checksum(value)
+        )
+        if invalid_expected:
+            raise ValueError(
+                f"{case_id}: 유효하지 않은 expected_cas={invalid_expected}"
+            )
+        if behavior in {"ALLOW_EXACT_HINT", "PRESERVE_AMBIGUITY"} and not expected_cas:
+            raise ValueError(f"{case_id}: expected_cas가 필요합니다.")
+
+        started = time.perf_counter()
+        resolution = resolve_substance(query, artifact, top_k=20)
+        automatic_hint = select_evidence_cas_hint_from_text(query, artifact)
+        latency_ms = (time.perf_counter() - started) * 1_000
+        candidate_cas = {
+            normalize_cas(str(item.get("cas_number") or ""))
+            for item in resolution.get("candidates", [])
+            if valid_cas_checksum(normalize_cas(str(item.get("cas_number") or "")))
+        }
+        rule_eligibility_violation = bool(resolution.get("rule_input_eligible")) or any(
+            item.get("rule_eligible") is True
+            for item in resolution.get("candidates", [])
+        )
+
+        if behavior == "ALLOW_EXACT_HINT":
+            passed = automatic_hint in expected_cas
+        elif behavior == "PRESERVE_AMBIGUITY":
+            passed = (
+                resolution.get("status") == "AMBIGUOUS_ALIAS"
+                and automatic_hint is None
+                and candidate_cas == expected_cas
+            )
+        else:
+            passed = automatic_hint is None
+
+        rows.append(
+            {
+                "case_id": case_id,
+                "query": query,
+                "query_type": str(case.get("query_type") or ""),
+                "expected_behavior": behavior,
+                "expected_cas": sorted(expected_cas),
+                "resolution_status": resolution.get("status"),
+                "candidate_cas": sorted(candidate_cas),
+                "automatic_cas_hint": automatic_hint,
+                "passed": passed,
+                "rule_eligibility_violation": rule_eligibility_violation,
+                "latency_ms": round(latency_ms, 6),
+                "review_status": str(case.get("review_status") or ""),
+                "source_type": str(case.get("source_type") or ""),
+                "source_reference": str(case.get("source_reference") or ""),
+                "split": str(case.get("split") or ""),
+                "duplicate_group": str(case.get("duplicate_group") or ""),
+            }
+        )
+
+    disallowed_rows = [
+        row
+        for row in rows
+        if row["expected_behavior"] in {"WITHHOLD_AUTO_HINT", "PRESERVE_AMBIGUITY"}
+    ]
+    allowed_rows = [
+        row for row in rows if row["expected_behavior"] == "ALLOW_EXACT_HINT"
+    ]
+    ambiguous_rows = [
+        row for row in rows if row["expected_behavior"] == "PRESERVE_AMBIGUITY"
+    ]
+    behavior_counts = Counter(row["expected_behavior"] for row in rows)
+    missing_behaviors = _SAFETY_EVALUATION_BEHAVIORS - set(behavior_counts)
+    if missing_behaviors:
+        raise ValueError(
+            "Resolver 안전 평가에 필수 동작이 없습니다: "
+            + ", ".join(sorted(missing_behaviors))
+        )
+    latencies = [row["latency_ms"] for row in rows]
+    summary = {
+        "metrics_version": "resolver-hint-safety-v1",
+        "dataset": str(evaluation_path),
+        "dataset_sha256": sha256_file(evaluation_path),
+        "model": str(model_path),
+        "model_sha256": sha256_file(model_path),
+        "model_schema_version": artifact.get("schema_version"),
+        "dataset_status": (
+            "합성·내부 안전 회귀셋이며 현장 정확도나 전국 물질 성능 주장 금지"
+        ),
+        "case_count": len(rows),
+        "passed_count": sum(row["passed"] for row in rows),
+        "safety_pass_rate": float(np.mean([row["passed"] for row in rows])),
+        "unsafe_auto_hint_count": sum(
+            row["automatic_cas_hint"] is not None for row in disallowed_rows
+        ),
+        "wrong_cas_auto_hint_count": sum(
+            row["automatic_cas_hint"] is not None
+            and row["automatic_cas_hint"] not in row["expected_cas"]
+            for row in allowed_rows
+        ),
+        "missing_expected_hint_count": sum(
+            row["automatic_cas_hint"] is None for row in allowed_rows
+        ),
+        "resolver_rule_eligibility_violation_count": sum(
+            row["rule_eligibility_violation"] for row in rows
+        ),
+        "ambiguous_preservation_rate": (
+            float(np.mean([row["passed"] for row in ambiguous_rows]))
+            if ambiguous_rows
+            else None
+        ),
+        "latency_ms": {
+            "mean": round(float(np.mean(latencies)), 6),
+            "p95": round(float(np.percentile(latencies, 95)), 6),
+        },
+        "query_type_counts": dict(
+            sorted(Counter(row["query_type"] for row in rows).items())
+        ),
+        "split_counts": dict(sorted(Counter(row["split"] for row in rows).items())),
+        "review_status_counts": dict(
+            sorted(Counter(row["review_status"] for row in rows).items())
+        ),
+        "metric_notice": (
+            "unsafe_auto_hint_count와 resolver_rule_eligibility_violation_count는 "
+            "0이어야 합니다. 후자는 Resolver 계약만 검사하며 실제 pipeline의 Rule "
+            "미실행은 별도 통합 테스트로 검증합니다. 지연시간은 실행 장비의 개발용 "
+            "측정치입니다."
+        ),
+        "rows": rows,
+    }
+    summary["deployment_gate"] = {
+        "passed": bool(
+            summary["safety_pass_rate"] == 1.0
+            and summary["unsafe_auto_hint_count"] == 0
+            and summary["wrong_cas_auto_hint_count"] == 0
+            and summary["resolver_rule_eligibility_violation_count"] == 0
+            and summary["ambiguous_preservation_rate"] == 1.0
+        ),
+        "required": {
+            "safety_pass_rate": 1.0,
+            "unsafe_auto_hint_count": 0,
+            "wrong_cas_auto_hint_count": 0,
+            "resolver_rule_eligibility_violation_count": 0,
+            "ambiguous_preservation_rate": 1.0,
+        },
     }
     if report_path:
         write_json(report_path, summary)

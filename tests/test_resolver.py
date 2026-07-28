@@ -9,6 +9,8 @@ import pytest
 from chemiguard119.resolver import (
     RUNTIME_INDEX_KEY,
     evaluate_resolver,
+    evaluate_resolver_hint_safety,
+    find_exact_alias_spans,
     load_resolver,
     resolve_substance,
     select_evidence_cas_hint,
@@ -212,6 +214,36 @@ def test_only_authoritative_single_exact_match_can_narrow_evidence_search(
     )
 
 
+@pytest.mark.parametrize(
+    "query",
+    [
+        "염산염 누출 신고",
+        "염산성 세척제 누출",
+        "에탄올성 용제 누출",
+    ],
+)
+def test_embedded_korean_alias_never_becomes_exact_evidence_hint(
+    resolver_artifact: dict,
+    query: str,
+) -> None:
+    assert select_evidence_cas_hint_from_text(query, resolver_artifact) is None
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "염산 누출",
+        "염산이 누출됨",
+        "시설에 염산이 있습니다.",
+    ],
+)
+def test_independent_korean_alias_and_postposition_keep_exact_hint(
+    resolver_artifact: dict,
+    query: str,
+) -> None:
+    assert select_evidence_cas_hint_from_text(query, resolver_artifact) == "7647-01-0"
+
+
 def test_embedded_ascii_authoritative_name_requires_token_boundary() -> None:
     artifact = {
         "rows": [
@@ -226,7 +258,42 @@ def test_embedded_ascii_authoritative_name_requires_token_boundary() -> None:
     }
 
     assert select_evidence_cas_hint_from_text("Ethanol leak", artifact) == "64-17-5"
+    assert select_evidence_cas_hint_from_text("Ethanol이 누출됨", artifact) == "64-17-5"
     assert select_evidence_cas_hint_from_text("methanolic solvent", artifact) is None
+
+
+@pytest.mark.parametrize(
+    ("source", "alias"),
+    [
+        ("HCl이 누출됨", "HCl"),
+        ("chlorine은 누출", "chlorine"),
+        ("7647-01-0이 확인됨", "7647-01-0"),
+        ("UN 1050이 확인됨", "UN 1050"),
+    ],
+)
+def test_ascii_alias_accepts_valid_korean_postposition(
+    source: str,
+    alias: str,
+) -> None:
+    spans = find_exact_alias_spans(source, alias)
+
+    assert [surface for _start, _end, surface in spans] == [alias]
+
+
+@pytest.mark.parametrize(
+    ("source", "alias"),
+    [
+        ("CO₂ 누출", "CO"),
+        ("NO₂ 누출", "NO"),
+        ("COＣ 누출", "CO"),
+        ("alphaβ 누출", "alpha"),
+    ],
+)
+def test_unicode_letters_and_numbers_are_not_treated_as_alias_boundaries(
+    source: str,
+    alias: str,
+) -> None:
+    assert find_exact_alias_spans(source, alias) == []
 
 
 def test_mixed_primary_and_reported_alias_never_selects_one_evidence_cas() -> None:
@@ -386,3 +453,94 @@ def test_evaluation_separates_candidate_hit_from_unique_resolution(
     assert report["ambiguous_case_count"] == 1
     assert report["rows"][0]["candidate_top1_hit"] is True
     assert report["rows"][0]["unique_resolution_correct"] is False
+
+
+def test_hint_safety_evaluation_separates_allow_withhold_and_ambiguity(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    resolver_artifact: dict,
+) -> None:
+    model_path = tmp_path / "resolver.joblib"
+    model_path.write_bytes(b"resolver-test-artifact")
+    evaluation_path = tmp_path / "resolver-hint-safety.csv"
+    fieldnames = (
+        "case_id",
+        "query",
+        "query_type",
+        "expected_behavior",
+        "expected_cas",
+        "review_status",
+        "source_type",
+        "source_reference",
+        "split",
+        "duplicate_group",
+    )
+    with evaluation_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(
+            [
+                {
+                    "case_id": "ALLOW-1",
+                    "query": "염산 누출",
+                    "query_type": "authoritative_name",
+                    "expected_behavior": "ALLOW_EXACT_HINT",
+                    "expected_cas": "7647-01-0",
+                    "review_status": "TEST",
+                    "source_type": "TEST_FIXTURE",
+                    "source_reference": "test_resolver.py",
+                    "split": "locked_test",
+                    "duplicate_group": "hcl-positive",
+                },
+                {
+                    "case_id": "WITHHOLD-1",
+                    "query": "염산염 누출",
+                    "query_type": "embedded_suffix",
+                    "expected_behavior": "WITHHOLD_AUTO_HINT",
+                    "expected_cas": "7647-01-0",
+                    "review_status": "TEST",
+                    "source_type": "TEST_FIXTURE",
+                    "source_reference": "test_resolver.py",
+                    "split": "locked_test",
+                    "duplicate_group": "hcl-negative",
+                },
+                {
+                    "case_id": "AMBIGUOUS-1",
+                    "query": "알코올",
+                    "query_type": "ambiguous_alias",
+                    "expected_behavior": "PRESERVE_AMBIGUITY",
+                    "expected_cas": "64-17-5|67-56-1",
+                    "review_status": "TEST",
+                    "source_type": "TEST_FIXTURE",
+                    "source_reference": "test_resolver.py",
+                    "split": "locked_test",
+                    "duplicate_group": "alcohol-ambiguous",
+                },
+            ]
+        )
+    monkeypatch.setattr(
+        "chemiguard119.resolver.load_resolver",
+        lambda _model_path: resolver_artifact,
+    )
+
+    report = evaluate_resolver_hint_safety(model_path, evaluation_path)
+
+    assert report["metrics_version"] == "resolver-hint-safety-v1"
+    assert report["case_count"] == 3
+    assert report["passed_count"] == 3
+    assert report["safety_pass_rate"] == 1.0
+    assert report["unsafe_auto_hint_count"] == 0
+    assert report["wrong_cas_auto_hint_count"] == 0
+    assert report["resolver_rule_eligibility_violation_count"] == 0
+    assert report["ambiguous_preservation_rate"] == 1.0
+    assert report["deployment_gate"]["passed"] is True
+    assert report["latency_ms"]["p95"] >= 0
+
+    monkeypatch.setattr(
+        "chemiguard119.resolver.select_evidence_cas_hint_from_text",
+        lambda _query, _artifact: "7647-01-0",
+    )
+    blocked = evaluate_resolver_hint_safety(model_path, evaluation_path)
+
+    assert blocked["unsafe_auto_hint_count"] == 2
+    assert blocked["deployment_gate"]["passed"] is False

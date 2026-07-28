@@ -108,6 +108,24 @@ def test_parser_prefers_longest_exact_alias_despite_source_spacing(
     assert mention["resolver"]["candidates"][0]["cas_number"] == "7681-52-9"
 
 
+@pytest.mark.parametrize(
+    "source",
+    [
+        "염산염 누출 신고",
+        "염산성 세척제 누출",
+    ],
+)
+def test_parser_does_not_promote_embedded_korean_alias(
+    resolver_artifact: dict,
+    source: str,
+) -> None:
+    parsed = deterministic_parse(source, resolver_artifact)
+
+    assert parsed["substance_mentions"] == []
+    assert parsed["missing_fields"] == ["substance"]
+    assert parsed["needs_substance_confirmation"] is True
+
+
 def test_parser_validator_blocks_mentions_not_grounded_in_source() -> None:
     source = "염산 누출 의심"
     hallucinated = {

@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from chemiguard119.resolver import resolve_substance
+from chemiguard119.resolver import find_exact_alias_spans, resolve_substance
 from chemiguard119.utils import normalize_text
 
 
@@ -93,21 +93,10 @@ def deterministic_parse(text: str, resolver_artifact: dict[str, Any]) -> dict[st
         alias = str(row["alias_text"]).strip()
         if len(alias.strip()) < 2:
             continue
-        if re.fullmatch(r"[A-Za-z0-9]+", alias.strip()) and len(alias.strip()) <= 4:
-            pattern = re.compile(
-                rf"(?<![A-Za-z0-9]){re.escape(alias)}(?![A-Za-z0-9])",
-                re.IGNORECASE,
-            )
-        else:
-            # 원천별 띄어쓰기 차이는 같은 정확 별칭으로 취급한다. 예를 들어
-            # artifact의 ``차아염소산 나트륨``은 신고문의 ``차아염소산나트륨``과
-            # 일치해야 더 짧은 ``아염소산나트륨`` 후보보다 먼저 선택할 수 있다.
-            alias_pattern = r"\s*".join(
-                re.escape(part) for part in re.split(r"\s+", alias)
-            )
-            pattern = re.compile(alias_pattern, re.IGNORECASE)
-        for match in pattern.finditer(text):
-            matches.append((match.start(), match.end(), row, match.group(0)))
+        # Resolver와 같은 문장 내 exact matcher를 사용해 ``염산염`` 안의
+        # ``염산``처럼 다른 표현에 포함된 부분 문자열을 물질명으로 승격하지 않는다.
+        for start, end, surface in find_exact_alias_spans(text, alias):
+            matches.append((start, end, row, surface))
 
     found_by_cas: dict[str, dict[str, Any]] = {}
     selected_spans: list[tuple[int, int]] = []
