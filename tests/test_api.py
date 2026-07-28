@@ -335,6 +335,37 @@ def test_readiness_and_metadata_report_approved_conflict_review_capability(
     assert metadata.json()["expert_reviewed"] is True
 
 
+def test_runtime_uses_precomputed_conflict_capability(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cached = runtime.conflict_review_capability(PUBLIC_SOURCE_PILOT_POLICY)
+    precomputed_runtime = ModelRuntime(
+        db_path=runtime.db_path,
+        resolver_model_path=runtime.resolver_model_path,
+        retriever_model_path=runtime.retriever_model_path,
+        config_dir=runtime.config_dir,
+        resolver_artifact=runtime.resolver_artifact,
+        retriever_artifact=runtime.retriever_artifact,
+        loaded_at_utc=runtime.loaded_at_utc,
+        conflict_capabilities={PUBLIC_SOURCE_PILOT_POLICY: cached},
+    )
+    monkeypatch.setattr(
+        api,
+        "_conflict_review_capability",
+        lambda *_args, **_kwargs: pytest.fail(
+            "요청 중 config를 다시 읽으면 안 됩니다."
+        ),
+    )
+
+    assert (
+        precomputed_runtime.readiness(PUBLIC_SOURCE_PILOT_POLICY)[
+            "conflict_review_capability"
+        ]
+        == cached
+    )
+
+
 def test_approved_direct_rule_makes_conflict_review_ready_without_crosswalk(
     runtime: ModelRuntime,
 ) -> None:

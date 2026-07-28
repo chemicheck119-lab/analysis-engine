@@ -330,6 +330,7 @@ python -m pip check
 
 - [아키텍처](docs/ARCHITECTURE.md): 구성요소와 전체 처리 흐름
 - [API](docs/API.md): 백엔드·프론트 연동 계약
+- [FE·BE·AI 연동](docs/BACKEND_INTEGRATION.md): 저장소별 책임, 호출·병합 순서
 - [데이터와 모델](docs/DATA_AND_MODEL.md): 출처, 전처리, 모델 역할과 평가
 - [모델 평가](docs/EVALUATION.md): 지표 정의, 기준선, 실패 원인 분리
 - [배포](docs/DEPLOYMENT.md): artifact, Secret, Docker, CI/CD, 롤백

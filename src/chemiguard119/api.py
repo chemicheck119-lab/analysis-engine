@@ -289,6 +289,7 @@ class ModelRuntime:
     retriever_artifact: dict[str, Any]
     loaded_at_utc: str
     integrity: dict[str, Any] | None = None
+    conflict_capabilities: dict[str, dict[str, Any]] | None = None
 
     @classmethod
     def load(
@@ -305,6 +306,10 @@ class ModelRuntime:
             retriever_model_path=retriever_model_path,
             config_dir=config_dir,
         )
+        conflict_capabilities = {
+            policy_mode: _conflict_review_capability(config_dir, policy_mode)
+            for policy_mode in SUPPORTED_POLICY_MODES
+        }
         return cls(
             db_path=db_path,
             resolver_model_path=resolver_model_path,
@@ -314,7 +319,18 @@ class ModelRuntime:
             retriever_artifact=load_retriever(retriever_model_path),
             loaded_at_utc=datetime.now(timezone.utc).isoformat(),
             integrity=integrity,
+            conflict_capabilities=conflict_capabilities,
         )
+
+    def conflict_review_capability(self, policy_mode: str) -> dict[str, Any]:
+        """변경 불가능한 배포 config의 계산 결과를 요청 경로에서 재사용한다."""
+
+        if self.conflict_capabilities is not None:
+            cached = self.conflict_capabilities.get(policy_mode)
+            if cached is not None:
+                return cached
+        # 단위 테스트처럼 runtime을 직접 주입한 경우에는 config 변경을 반영한다.
+        return _conflict_review_capability(self.config_dir, policy_mode)
 
     def readiness(
         self,
@@ -326,10 +342,7 @@ class ModelRuntime:
             "retriever": self.retriever_model_path.is_file(),
             "config": self.config_dir.is_dir(),
         }
-        conflict_review_capability = _conflict_review_capability(
-            self.config_dir,
-            policy_mode,
-        )
+        conflict_review_capability = self.conflict_review_capability(policy_mode)
         integrity = self.integrity or {
             "status": "INJECTED_OR_LEGACY_RUNTIME",
             "manifest_sha256_verified": False,
@@ -455,9 +468,9 @@ def _authorize(
         )
     active_runtime = getattr(request.app.state, "runtime", None)
     if active_runtime is not None:
-        capability = active_runtime.readiness(request.app.state.rule_policy)[
-            "conflict_review_capability"
-        ]
+        capability = active_runtime.conflict_review_capability(
+            request.app.state.rule_policy
+        )
         if capability.get("configuration_valid") is not True:
             raise APIBoundaryError(
                 "CONFLICT_POLICY_CONFIGURATION_INVALID",
@@ -671,7 +684,7 @@ def _public_analysis_response(
         rule_wrapper.get("executed") is True
         and _result_expert_reviewed(policy_mode, rule_result)
     )
-    capability = runtime.readiness(policy_mode)["conflict_review_capability"]
+    capability = runtime.conflict_review_capability(policy_mode)
     return AnalysisResponse(
         analysis_id=analysis_id,
         request_id=request_id,
@@ -1144,9 +1157,9 @@ def create_app(
                 "Rule 출력 안전 검증에 실패했습니다.",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-        capability = active_runtime.readiness(request.app.state.rule_policy)[
-            "conflict_review_capability"
-        ]
+        capability = active_runtime.conflict_review_capability(
+            request.app.state.rule_policy
+        )
         return {
             "status": result.get("status"),
             "confirmation_ids": {

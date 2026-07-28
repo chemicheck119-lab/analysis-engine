@@ -1,0 +1,103 @@
+{
+  "contract_version": "chemicheck119-cross-repo-v1",
+  "api_schema_version": "chemiguard119-api-v1",
+  "service": {
+    "id": "chemicheck119-model-api",
+    "repository": "https://github.com/chemicheck119/llm",
+    "primary_endpoint": {
+      "method": "POST",
+      "path": "/api/v1/incidents/analyze"
+    },
+    "metadata_path": "/api/v1/meta",
+    "liveness_path": "/health/live",
+    "readiness_path": "/health/ready"
+  },
+  "call_path": [
+    {
+      "from": "FE_Repository",
+      "to": "BE_Repository",
+      "rule": "프론트엔드는 서비스 백엔드의 사고 분석 API만 호출한다."
+    },
+    {
+      "from": "BE_Repository",
+      "to": "llm",
+      "rule": "백엔드만 내부 모델 API와 X-API-Key를 사용한다."
+    }
+  ],
+  "security": {
+    "model_api_public_browser_access": false,
+    "api_key_header": "X-API-Key",
+    "request_id_header": "X-Request-Id",
+    "api_key_owner": "BE_Repository deployment secret",
+    "api_key_minimum_length": 32
+  },
+  "client_policy": {
+    "connect_timeout_seconds": 2,
+    "response_timeout_seconds": 15,
+    "max_transient_retries": 1,
+    "retryable_http_statuses": [
+      503
+    ],
+    "never_retry_http_statuses": [
+      401,
+      422,
+      500
+    ],
+    "request_id_is_idempotency_key": false
+  },
+  "compatibility": {
+    "accepted_api_schema_versions": [
+      "chemiguard119-api-v1"
+    ],
+    "required_response_headers": [
+      "X-Request-Id",
+      "X-API-Schema-Version",
+      "X-Service-Id"
+    ],
+    "required_analysis_response_fields": [
+      "schema_version",
+      "analysis_id",
+      "request_id",
+      "incident_id",
+      "state",
+      "input_fingerprint",
+      "model_outputs",
+      "evidence",
+      "conflict_review",
+      "confirmation_gate",
+      "required_next_steps",
+      "provenance",
+      "safety_notice"
+    ]
+  },
+  "ownership": {
+    "FE_Repository": [
+      "태블릿 표시 상태",
+      "사용자 입력",
+      "백엔드 DTO 렌더링"
+    ],
+    "BE_Repository": [
+      "사용자 인증",
+      "사고 CRUD",
+      "현장 확인 레코드",
+      "모델 API 인증과 호출",
+      "분석 결과 저장",
+      "프론트용 DTO 변환"
+    ],
+    "llm": [
+      "신고문 구조화",
+      "물질 후보 검색",
+      "시설 이력 후보 검색",
+      "근거 검색",
+      "충돌 규칙 검토",
+      "모델과 데이터 provenance"
+    ]
+  },
+  "merge_order": [
+    "llm 계약과 모델 API 변경 PR 병합",
+    "BE_Repository 모델 클라이언트와 계약 테스트 PR 병합",
+    "FE_Repository 백엔드 DTO 연동 PR 병합",
+    "세 서비스 staging 통합 테스트",
+    "배포 태그 고정 후 운영 승격"
+  ]
+}

@@ -249,4 +249,5 @@ flowchart TB
 - [API 계약](API.md)
 - [데이터와 모델](DATA_AND_MODEL.md)
 - [배포](DEPLOYMENT.md)
+- [FE·BE·AI 연동 및 병합 계약](BACKEND_INTEGRATION.md)
 - [안전 및 한계](SAFETY_AND_LIMITATIONS.md)

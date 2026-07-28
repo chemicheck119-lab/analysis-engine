@@ -7,6 +7,7 @@ import pytest
 
 import chemiguard119.retrieval as retrieval_module
 from chemiguard119.retrieval import (
+    RUNTIME_INDEX_KEY,
     _append_missing_cas_source_representatives,
     _rrf,
     _select_source_diverse_ids,
@@ -139,6 +140,24 @@ def test_hybrid_search_uses_exact_bm25_tfidf_and_rrf(
     assert "공개 근거 대조가 완료되지 않은" in result["cas_link_warning"]
     assert "body" not in result["results"][0]
     assert "유독성 염소가스" in result["results"][0]["body_preview"]
+
+
+def test_loaded_retriever_reuses_document_lookup_index(
+    retriever_fixture: tuple[Path, dict],
+) -> None:
+    db_path, artifact = retriever_fixture
+    runtime_index = artifact[RUNTIME_INDEX_KEY]
+
+    search_evidence(
+        "차아염소산나트륨",
+        db_path,
+        artifact,
+        cas_hint="7681-52-9",
+    )
+
+    assert artifact[RUNTIME_INDEX_KEY] is runtime_index
+    assert runtime_index["row_by_id"]["E1"]["source"] == "CAMEO"
+    assert runtime_index["official_ids_by_cas"]["7681-52-9"] == {"E1"}
 
 
 def test_valid_cas_hint_with_no_loaded_detail_never_returns_another_substance(

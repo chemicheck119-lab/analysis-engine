@@ -411,10 +411,19 @@ Git commit
 - [ ] 원천 데이터 갱신 시 새 bundle과 새 manifest 생성
 - [ ] rollback bundle 유지
 
+배포 직후 공통 계약은 API Key를 환경변수로 주입한 다음 한 명령으로 검사할 수 있습니다.
+
+```bash
+CHEMICHECK119_MODEL_API_KEY="배포-Secret" \
+PYTHONPATH=src python scripts/integration/smoke_model_api.py \
+  --base-url https://모델-api-주소
+```
+
 ## 15. 관련 문서
 
 - [README](../README.md)
 - [아키텍처](ARCHITECTURE.md)
 - [API](API.md)
+- [FE·BE·AI 연동 및 병합 계약](BACKEND_INTEGRATION.md)
 - [데이터와 모델](DATA_AND_MODEL.md)
 - [안전 및 한계](SAFETY_AND_LIMITATIONS.md)
