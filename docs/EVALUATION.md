@@ -40,6 +40,7 @@ python scripts/evaluation/evaluate_verified_pairs.py \
 | 파일 | 건수 | 목적 | 상태 |
 |---|---:|---|---|
 | `resolver_regression_queries.csv` | 21 | CAS·명칭·별칭·화학식 회귀 검사 | 내부 초안 |
+| `resolver_hint_safety_queries.csv` | 12 | 자동 CAS 힌트 허용·보류·모호성 보존 | 내부 초안 |
 | `retrieval_regression_queries.csv` | 10 | KOSHA·CAMEO 근거 검색 회귀 검사 | 내부 초안 |
 | `incident_parser_seed.jsonl` | 6 | 신고문 구조화 데이터 형식 시드 | 학습·성능평가 불가 |
 
@@ -62,6 +63,7 @@ chemiguard119 evaluate \
   --resolver-model artifacts/resolver.joblib \
   --retriever-model artifacts/retriever.joblib \
   --resolver-evaluation data/evaluation/resolver_regression_queries.csv \
+  --resolver-safety-evaluation data/evaluation/resolver_hint_safety_queries.csv \
   --retriever-evaluation data/evaluation/retrieval_regression_queries.csv \
   --report-dir outputs/modeling \
   --json
@@ -71,6 +73,7 @@ chemiguard119 evaluate \
 
 ```text
 outputs/modeling/resolver_evaluation.json
+outputs/modeling/resolver_hint_safety_evaluation.json
 outputs/modeling/retriever_evaluation.json
 ```
 
@@ -86,6 +89,45 @@ outputs/modeling/retriever_evaluation.json
 
 후보가 1위에 있더라도 여러 CAS가 같은 별칭을 사용하면 단일 물질로 확정한 것으로 계산하지
 않습니다.
+
+### 4.1 자동 CAS 힌트 안전 회귀
+
+`resolver_hint_safety_queries.csv`는 일반 후보 정확도와 별도로 다음 세 동작을 검사합니다.
+
+| 기대 동작 | 의미 |
+|---|---|
+| `ALLOW_EXACT_HINT` | 독립된 공식명은 기대 CAS로 근거 검색을 좁힐 수 있음 |
+| `WITHHOLD_AUTO_HINT` | 부분 문자열·다중 물질에서는 단일 CAS 힌트를 보류 |
+| `PRESERVE_AMBIGUITY` | 같은 표현이 여러 CAS면 모호 상태와 전체 후보를 유지 |
+
+보고서의 배포 차단 지표는 다음과 같습니다.
+
+| 지표 | 통과 기준 |
+|---|---:|
+| `unsafe_auto_hint_count` | 0 |
+| `wrong_cas_auto_hint_count` | 0 |
+| `resolver_rule_eligibility_violation_count` | 0 |
+| `ambiguous_preservation_rate` | 1.0 |
+
+`resolver_rule_eligibility_violation_count`는 Resolver 응답이나 후보가 Rule 입력 가능
+상태로 잘못 승격됐는지만 검사합니다. 실제 pipeline의 Rule 미실행은 별도 통합 테스트로
+검증합니다. CAS 힌트는 근거 검색용일 뿐이며 현장 확인 두 건 없이 Rule Engine을 실행할 수
+없습니다.
+
+다섯 기준 중 하나라도 실패하면 `deployment_gate.passed=false`가 되고 `evaluate` 명령은
+`BLOCKED_SAFETY_GATE`로 종료합니다. 전체 오프라인 pipeline도 release manifest를 만들기
+전에 실패합니다.
+
+2026-07-28 Python 3.11 개발 환경과 4,300종 artifact에서 합성·내부 회귀 12건을 실행한
+결과 12건 모두 통과했고 위험 힌트와 Resolver Rule 입력 승인 위반은 0건이었습니다. 평균
+지연시간은 4.300ms, p95는 6.361ms였습니다. 이 시간은 해당 장비에서 Resolver 호출과 문장 내 별칭
+스캔을 함께 측정한 값으로 운영 SLO가 아닙니다.
+
+수정 전에는 `염산염`, `염산성`, `톨루엔느`, `에탄올성`의 일부 문자열이 공식 물질명
+exact로 승격돼 해당 CAS 문서만 반환되는 사례를 재현했습니다. 공유 원문 span matcher를
+적용한 뒤에는 이 표현들에서 CAS 힌트를 보류합니다. 데이터의 `review_status`는 여전히
+`DRAFT_INTERNAL_REGRESSION`이므로 현장 정확도나 외부 검증 성능으로 인용할 수 없습니다.
+보고서에는 평가 CSV와 resolver artifact의 SHA-256을 함께 기록합니다.
 
 ## 5. Retriever 지표
 

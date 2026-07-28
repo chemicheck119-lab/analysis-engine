@@ -316,6 +316,7 @@ LM Studio 백엔드는 다음 실험에만 사용할 수 있습니다.
 평가 입력은 `data/evaluation/`에 있습니다.
 
 - `resolver_regression_queries.csv`: CAS, 국영문명, 별칭, 화학식, 모호 표현
+- `resolver_hint_safety_queries.csv`: 부분 문자열·다중 물질·모호 표현의 자동 CAS 힌트 잠금 회귀
 - `retrieval_regression_queries.csv`: KOSHA·CAMEO 근거의 기대 출처·CAS
 - `incident_parser_seed.jsonl`: 신고문 구조화 시드
 
@@ -327,6 +328,9 @@ LM Studio 백엔드는 다음 실험에만 사용할 수 있습니다.
 | Resolver 단일후보 확정 정확도 | 21 | 0.9524 |
 | Resolver Top-3 Recall | 21 | 1.0000 |
 | Resolver MRR | 21 | 1.0000 |
+| 자동 CAS 힌트 안전 통과율 | 12 | 1.0000 |
+| 금지된 자동 CAS 힌트 | 12 | 0건 |
+| Resolver Rule 입력 승인 위반 | 12 | 0건 |
 | Retriever 전체 흐름 Recall@5 | 10 | 0.9000 |
 | Retriever 전체 흐름 MRR@8 | 10 | 0.8500 |
 | Retriever 단독·정답 CAS 제공 Recall@5 | 10 | 1.0000 |
@@ -337,6 +341,12 @@ LM Studio 백엔드는 다음 실험에만 사용할 수 있습니다.
 이는 작은 내부 개발셋의 회귀 지표입니다. 현장 정확도, 전체 물질 성능, 사고 대응 성공률로
 인용하면 안 됩니다. 릴리스 워크플로가 같은 평가를 다시 실행하고 결과 파일을 artifact와 함께
 보관합니다. 지표 정의와 실패 분석은 [모델 평가](EVALUATION.md)를 참고하세요.
+
+문장 안의 물질명은 Resolver와 결정적 파서가 같은 원문 span matcher로 찾습니다. 별칭
+내부의 띄어쓰기 차이는 허용하지만, 다른 한글·영숫자에 붙은 부분 문자열은 exact로 승격하지
+않습니다. 따라서 `염산 누출`은 염산 후보를 만들지만 `염산염`, `염산성`은 염산 CAS로
+근거 검색을 제한하지 않습니다. 찾지 못한 경우에는 잘못된 CAS를 선택하는 대신 CAS 없는
+일반 근거 검색과 현장 확인 요청으로 남깁니다.
 
 ## 13. 파인튜닝 위치
 

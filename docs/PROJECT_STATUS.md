@@ -12,6 +12,7 @@
 |---|---|---|
 | 신고문 구조화 | 부분 완료 | 결정적 파서 구현, 내부 seed 6건뿐이라 성능 평가 불충분 |
 | 물질 후보 검색 | 부분 완료 | 4,300개 카탈로그, 내부 회귀 21건 Top-1 0.9524·Top-3 Recall 1.0 |
+| 자동 CAS 힌트 안전성 | 부분 완료 | 합성·내부 회귀 12건 통과, 부분 문자열 위험 힌트 0건 |
 | 업체 이력 후보 | 부분 완료 | ICIS·PRTR 과거 이력 후보 168,424건, 현재 재고 확정 기능 아님 |
 | 공식 근거 검색 | 부분 완료 | 근거 문서 5,858건, 내부 회귀 10건 Recall@5 0.9·MRR@8 0.85 |
 | 충돌 검토 | 파일럿 | 공개 검증 CAMEO CAS 6종, 15개 조합 회귀 검사 |
@@ -31,12 +32,27 @@
 Python 3.11.15 환경에서 다음을 확인했습니다.
 
 ```text
-전체 테스트: 154 passed
+전체 테스트: 173 passed
 Ruff: 통과
 형식 검사: 통과
 compileall: 통과
 pip check: 통과
 ```
+
+추가한 자동 CAS 힌트 안전 회귀 결과:
+
+```text
+cases: 12
+passed: 12
+unsafe_auto_hint_count: 0
+wrong_cas_auto_hint_count: 0
+resolver_rule_eligibility_violation_count: 0
+ambiguous_preservation_rate: 1.0
+mean latency: 4.300ms
+p95 latency: 6.361ms
+```
+
+이는 `DRAFT_INTERNAL_REGRESSION` 합성·내부 회귀 결과이며 현장 정확도가 아닙니다.
 
 원천 CSV 8개로 임시 release artifact를 다시 생성한 결과:
 
@@ -72,13 +88,15 @@ conflict executed: false
 3. 공개 검증 CAMEO 범위가 CAS 6종·물질쌍 15개로 제한됩니다.
 4. 검증된 스테이징 URL과 실제 서버 배포 성공 기록이 없습니다.
 5. 릴리스 artifact는 반드시 고정된 Python 3.11 환경에서 새로 생성해야 합니다.
+6. 미확인 응답에 중첩 위험 필드를 주입하는 경우의 strict 출력 계약이 불충분합니다.
+7. Uvicorn access log와 예외 traceback의 민감정보 제거가 아직 공통 정책으로 고정되지 않았습니다.
 
 ### P1 — 제한된 파일럿 전에 필요한 항목
 
 1. parser 6건, resolver 21건, retrieval 10건인 평가셋을 독립 보류셋으로 확장해야 합니다.
 2. API 동시성·부하·timeout·장애 복구 시험이 없습니다.
 3. 중앙 로그 저장소, 보존 기간, 알림 기준이 정해지지 않았습니다.
-4. 최신 GitHub Actions 실행 상태를 현재 GitHub 앱 권한으로 확인할 수 없습니다.
+4. 현재 작업 브랜치는 아직 원격 PR과 GitHub Actions 실행이 없습니다.
 
 ### P2 — 성능 고도화 항목
 
@@ -95,16 +113,19 @@ conflict executed: false
 
 ## 5. 다음 권장 순서
 
-1. 구조화 운영 로그 PR을 병합하고 스테이징 로그에서 민감정보 미노출을 확인합니다.
-2. parser·resolver·retrieval 독립 평가셋의 스키마와 수집 양식을 먼저 확정합니다.
-3. KOSHA 상세 근거와 CAMEO 공개 검증 범위를 우선순위 CAS부터 확대합니다.
-4. Python 3.11 릴리스 workflow로 bundle을 생성하고 스테이징에 배포합니다.
-5. 기준선 평가가 안정된 뒤 임베딩·reranker를 오프라인 실험으로 비교합니다.
+1. 자동 CAS 힌트 경계·안전 회귀 PR을 검토하고 병합합니다.
+2. 미확인 응답의 허용 필드를 strict schema로 제한합니다.
+3. Uvicorn query access log와 예외 traceback의 민감정보 노출 경로를 차단합니다.
+4. Retriever의 실제 정답 evidence·MSDS 장을 포함한 관련성 골드셋을 만듭니다.
+5. 데이터 출처·라이선스 manifest를 릴리스 gate와 연결합니다.
+6. Python 3.11 릴리스 workflow로 bundle을 생성하고 스테이징에 배포합니다.
+7. 기준선 평가가 안정된 뒤 임베딩·reranker를 오프라인 실험으로 비교합니다.
 
 ## 6. GitHub 관리 상태
 
-- 원격 `main`: PR #4 병합 commit까지 로컬 Git으로 확인
-- PR #5: 모델 API 검증 `test-and-build` 성공, mergeable 상태 확인
+- 원격 `main`: GitHub에서 PR #5 병합 완료 확인
+- 로컬 기준점: 병합된 PR #5 head `ee09ec3`
+- 현재 작업 브랜치: `codex/p0-safe-substance-hints`
 - GitHub 앱: PR·Actions 읽기는 가능하지만 쓰기 작업은 `403`
 - 사용자 터미널 `gh`: `hywznn` 계정과 `repo` scope 인증 확인
 - Codex 샌드박스: keyring과 GitHub DNS에 접근하지 못해 원격 쓰기 미검증
