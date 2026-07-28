@@ -12,6 +12,11 @@
     "liveness_path": "/health/live",
     "readiness_path": "/health/ready"
   },
+  "fixtures": {
+    "unconfirmed_request": "examples/api/incident_unconfirmed_request.json",
+    "unconfirmed_response": "examples/api/incident_unconfirmed_response.json",
+    "confirmed_request": "examples/api/incident_confirmed_request.json"
+  },
   "call_path": [
     {
       "from": "FE_Repository",
@@ -44,6 +49,51 @@
       500
     ],
     "request_id_is_idempotency_key": false
+  },
+  "presentation_policy": {
+    "candidate_score_semantics": "RANKING_NOT_PROBABILITY",
+    "facility_history_semantics": "HISTORICAL_CANDIDATE_NOT_CURRENT_INVENTORY",
+    "planned_actions_semantics": "UNVALIDATED_USER_INPUT_NOT_AI_RECOMMENDATION",
+    "material_search_capabilities": [
+      "CAS_NUMBER",
+      "STANDARD_NAME",
+      "ALIAS"
+    ],
+    "material_search_not_yet_supported": [
+      "PROPERTY_ONLY_IDENTIFICATION"
+    ],
+    "unconfirmed_states": [
+      "AWAITING_SUBSTANCE_CONFIRMATION",
+      "AWAITING_INCIDENT_CONFIRMATION",
+      "AWAITING_FACILITY_CONFIRMATION"
+    ],
+    "unconfirmed": {
+      "risk_display_allowed": false,
+      "specific_reaction_display_allowed": false,
+      "recommended_response_display_allowed": false,
+      "facility_candidate_label": "과거 공개 이력 기반 시설물질 후보",
+      "required_conflict_review_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+      "required_conflict_executed": false
+    },
+    "confirmed": {
+      "risk_display_requires_all_confirmations": true,
+      "risk_display_requires_executed_review": true,
+      "ordinal_scale_is_probability": false,
+      "low_means_safe": false,
+      "required_disclosures": [
+        "source_url",
+        "rule_version",
+        "expert_reviewed",
+        "final_decision_authority"
+      ]
+    },
+    "v1_pair_limit": {
+      "confirmed_incident_substances": 1,
+      "confirmed_facility_substances": 1,
+      "conflict_reviews": 1,
+      "multiple_facility_candidates_before_confirmation_allowed": true,
+      "multiple_executed_pair_reviews_in_one_response_allowed": false
+    }
   },
   "compatibility": {
     "accepted_api_schema_versions": [

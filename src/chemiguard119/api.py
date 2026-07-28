@@ -21,6 +21,7 @@ from typing import Annotated, Any, AsyncIterator
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
 from chemiguard119 import __version__
 from chemiguard119.api_models import (
@@ -35,6 +36,8 @@ from chemiguard119.api_models import (
     FacilityHistorySearchRequest,
     IncidentAnalyzeRequest,
     ResolveRequest,
+    UnconfirmedConflictReview,
+    contains_unconfirmed_risk_output,
 )
 from chemiguard119.paths import (
     CONFIG_DIR,
@@ -580,31 +583,10 @@ def _confirmation_gate(payload: IncidentAnalyzeRequest) -> dict[str, Any]:
     }
 
 
-def _contains_risk_decision(value: Any) -> bool:
-    risk_fields = {
-        "severity",
-        "risk_level",
-        "conflict_level",
-        "rule_id",
-        "hazard_codes",
-        "brief_text",
-        "required_checks",
-        "final_decision",
-    }
-    if isinstance(value, dict):
-        for key, item in value.items():
-            if key in risk_fields and item not in (None, "", [], {}):
-                return True
-            if _contains_risk_decision(item):
-                return True
-    elif isinstance(value, list):
-        return any(_contains_risk_decision(item) for item in value)
-    return False
-
-
 def _enforce_confirmation_gate(
     payload: IncidentAnalyzeRequest,
     pipeline_result: dict[str, Any],
+    facility_history: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """후보만 있는 결과가 위험 확정 응답으로 승격되는 것을 API에서 재차 차단한다."""
 
@@ -613,16 +595,37 @@ def _enforce_confirmation_gate(
         return gate
 
     review = pipeline_result.get("rule_review") or {}
+    try:
+        UnconfirmedConflictReview.model_validate(review)
+    except ValidationError as error:
+        raise APIBoundaryError(
+            "UNCONFIRMED_RISK_OUTPUT_BLOCKED",
+            "두 물질의 현장 확인 레코드가 없어 위험도·충돌 확정 출력을 차단했습니다.",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            retryable=False,
+        ) from error
+    expected_pipeline_status = {
+        (False, False): "NEEDS_SUBSTANCE_CONFIRMATION",
+        (True, False): "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+        (False, True): "NEEDS_INCIDENT_SUBSTANCE_CONFIRMATION",
+    }[(gate["incident_confirmed"], gate["facility_confirmed"])]
+    expected_missing = {
+        role
+        for role, confirmed in (
+            ("incident_cas", gate["incident_confirmed"]),
+            ("facility_cas", gate["facility_confirmed"]),
+        )
+        if not confirmed
+    }
     candidate_outputs = {
         "parsed_report": pipeline_result.get("parsed_report"),
         "substance_candidates": pipeline_result.get("substance_candidates"),
+        "facility_history_candidates": facility_history,
     }
-    completed_statuses = {"COMPLETED", "COMPLETED_WITH_WARNINGS", "COMPLETED_DEMO"}
     if (
-        review.get("executed") is True
-        or _contains_risk_decision(review)
-        or _contains_risk_decision(candidate_outputs)
-        or pipeline_result.get("status") in completed_statuses
+        contains_unconfirmed_risk_output(candidate_outputs)
+        or pipeline_result.get("status") != expected_pipeline_status
+        or set(review["missing_confirmations"]) != expected_missing
     ):
         raise APIBoundaryError(
             "UNCONFIRMED_RISK_OUTPUT_BLOCKED",
@@ -644,7 +647,6 @@ def _public_analysis_response(
     rule_policy: str,
     facility_history: dict[str, Any] | None = None,
 ) -> AnalysisResponse:
-    confirmation_gate = _enforce_confirmation_gate(payload, pipeline_result)
     if pipeline_result.get("status") == "INVALID_INPUT":
         raise APIBoundaryError(
             "INVALID_PIPELINE_INPUT",
@@ -659,6 +661,11 @@ def _public_analysis_response(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             retryable=False,
         )
+    confirmation_gate = _enforce_confirmation_gate(
+        payload,
+        pipeline_result,
+        facility_history,
+    )
 
     parsed = deepcopy(pipeline_result.get("parsed_report") or {})
     parsed.pop("source_text", None)
