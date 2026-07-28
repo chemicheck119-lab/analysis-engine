@@ -4,7 +4,9 @@ services:
       context: .
     image: chemicheck119-model-api:local
     environment:
-      CHEMIGUARD119_ENVIRONMENT: production
+      # 외부 bind mount artifact는 시작 후 호스트에서 교체될 수 있으므로 로컬 개발 전용입니다.
+      # staging·production은 Dockerfile.bundle로 만든 불변 이미지를 사용합니다.
+      CHEMIGUARD119_ENVIRONMENT: development
       CHEMIGUARD119_API_KEY: ${CHEMIGUARD119_API_KEY:?CHEMIGUARD119_API_KEY를 설정하세요}
       CHEMIGUARD119_RUNTIME_MANIFEST_SHA256: ${CHEMIGUARD119_RUNTIME_MANIFEST_SHA256:?runtime manifest SHA-256을 설정하세요}
       CHEMIGUARD119_GIT_COMMIT: ${CHEMIGUARD119_GIT_COMMIT:?40자리 릴리스 Git commit을 설정하세요}

@@ -11,7 +11,9 @@ import argparse
 import importlib
 import inspect
 import json
+import os
 import platform
+import re
 import shlex
 import sys
 from datetime import datetime, timezone
@@ -481,11 +483,34 @@ def _train(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _evaluate(args: argparse.Namespace) -> dict[str, Any]:
+    from chemiguard119.evaluation_contract import audit_evaluation_dataset
+
     args.report_dir.mkdir(parents=True, exist_ok=True)
     payload: dict[str, Any] = {
         "status": "COMPLETED",
         "evaluation_warning": "내부 회귀셋이며 현장 성능 주장 금지",
+        "evaluation_profile": args.evaluation_profile,
+        "evaluation_contracts": {},
     }
+    contract_paths = {
+        "resolver": args.resolver_evaluation,
+        "resolver_hint_safety": args.resolver_safety_evaluation,
+        "retriever_legacy": args.retriever_evaluation,
+        "retriever_sections": args.retriever_section_evaluation,
+    }
+    payload["evaluation_contracts"] = {
+        name: audit_evaluation_dataset(path, args.evaluation_profile)
+        for name, path in contract_paths.items()
+    }
+    blocked_contracts = [
+        name
+        for name, report in payload["evaluation_contracts"].items()
+        if not report["passed"]
+    ]
+    if blocked_contracts:
+        payload["status"] = "BLOCKED_EVALUATION_GATE"
+        payload["blocked_contracts"] = blocked_contracts
+        return payload
     if args.only in {"all", "resolver"}:
         from chemiguard119.resolver import (
             evaluate_resolver,
@@ -512,8 +537,10 @@ def _evaluate(args: argparse.Namespace) -> dict[str, Any]:
         payload["resolver_safety_report_path"] = str(resolver_safety_report)
     if args.only in {"all", "retriever"}:
         from chemiguard119.retrieval import evaluate_retriever
+        from chemiguard119.retrieval_evaluation import evaluate_retriever_sections
 
         retriever_report = args.report_dir / "retriever_evaluation.json"
+        section_report = args.report_dir / "retriever_section_evaluation.json"
         payload["retriever"] = evaluate_retriever(
             args.db,
             args.retriever_model,
@@ -521,7 +548,15 @@ def _evaluate(args: argparse.Namespace) -> dict[str, Any]:
             args.retriever_evaluation,
             retriever_report,
         )
+        payload["retriever_sections"] = evaluate_retriever_sections(
+            args.db,
+            args.retriever_model,
+            args.retriever_section_evaluation,
+            profile=args.evaluation_profile,
+            report_path=section_report,
+        )
         payload["retriever_report_path"] = str(retriever_report)
+        payload["retriever_section_report_path"] = str(section_report)
     return payload
 
 
@@ -661,6 +696,25 @@ def _finetune_check(args: argparse.Namespace) -> dict[str, Any]:
 def _release_manifest(args: argparse.Namespace) -> dict[str, Any]:
     from chemiguard119.release import create_runtime_manifest
 
+    evaluation_evidence: dict[str, dict[str, Path]] = {}
+    for name in (
+        "resolver",
+        "resolver_hint_safety",
+        "retriever_sections",
+        "parser_locked",
+        "e2e_scenarios",
+    ):
+        report_path = getattr(args, f"{name}_report", None)
+        dataset_path = getattr(args, f"{name}_dataset", None)
+        if report_path is not None or dataset_path is not None:
+            if report_path is None or dataset_path is None:
+                raise ValueError(
+                    f"{name}: evaluator report와 dataset 경로를 함께 제공해야 합니다."
+                )
+            evaluation_evidence[name] = {
+                "report_path": report_path,
+                "dataset_path": dataset_path,
+            }
     return create_runtime_manifest(
         db_path=args.db,
         resolver_model_path=args.resolver_model,
@@ -668,11 +722,14 @@ def _release_manifest(args: argparse.Namespace) -> dict[str, Any]:
         config_dir=args.config_dir,
         output_path=args.output,
         git_commit=args.git_commit,
+        evaluation_evidence=evaluation_evidence,
+        release_attestation_path=args.release_attestation,
     )
 
 
 def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
     from chemiguard119.audit import audit_dataset
+    from chemiguard119.evaluation_contract import require_evaluation_dataset
     from chemiguard119.resolver import (
         evaluate_resolver,
         evaluate_resolver_hint_safety,
@@ -694,6 +751,7 @@ def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
             "retriever_model": str(args.retriever_model),
             "report_dir": str(args.report_dir),
             "config_dir": str(args.config_dir),
+            "evaluation_profile": args.evaluation_profile,
         },
         "stages": {},
         "last_completed_stage": None,
@@ -701,6 +759,23 @@ def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
         "safety_notice": SAFETY_NOTICE,
     }
     try:
+        report["stages"]["evaluation_contract"] = {
+            "resolver": require_evaluation_dataset(
+                args.resolver_evaluation, args.evaluation_profile
+            ),
+            "resolver_hint_safety": require_evaluation_dataset(
+                args.resolver_safety_evaluation, args.evaluation_profile
+            ),
+            "retriever_legacy": require_evaluation_dataset(
+                args.retriever_evaluation, args.evaluation_profile
+            ),
+            "retriever_sections": require_evaluation_dataset(
+                args.retriever_section_evaluation, args.evaluation_profile
+            ),
+        }
+        report["last_completed_stage"] = "evaluation_contract"
+        _write_json(report_path, report)
+
         report["stages"]["audit"] = audit_dataset(
             args.data_dir,
             include_hash=args.include_hash,
@@ -731,6 +806,11 @@ def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
             args.report_dir / "resolver_hint_safety_evaluation_latest.json"
         )
         retriever_eval_path = args.report_dir / "retriever_evaluation_latest.json"
+        retriever_section_eval_path = (
+            args.report_dir / "retriever_section_evaluation_latest.json"
+        )
+        from chemiguard119.retrieval_evaluation import evaluate_retriever_sections
+
         report["stages"]["evaluate"] = {
             "resolver": evaluate_resolver(
                 args.resolver_model,
@@ -749,19 +829,94 @@ def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
                 args.retriever_evaluation,
                 retriever_eval_path,
             ),
+            "retriever_sections": evaluate_retriever_sections(
+                args.db,
+                args.retriever_model,
+                args.retriever_section_evaluation,
+                profile=args.evaluation_profile,
+                report_path=retriever_section_eval_path,
+            ),
         }
         if not report["stages"]["evaluate"]["resolver_hint_safety"]["deployment_gate"][
             "passed"
         ]:
             raise RuntimeError("Resolver 자동 CAS 힌트 안전 회귀 gate가 실패했습니다.")
         report["last_completed_stage"] = "evaluate"
-        from chemiguard119.release import create_runtime_manifest
+        from chemiguard119.release import (
+            bind_evaluation_report,
+            create_runtime_manifest,
+        )
+
+        release_commit = (os.getenv("CHEMIGUARD119_GIT_COMMIT") or "UNKNOWN").strip()
+        report_bindings = {
+            "resolver": (
+                resolver_eval_path,
+                args.resolver_evaluation,
+                "resolver",
+            ),
+            "resolver_hint_safety": (
+                resolver_safety_eval_path,
+                args.resolver_safety_evaluation,
+                "resolver_hint_safety",
+            ),
+            "retriever_sections": (
+                retriever_section_eval_path,
+                args.retriever_section_evaluation,
+                "retriever_sections",
+            ),
+        }
+        if re.fullmatch(r"[0-9a-fA-F]{40}", release_commit):
+            for report_name, (
+                evaluation_report_path,
+                evaluation_dataset_path,
+                contract_name,
+            ) in report_bindings.items():
+                report["stages"]["evaluate"][report_name] = bind_evaluation_report(
+                    report["stages"]["evaluate"][report_name],
+                    report_path=evaluation_report_path,
+                    dataset_path=evaluation_dataset_path,
+                    evaluation_contract=report["stages"]["evaluation_contract"][
+                        contract_name
+                    ],
+                    profile=args.evaluation_profile,
+                    git_commit=release_commit,
+                )
+
+        evaluation_evidence: dict[str, dict[str, Path]] = {
+            name: {
+                "report_path": evaluation_report_path,
+                "dataset_path": evaluation_dataset_path,
+            }
+            for name, (
+                evaluation_report_path,
+                evaluation_dataset_path,
+                _contract_name,
+            ) in report_bindings.items()
+        }
+        for name in ("parser_locked", "e2e_scenarios"):
+            evaluation_report_path = getattr(args, f"{name}_report")
+            evaluation_dataset_path = getattr(args, f"{name}_dataset")
+            if (
+                evaluation_report_path is not None
+                or evaluation_dataset_path is not None
+            ):
+                if evaluation_report_path is None or evaluation_dataset_path is None:
+                    raise ValueError(
+                        f"{name}: evaluator report와 dataset 경로를 함께 제공해야 합니다."
+                    )
+                evaluation_evidence[name] = {
+                    "report_path": evaluation_report_path,
+                    "dataset_path": evaluation_dataset_path,
+                }
 
         report["stages"]["release_manifest"] = create_runtime_manifest(
             db_path=args.db,
             resolver_model_path=args.resolver_model,
             retriever_model_path=args.retriever_model,
             config_dir=args.config_dir,
+            git_commit=release_commit,
+            evaluation_evidence=evaluation_evidence,
+            release_attestation_path=args.release_attestation,
         )
         report["last_completed_stage"] = "release_manifest"
         report["status"] = "COMPLETED"
@@ -934,6 +1089,21 @@ def build_parser() -> argparse.ArgumentParser:
         type=_path,
         default=EVALUATION_DIR / "retrieval_regression_queries.csv",
     )
+    evaluate.add_argument(
+        "--retriever-section-evaluation",
+        type=_path,
+        default=EVALUATION_DIR / "retrieval_section_regression.jsonl",
+    )
+    evaluate.add_argument(
+        "--evaluation-profile",
+        choices=(
+            "INTERNAL_REGRESSION",
+            "COMPETITION_REVIEWED",
+            "PILOT_REVIEWED",
+        ),
+        default="INTERNAL_REGRESSION",
+        help="평가 데이터 검수·주장 범위 gate",
+    )
     evaluate.add_argument("--report-dir", type=_path, default=DEFAULT_REPORT_DIR)
     _add_json_option(evaluate)
     evaluate.set_defaults(handler=_evaluate)
@@ -1062,6 +1232,46 @@ def build_parser() -> argparse.ArgumentParser:
         type=_path,
         default=EVALUATION_DIR / "retrieval_regression_queries.csv",
     )
+    pipeline.add_argument(
+        "--retriever-section-evaluation",
+        type=_path,
+        default=EVALUATION_DIR / "retrieval_section_regression.jsonl",
+    )
+    pipeline.add_argument(
+        "--evaluation-profile",
+        choices=(
+            "INTERNAL_REGRESSION",
+            "COMPETITION_REVIEWED",
+            "PILOT_REVIEWED",
+        ),
+        default="INTERNAL_REGRESSION",
+        help="reviewed profile은 DRAFT 평가 데이터에서 release 생성을 차단",
+    )
+    pipeline.add_argument(
+        "--parser-locked-report",
+        type=_path,
+        help="별도 parser locked-test evaluator JSON 보고서",
+    )
+    pipeline.add_argument(
+        "--parser-locked-dataset",
+        type=_path,
+        help="parser locked-test 원본 평가 데이터",
+    )
+    pipeline.add_argument(
+        "--e2e-scenarios-report",
+        type=_path,
+        help="별도 E2E scenario evaluator JSON 보고서",
+    )
+    pipeline.add_argument(
+        "--e2e-scenarios-dataset",
+        type=_path,
+        help="E2E scenario 원본 평가 데이터",
+    )
+    pipeline.add_argument(
+        "--release-attestation",
+        type=_path,
+        help="독립 검수자가 서명한 release attestation JSON",
+    )
     _add_json_option(pipeline)
     pipeline.set_defaults(handler=_pipeline)
 
@@ -1073,6 +1283,28 @@ def build_parser() -> argparse.ArgumentParser:
     release_manifest.add_argument("--config-dir", type=_path, default=CONFIG_DIR)
     release_manifest.add_argument("--output", type=_path)
     release_manifest.add_argument("--git-commit")
+    for option, description in (
+        ("resolver", "Resolver evaluator"),
+        ("resolver-hint-safety", "Resolver CAS 안전 evaluator"),
+        ("retriever-sections", "근거 section evaluator"),
+        ("parser-locked", "신고문 parser locked-test evaluator"),
+        ("e2e-scenarios", "통합 사고분석 E2E evaluator"),
+    ):
+        release_manifest.add_argument(
+            f"--{option}-report",
+            type=_path,
+            help=f"{description} JSON 보고서",
+        )
+        release_manifest.add_argument(
+            f"--{option}-dataset",
+            type=_path,
+            help=f"{description} 원본 평가 데이터",
+        )
+    release_manifest.add_argument(
+        "--release-attestation",
+        type=_path,
+        help="독립 검수자가 서명한 release attestation JSON",
+    )
     _add_json_option(release_manifest)
     release_manifest.set_defaults(handler=_release_manifest)
 
@@ -1099,6 +1331,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             in {
                 "FAILED",
                 "BLOCKED_SAFETY_GATE",
+                "BLOCKED_EVALUATION_GATE",
                 "OUTPUT_VALIDATION_FAILED",
             }
             else 0

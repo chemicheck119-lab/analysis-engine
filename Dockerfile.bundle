@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 FROM python:3.11.15-slim
 
 ARG RUNTIME_MANIFEST_SHA256
@@ -31,7 +32,9 @@ COPY artifacts/resolver.joblib /opt/chemicheck119/artifacts/resolver.joblib
 COPY artifacts/retriever.joblib /opt/chemicheck119/artifacts/retriever.joblib
 COPY artifacts/runtime_manifest.json /opt/chemicheck119/artifacts/runtime_manifest.json
 
-RUN CHEMIGUARD119_RUNTIME_MANIFEST_SHA256="${RUNTIME_MANIFEST_SHA256}" \
+RUN --mount=type=secret,id=release_attestation_key,required=true \
+    CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY="$(cat /run/secrets/release_attestation_key)" \
+    CHEMIGUARD119_RUNTIME_MANIFEST_SHA256="${RUNTIME_MANIFEST_SHA256}" \
     CHEMIGUARD119_GIT_COMMIT="${GIT_COMMIT}" \
     python -c "from chemiguard119.api import ModelRuntime; ModelRuntime.load()" \
     && chown -R chemicheck:chemicheck /opt/chemicheck119 \

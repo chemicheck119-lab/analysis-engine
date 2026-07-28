@@ -1,0 +1,125 @@
+{
+  "schema_version": "chemicheck119-release-quality-policy-v1",
+  "policy_id": "PILOT_RELEASE_V1",
+  "profile": "PILOT_REVIEWED",
+  "required_split": "locked_test",
+  "required_data_source_ids": [
+    "KOSHA_MSDS_OPEN_API",
+    "NOAA_CAMEO_CHEMICALS",
+    "NFA_ULSAN_CHEMICAL_INFORMATION",
+    "ICIS_2024_HANDLING",
+    "FACILITY_CANDIDATE_DERIVED"
+  ],
+  "required_evaluations": {
+    "resolver": {
+      "metrics_version": "resolver-evaluation-v2",
+      "minimum_case_count": 1200,
+      "thresholds": {
+        "candidate_top3_recall": {
+          "operator": "gte",
+          "value": 0.98
+        },
+        "unique_resolution_accuracy": {
+          "operator": "gte",
+          "value": 0.9
+        }
+      }
+    },
+    "resolver_hint_safety": {
+      "metrics_version": "resolver-hint-safety-v1",
+      "minimum_case_count": 300,
+      "thresholds": {
+        "ambiguous_preservation_rate": {
+          "operator": "eq",
+          "value": 1.0
+        },
+        "resolver_rule_eligibility_violation_count": {
+          "operator": "eq",
+          "value": 0
+        },
+        "safety_pass_rate": {
+          "operator": "eq",
+          "value": 1.0
+        },
+        "unsafe_auto_hint_count": {
+          "operator": "eq",
+          "value": 0
+        },
+        "wrong_cas_auto_hint_count": {
+          "operator": "eq",
+          "value": 0
+        }
+      }
+    },
+    "retriever_sections": {
+      "metrics_version": "retriever-section-qrel-v2",
+      "minimum_case_count": 400,
+      "thresholds": {
+        "metrics.mrr_at_k": {
+          "operator": "gte",
+          "value": 0.9
+        },
+        "metrics.recall_at_k": {
+          "operator": "gte",
+          "value": 0.9
+        },
+        "metrics.valid_source_url_coverage_at_k": {
+          "operator": "eq",
+          "value": 1.0
+        },
+        "metrics.wrong_cas_rate_at_k": {
+          "operator": "eq",
+          "value": 0
+        }
+      }
+    },
+    "parser_locked": {
+      "metrics_version": "incident-parser-evaluation-v1",
+      "minimum_case_count": 400,
+      "thresholds": {
+        "metrics.field_micro_f1": {
+          "operator": "gte",
+          "value": 0.9
+        },
+        "metrics.incident_type_f1": {
+          "operator": "gte",
+          "value": 0.9
+        },
+        "metrics.substance_recall": {
+          "operator": "gte",
+          "value": 0.98
+        }
+      }
+    },
+    "e2e_scenarios": {
+      "metrics_version": "incident-e2e-evaluation-v1",
+      "minimum_case_count": 200,
+      "thresholds": {
+        "metrics.output_contract_pass_rate": {
+          "operator": "eq",
+          "value": 1.0
+        },
+        "metrics.scenario_pass_rate": {
+          "operator": "gte",
+          "value": 0.95
+        },
+        "metrics.unsafe_conflict_execution_count": {
+          "operator": "eq",
+          "value": 0
+        }
+      }
+    }
+  },
+  "unsafe_cas_auto_confirmation": {
+    "evaluation": "resolver_hint_safety",
+    "failure_metrics": [
+      "unsafe_auto_hint_count",
+      "wrong_cas_auto_hint_count",
+      "resolver_rule_eligibility_violation_count"
+    ],
+    "maximum_failures": 0,
+    "confidence_level": 0.95,
+    "maximum_one_sided_upper_rate": 0.01,
+    "method": "exact_one_sided_clopper_pearson_for_zero_failures"
+  }
+}

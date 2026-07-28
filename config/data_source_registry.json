@@ -1,0 +1,60 @@
+{
+  "schema_version": "chemicheck119-data-source-registry-v1",
+  "reviewed_at_utc": "2026-07-28T00:00:00+00:00",
+  "policy": {
+    "publish_requires_all_redistribution_status": "APPROVED",
+    "public_lookup_does_not_imply_redistribution_permission": true
+  },
+  "sources": [
+    {
+      "source_id": "KOSHA_MSDS_OPEN_API",
+      "provider": "한국산업안전보건공단",
+      "source_url": "https://www.data.go.kr/data/15157612/openapi.do",
+      "terms_url": "https://www.data.go.kr/data/15157612/openapi.do",
+      "runtime_artifacts": ["substance", "alias", "evidence"],
+      "redistribution_status": "APPROVED",
+      "review_basis": "공공데이터포털 이용허락범위 제한 없음 표시를 2026-07-28 확인",
+      "reviewer": "PROJECT_DATA_GOVERNANCE_REVIEW_REQUIRED_FOR_CHANGES"
+    },
+    {
+      "source_id": "NOAA_CAMEO_CHEMICALS",
+      "provider": "NOAA/EPA",
+      "source_url": "https://cameochemicals.noaa.gov/",
+      "terms_url": "https://cameochemicals.noaa.gov/help/reference/terms_and_conditions.htm",
+      "runtime_artifacts": ["evidence", "cameo_chemical", "cameo_mapping", "compatibility"],
+      "redistribution_status": "REVIEW_REQUIRED",
+      "review_basis": "CAMEO 약관에 제3자 권리와 일부 필드 복제 제한이 있어 필드별 재배포 검토 필요",
+      "reviewer": ""
+    },
+    {
+      "source_id": "NFA_ULSAN_CHEMICAL_INFORMATION",
+      "provider": "소방청",
+      "source_url": "https://www.data.go.kr/data/15081005/fileData.do",
+      "terms_url": "https://www.data.go.kr/data/15081005/fileData.do",
+      "runtime_artifacts": ["substance", "alias", "facility_candidate"],
+      "redistribution_status": "APPROVED",
+      "review_basis": "공공데이터포털 이용허락범위 제한 없음 표시를 2026-07-28 확인",
+      "reviewer": "PROJECT_DATA_GOVERNANCE_REVIEW_REQUIRED_FOR_CHANGES"
+    },
+    {
+      "source_id": "ICIS_2024_HANDLING",
+      "provider": "환경부 화학물질안전원",
+      "source_url": "https://icis.mcee.go.kr/search/searchType6.do",
+      "terms_url": "https://icis.mcee.go.kr/",
+      "runtime_artifacts": ["substance", "alias", "facility_candidate"],
+      "redistribution_status": "REVIEW_REQUIRED",
+      "review_basis": "공개 조회와 파생 데이터 컨테이너 재배포는 별도 조건이므로 기관 약관 확인 필요",
+      "reviewer": ""
+    },
+    {
+      "source_id": "FACILITY_CANDIDATE_DERIVED",
+      "provider": "케미체크119 프로젝트",
+      "source_url": "DERIVED_FROM_ICIS_AND_PRTR_INPUTS",
+      "terms_url": "INHERITS_UPSTREAM_TERMS",
+      "runtime_artifacts": ["facility_candidate"],
+      "redistribution_status": "REVIEW_REQUIRED",
+      "review_basis": "상류 ICIS·PRTR 자료의 재배포 범위 확정 전 파생 artifact 공개 배포 금지",
+      "reviewer": ""
+    }
+  ]
+}
