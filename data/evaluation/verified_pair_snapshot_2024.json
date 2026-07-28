@@ -1,0 +1,433 @@
+{
+  "metrics_version": "verified-pair-regression-v1",
+  "generated_at_utc": "2026-07-27T17:10:48.981149+00:00",
+  "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
+  "database": {
+    "file": "chemiguard119.sqlite",
+    "sha256": "94e7ddec8016aab43ff5c847eb05ae994d2ca694ccb71fc4bd7311e12b536c46"
+  },
+  "crosswalk": {
+    "file": "cameo_crosswalk.csv",
+    "sha256": "50411363a840c88a0b371123f8e5ab265001ec6ca1bb70840eb93a79b79f617c",
+    "public_verified_substance_count": 6
+  },
+  "expected_unique_pair_count": 15,
+  "evaluated_pair_count": 15,
+  "status_counts": {
+    "SCREENING_COMPLETED": 15
+  },
+  "risk_level_counts": {
+    "HIGH": 8,
+    "LOW": 5,
+    "MEDIUM": 2
+  },
+  "pairs": [
+    {
+      "cas_a": "108-88-3",
+      "form_a": "TOLUENE",
+      "cas_b": "64-17-5",
+      "form_b": "ETHANOL",
+      "status": "SCREENING_COMPLETED",
+      "risk_level": "LOW",
+      "risk_level_ko": "낮음",
+      "raw_class_id": 0,
+      "hazard_codes": [
+        "NR"
+      ],
+      "gas_products": [],
+      "screened_group_pair_count": 1,
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/4654",
+        "https://cameochemicals.noaa.gov/chemical/667",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "is_probability": false
+    },
+    {
+      "cas_a": "108-88-3",
+      "form_a": "TOLUENE",
+      "cas_b": "67-64-1",
+      "form_b": "ACETONE",
+      "status": "SCREENING_COMPLETED",
+      "risk_level": "LOW",
+      "risk_level_ko": "낮음",
+      "raw_class_id": 0,
+      "hazard_codes": [
+        "NR"
+      ],
+      "gas_products": [],
+      "screened_group_pair_count": 1,
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/4654",
+        "https://cameochemicals.noaa.gov/chemical/8",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "is_probability": false
+    },
+    {
+      "cas_a": "108-88-3",
+      "form_a": "TOLUENE",
+      "cas_b": "7440-23-5",
+      "form_b": "SODIUM",
+      "status": "SCREENING_COMPLETED",
+      "risk_level": "LOW",
+      "risk_level_ko": "낮음",
+      "raw_class_id": 0,
+      "hazard_codes": [
+        "NR"
+      ],
+      "gas_products": [],
+      "screened_group_pair_count": 1,
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/4654",
+        "https://cameochemicals.noaa.gov/chemical/7794",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "is_probability": false
+    },
+    {
+      "cas_a": "108-88-3",
+      "form_a": "TOLUENE",
+      "cas_b": "7647-01-0",
+      "form_b": "HYDROCHLORIC ACID, SOLUTION",
+      "status": "SCREENING_COMPLETED",
+      "risk_level": "LOW",
+      "risk_level_ko": "낮음",
+      "raw_class_id": 0,
+      "hazard_codes": [
+        "NR"
+      ],
+      "gas_products": [],
+      "screened_group_pair_count": 2,
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/4654",
+        "https://cameochemicals.noaa.gov/chemical/3598",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "is_probability": false
+    },
+    {
+      "cas_a": "108-88-3",
+      "form_a": "TOLUENE",
+      "cas_b": "7681-52-9",
+      "form_b": "SODIUM HYPOCHLORITE",
+      "status": "SCREENING_COMPLETED",
+      "risk_level": "HIGH",
+      "risk_level_ko": "높음",
+      "raw_class_id": 2,
+      "hazard_codes": [
+        "E",
+        "G",
+        "NR",
+        "R1",
+        "R3",
+        "T"
+      ],
+      "gas_products": [
+        "CO2"
+      ],
+      "screened_group_pair_count": 3,
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/4654",
+        "https://cameochemicals.noaa.gov/chemical/4503",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "is_probability": false
+    },
+    {
+      "cas_a": "64-17-5",
+      "form_a": "ETHANOL",
+      "cas_b": "67-64-1",
+      "form_b": "ACETONE",
+      "status": "SCREENING_COMPLETED",
+      "risk_level": "MEDIUM",
+      "risk_level_ko": "중간",
+      "raw_class_id": 1,
+      "hazard_codes": [
+        "E",
+        "R2"
+      ],
+      "gas_products": [],
+      "screened_group_pair_count": 1,
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/667",
+        "https://cameochemicals.noaa.gov/chemical/8",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "is_probability": false
+    },
+    {
+      "cas_a": "64-17-5",
+      "form_a": "ETHANOL",
+      "cas_b": "7440-23-5",
+      "form_b": "SODIUM",
+      "status": "SCREENING_COMPLETED",
+      "risk_level": "HIGH",
+      "risk_level_ko": "높음",
+      "raw_class_id": 2,
+      "hazard_codes": [
+        "C",
+        "F",
+        "G",
+        "R1",
+        "R3"
+      ],
+      "gas_products": [
+        "H2"
+      ],
+      "screened_group_pair_count": 1,
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/667",
+        "https://cameochemicals.noaa.gov/chemical/7794",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "is_probability": false
+    },
+    {
+      "cas_a": "64-17-5",
+      "form_a": "ETHANOL",
+      "cas_b": "7647-01-0",
+      "form_b": "HYDROCHLORIC ACID, SOLUTION",
+      "status": "SCREENING_COMPLETED",
+      "risk_level": "MEDIUM",
+      "risk_level_ko": "중간",
+      "raw_class_id": 1,
+      "hazard_codes": [
+        "NR",
+        "R1"
+      ],
+      "gas_products": [],
+      "screened_group_pair_count": 2,
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/667",
+        "https://cameochemicals.noaa.gov/chemical/3598",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "is_probability": false
+    },
+    {
+      "cas_a": "64-17-5",
+      "form_a": "ETHANOL",
+      "cas_b": "7681-52-9",
+      "form_b": "SODIUM HYPOCHLORITE",
+      "status": "SCREENING_COMPLETED",
+      "risk_level": "HIGH",
+      "risk_level_ko": "높음",
+      "raw_class_id": 2,
+      "hazard_codes": [
+        "C",
+        "E",
+        "F",
+        "G",
+        "NR",
+        "R1",
+        "R3",
+        "T"
+      ],
+      "gas_products": [
+        "CO",
+        "CO2",
+        "H2",
+        "HX",
+        "X2",
+        "XO2"
+      ],
+      "screened_group_pair_count": 3,
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/667",
+        "https://cameochemicals.noaa.gov/chemical/4503",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "is_probability": false
+    },
+    {
+      "cas_a": "67-64-1",
+      "form_a": "ACETONE",
+      "cas_b": "7440-23-5",
+      "form_b": "SODIUM",
+      "status": "SCREENING_COMPLETED",
+      "risk_level": "HIGH",
+      "risk_level_ko": "높음",
+      "raw_class_id": 2,
+      "hazard_codes": [
+        "F",
+        "G",
+        "R1"
+      ],
+      "gas_products": [
+        "H2",
+        "Hydrocarbons"
+      ],
+      "screened_group_pair_count": 1,
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/8",
+        "https://cameochemicals.noaa.gov/chemical/7794",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "is_probability": false
+    },
+    {
+      "cas_a": "67-64-1",
+      "form_a": "ACETONE",
+      "cas_b": "7647-01-0",
+      "form_b": "HYDROCHLORIC ACID, SOLUTION",
+      "status": "SCREENING_COMPLETED",
+      "risk_level": "LOW",
+      "risk_level_ko": "낮음",
+      "raw_class_id": 0,
+      "hazard_codes": [
+        "NR"
+      ],
+      "gas_products": [],
+      "screened_group_pair_count": 2,
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/8",
+        "https://cameochemicals.noaa.gov/chemical/3598",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "is_probability": false
+    },
+    {
+      "cas_a": "67-64-1",
+      "form_a": "ACETONE",
+      "cas_b": "7681-52-9",
+      "form_b": "SODIUM HYPOCHLORITE",
+      "status": "SCREENING_COMPLETED",
+      "risk_level": "HIGH",
+      "risk_level_ko": "높음",
+      "raw_class_id": 2,
+      "hazard_codes": [
+        "E",
+        "F",
+        "G",
+        "NR",
+        "R1",
+        "R3",
+        "T"
+      ],
+      "gas_products": [
+        "Halocarbons"
+      ],
+      "screened_group_pair_count": 3,
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/8",
+        "https://cameochemicals.noaa.gov/chemical/4503",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "is_probability": false
+    },
+    {
+      "cas_a": "7440-23-5",
+      "form_a": "SODIUM",
+      "cas_b": "7647-01-0",
+      "form_b": "HYDROCHLORIC ACID, SOLUTION",
+      "status": "SCREENING_COMPLETED",
+      "risk_level": "HIGH",
+      "risk_level_ko": "높음",
+      "raw_class_id": 2,
+      "hazard_codes": [
+        "C",
+        "F",
+        "G",
+        "R1",
+        "R3"
+      ],
+      "gas_products": [
+        "H2"
+      ],
+      "screened_group_pair_count": 2,
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/7794",
+        "https://cameochemicals.noaa.gov/chemical/3598",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "is_probability": false
+    },
+    {
+      "cas_a": "7440-23-5",
+      "form_a": "SODIUM",
+      "cas_b": "7681-52-9",
+      "form_b": "SODIUM HYPOCHLORITE",
+      "status": "SCREENING_COMPLETED",
+      "risk_level": "HIGH",
+      "risk_level_ko": "높음",
+      "raw_class_id": 2,
+      "hazard_codes": [
+        "C",
+        "E",
+        "F",
+        "G",
+        "R1",
+        "R3",
+        "T"
+      ],
+      "gas_products": [
+        "H2"
+      ],
+      "screened_group_pair_count": 3,
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/7794",
+        "https://cameochemicals.noaa.gov/chemical/4503",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "is_probability": false
+    },
+    {
+      "cas_a": "7647-01-0",
+      "form_a": "HYDROCHLORIC ACID, SOLUTION",
+      "cas_b": "7681-52-9",
+      "form_b": "SODIUM HYPOCHLORITE",
+      "status": "SCREENING_COMPLETED",
+      "risk_level": "HIGH",
+      "risk_level_ko": "높음",
+      "raw_class_id": 2,
+      "hazard_codes": [
+        "C",
+        "E",
+        "F",
+        "G",
+        "NR",
+        "R1",
+        "R3",
+        "T"
+      ],
+      "gas_products": [
+        "Acid Fumes",
+        "BR2",
+        "Cl2",
+        "ClO2",
+        "HX",
+        "NOx",
+        "O2",
+        "X2",
+        "X2O"
+      ],
+      "screened_group_pair_count": 6,
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/3598",
+        "https://cameochemicals.noaa.gov/chemical/4503",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "is_probability": false
+    }
+  ],
+  "offline_regression_only": true,
+  "does_not_confirm_on_site_presence": true,
+  "is_probability": false,
+  "interpretation": "공개 검증 CAS와 CAMEO 원자료의 연결 회귀 검사이며 현장 존재 확인, 사고 확률 또는 전문가 승인을 의미하지 않습니다."
+}

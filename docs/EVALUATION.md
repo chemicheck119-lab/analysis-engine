@@ -1,5 +1,26 @@
 # 케미체크119 모델 평가
 
+## 공개 검증 CAMEO 물질쌍 회귀 평가
+
+공개 검증 crosswalk가 늘어날 때마다 모든 고유 물질쌍을 실제 CAMEO 원자료 DB에 연결해
+검사합니다. 이는 현장 성능 평가가 아니라 배포 전 데이터 연결 회귀 검사입니다.
+
+```bash
+python scripts/evaluation/evaluate_verified_pairs.py \
+  --db artifacts/chemiguard119.sqlite \
+  --config-dir config \
+  --output data/evaluation/verified_pair_snapshot_2024.json
+```
+
+출력에는 DB와 crosswalk의 SHA-256, 예상·실행 조합 수, 상태와 서수 등급 분포가
+포함됩니다. `offline_regression_only=true`, `does_not_confirm_on_site_presence=true`,
+`is_probability=false`가 항상 함께 기록됩니다.
+
+2026-07-28 스냅샷에서는 공개 검증 6종의 고유 조합 15개를 모두 실행했고 15개 모두
+`SCREENING_COMPLETED`였습니다. 서수 등급 분포는 `HIGH=8`, `MEDIUM=2`, `LOW=5`입니다.
+이는 15개 데이터 연결이 실행된다는 회귀 결과이며, 낮음 조합의 안전 보장이나 실제
+사고확률·현장 정확도를 뜻하지 않습니다.
+
 ## 1. 쉽게 이해하기
 
 케미체크119의 평가는 모델 전체에 점수 하나를 붙이지 않습니다. 다음 질문을 분리해서

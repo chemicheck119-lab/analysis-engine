@@ -59,7 +59,7 @@ def _write_csv(
 
 
 def _patch_expected_counts(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(preprocessing, "EXPECTED_KOSHA_SUBSTANCE_COUNT", 2)
+    monkeypatch.setattr(preprocessing, "MINIMUM_KOSHA_SUBSTANCE_COUNT", 2)
     monkeypatch.setattr(preprocessing, "EXPECTED_ICIS_VALID_CAS_COUNT", 2)
     monkeypatch.setattr(preprocessing, "EXPECTED_ICIS_SPLIT_ALIAS_COUNT", 4)
     monkeypatch.setattr(preprocessing, "EXPECTED_CAMEO_CHEMICAL_COUNT", 2)
@@ -646,6 +646,65 @@ def test_prepare_dataset_builds_safe_lookup_artifacts(
         "CANDIDATE_UNVERIFIED": 1,
         "PUBLIC_SOURCE_VERIFIED": 1,
     }
+
+
+def test_prepare_dataset_accepts_reviewed_kosha_expansion_without_override(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_expected_counts(monkeypatch)
+    data_dir, config_dir, artifact_dir = _make_fixture(tmp_path)
+    kosha_path = data_dir / preprocessing.SOURCE_FILES["kosha"]
+    with kosha_path.open(encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    rows.append(
+        {
+            "레코드ID": "KOSHA-METHANOL-1",
+            "화학물질ID": "K-METHANOL",
+            "CAS번호": "67-56-1",
+            "화학물질명_국문": "메탄올",
+            "MSDS_장번호": "6",
+            "MSDS_항목명_국문": "누출 사고 시 대처방법",
+            "상세내용": "공식 수집 후 검토된 누출 대응 상세",
+            "최종개정일": "2026-07-01",
+            "시나리오역할": "",
+            "검색기준_화학물질명": "메탄올",
+            "UN번호": "1230",
+            "자료출처": "https://www.data.go.kr/data/15157612/openapi.do",
+        }
+    )
+    _write_csv(kosha_path, KOSHA_COLUMNS, rows)
+
+    manifest = preprocessing.prepare_dataset(data_dir, config_dir, artifact_dir)
+
+    with sqlite3.connect(artifact_dir / preprocessing.DEFAULT_DB_FILE) as connection:
+        substance = connection.execute(
+            """
+            SELECT canonical_name_ko, un_number, catalog_scope,
+                   has_kosha_detail, resolver_candidate_only
+            FROM substance WHERE cas_number = '67-56-1'
+            """
+        ).fetchone()
+        evidence = connection.execute(
+            """
+            SELECT title, body FROM evidence
+            WHERE source = 'KOSHA' AND cas_number = '67-56-1'
+            """
+        ).fetchone()
+        aliases = {
+            row[0]
+            for row in connection.execute(
+                "SELECT alias_text FROM alias WHERE cas_number = '67-56-1'"
+            )
+        }
+
+    assert substance == ("메탄올", "1230", "KOSHA_CORE_WITH_DETAIL", 1, 0)
+    assert evidence == (
+        "메탄올 MSDS 6장 누출 사고 시 대처방법",
+        "공식 수집 후 검토된 누출 대응 상세",
+    )
+    assert {"67-56-1", "메탄올"} <= aliases
+    assert manifest["counts"]["kosha_evidence"] == 3
 
 
 def test_prepare_dataset_rejects_git_lfs_pointer(

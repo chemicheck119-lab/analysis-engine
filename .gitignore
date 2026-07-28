@@ -11,6 +11,7 @@ htmlcov/
 *.egg-info/
 artifacts/
 outputs/modeling/
+outputs/support_priority/
 data/raw/*
 !data/raw/README.md
 data/processed/
