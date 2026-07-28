@@ -18,7 +18,7 @@
 | 유사 사고사례 RAG | 미완료 | 출처와 대응 라벨이 검증된 corpus 없음 |
 | 파인튜닝 | 보류 | 준비도 검사만 존재, 기준선 대비 필요성이 입증되지 않음 |
 | FastAPI | 완료 | 통합 분석과 보조 API, 인증·오류 계약·확인 게이트 구현 |
-| 운영 로그 | 작업 브랜치 완료 | 요청 ID·route·상태·지연시간 JSON 로그, 본문·Secret 제외 |
+| 운영 로그 | 완료 | 요청 ID·route·상태·지연시간 JSON 로그, 본문·Secret 제외 |
 | Docker | 부분 완료 | 일반·bundle Dockerfile과 CI 구성 존재, 로컬 Docker CLI 없음 |
 | 실제 배포 | 미완료 | 검증된 공개 스테이징 URL 없음 |
 | FE·BE 연동 자료 | 완료 | JSON 계약, curl·Python·JavaScript와 smoke 절차 존재 |
@@ -104,10 +104,10 @@ conflict executed: false
 ## 6. GitHub 관리 상태
 
 - 원격 `main`: PR #4 병합 commit까지 로컬 Git으로 확인
-- GitHub 앱: 설치된 계정이 없어 저장소 작업이 `403` 또는 `404`
+- PR #5: 모델 API 검증 `test-and-build` 성공, mergeable 상태 확인
+- GitHub 앱: PR·Actions 읽기는 가능하지만 쓰기 작업은 `403`
 - 사용자 터미널 `gh`: `hywznn` 계정과 `repo` scope 인증 확인
 - Codex 샌드박스: keyring과 GitHub DNS에 접근하지 못해 원격 쓰기 미검증
-- 최신 Actions 결과: 현재 권한으로 직접 확인하지 못함
 
-권한이 복구되기 전에는 코드·테스트·문서와 브랜치 작업을 계속할 수 있지만, 이슈·PR·마일스톤
-생성과 CI 결과 확인·병합은 완료했다고 주장하지 않습니다.
+현재 연결로는 코드·테스트·문서와 PR·CI 상태 확인은 가능하지만, 이슈·PR·마일스톤 수정과
+병합은 완료했다고 주장하지 않습니다.
