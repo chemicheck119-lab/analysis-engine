@@ -1,5 +1,14 @@
 # 케미체크119 모델 API 운영 가이드
 
+Uvicorn 기본 access log는 원 URL·query string을 기록할 수 있어 비활성화합니다. API는
+정규화된 route, request ID, 상태 코드, 지연시간만 JSON으로 남기며 예외도 메시지·traceback
+대신 예외 타입만 기록합니다.
+
+`CHEMIGUARD119_ENVIRONMENT`는 `development`, `test`, `staging`, `production`만
+허용합니다. 오타(`prod` 등)는 개발 환경으로 완화하지 않고 fail-closed합니다.
+`staging`과 `production`은 모두 manifest SHA·40자리 Git commit·검수 완료 평가·재배포
+승인·`VERIFIED` integrity가 확인돼야 ready가 됩니다.
+
 ## 1. 쉬운 설명
 
 모델 API는 요청마다 추적 번호인 `request_id`를 부여합니다. 같은 번호를 API 응답과 서버
@@ -25,7 +34,7 @@
   "event": "http_request_completed",
   "request_id": "REQ-BE-20260728-0001",
   "service_name": "chemicheck119-model-api",
-  "service_version": "0.3.0",
+  "service_version": "0.4.0",
   "deployment_environment": "staging",
   "authentication_mode": "API_KEY",
   "http_request_method": "POST",
@@ -95,7 +104,8 @@ CHEMIGUARD119_LOG_LEVEL=INFO
 3. `http_route`, 상태 코드, `duration_ms`, 배포 환경과 서비스 버전을 확인합니다.
 4. `401`이면 백엔드 Secret 주입과 호출 헤더를 확인합니다.
 5. `503`이면 readiness의 인증·artifact·정책 상태를 확인합니다.
-6. `500`이면 같은 시각의 오류 stack trace를 확인하되 신고 원문을 로그에 추가하지 않습니다.
+6. `500`이면 같은 `request_id`의 구조화 오류 이벤트와 `exception_type`을 확인합니다.
+   신고 원문이나 raw traceback은 로그에 추가하지 않습니다.
 7. 배포 직후 오류가 시작됐다면 이미지·manifest·Git commit을 한 묶음으로 롤백합니다.
 
 ## 7. 로컬 검증

@@ -10,17 +10,20 @@ CAMEO Rule Engine으로 배포합니다.
 1. clean Git commit의 애플리케이션 코드
 2. 원천 데이터로 생성한 DB·모델 artifact
 3. 버전이 고정된 config
-4. 각 파일 해시와 런타임 버전을 기록한 `runtime_manifest.json`
+4. 각 파일 해시·런타임·평가 claim·재배포 상태를 기록한
+   `chemicheck119-runtime-release-v4` 형식의 `runtime_manifest.json`
 
-운영 서버가 시작할 때 외부에서 주입한 manifest SHA-256과 Git commit을 먼저 검증합니다.
-검증에 실패하면 joblib을 로드하지 않고 readiness를 실패시킵니다.
+staging·production 서버가 시작할 때 외부에서 주입한 manifest SHA-256과 Git commit을 먼저
+검증합니다. 검증에 실패하면 joblib을 로드하지 않고 readiness를 실패시킵니다. 배포 검증은
+`PILOT_REVIEWED` 평가, 버전 고정 품질 임계값, 서명된 현장검증 attestation과 모든 runtime
+데이터의 재배포 `APPROVED` 상태도 요구합니다.
 
 ## 2. 실행 방식 선택
 
 | 방식 | 용도 | Artifact 위치 |
 |---|---|---|
 | Python 로컬 실행 | 개발·디버깅 | `artifacts/` |
-| `Dockerfile` + Compose | 서버가 artifact를 별도 관리 | 읽기 전용 volume |
+| `Dockerfile` + Compose | 로컬 개발 | 읽기 전용 volume |
 | `Dockerfile.bundle` | 검증된 모델과 코드를 한 이미지로 배포 | 이미지 내부 |
 | GitHub Actions release workflow | 재학습·검증·bundle 생성 | Actions artifact, 선택적 GHCR |
 
@@ -37,9 +40,10 @@ CAMEO Rule Engine으로 배포합니다.
 | `CHEMIGUARD119_API_HOST` | `127.0.0.1` | 내부 네트워크의 `0.0.0.0` |
 | `CHEMIGUARD119_API_PORT` | `8000` | 배포 포트 |
 | `CHEMIGUARD119_ALLOW_ANONYMOUS` | `false` | 반드시 `false` |
-| `CHEMIGUARD119_API_KEY` | 익명 개발 시 생략 가능 | 32자 이상 Secret |
+| `CHEMIGUARD119_API_KEY` | 익명 개발 시 생략 가능 | 64자리 hex 또는 43자리 base64url Secret |
 | `CHEMIGUARD119_RUNTIME_MANIFEST_SHA256` | 선택 | 64자리 SHA-256 필수 |
 | `CHEMIGUARD119_GIT_COMMIT` | 선택 | 40자리 릴리스 commit 필수 |
+| `CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY` | 생략 | 검수·빌드 전용 32바이트 Secret, 실행 서버 주입 금지 |
 | `CHEMIGUARD119_RULE_POLICY` | `PUBLIC_SOURCE_PILOT_V1` | 기본값 유지 권장 |
 
 ### 3.2 경로
@@ -97,7 +101,10 @@ config에는 최소 다음 파일이 필요합니다.
 config/
 ├── cameo_crosswalk.csv
 ├── conflict_policy.json
+├── data_source_registry.json
 ├── pair_rules.csv
+├── release_attestation.schema.json
+├── release_quality_policy.json
 └── substance_overrides.csv
 ```
 
@@ -125,13 +132,16 @@ curl -X POST http://127.0.0.1:8000/api/v1/substances/resolve \
 
 ### 6.1 GitHub Actions Secrets
 
-모델 릴리스 workflow에는 다음 Repository Secret 세 개가 필요합니다.
+모델 릴리스 workflow에는 다음 Repository Secret 여섯 개가 필요합니다.
 
 | Secret | 값 |
 |---|---|
 | `CHEMIGUARD119_DATA_BUNDLE_URL` | 인증정보가 URL에 포함되지 않은 HTTPS bundle URL |
 | `CHEMIGUARD119_DATA_BUNDLE_SHA256` | `tar.gz` 바이트의 64자리 SHA-256 |
-| `CHEMIGUARD119_API_KEY` | 32자 이상, 공백·예시 문자열이 없는 운영 API Key |
+| `CHEMIGUARD119_RELEASE_EVIDENCE_BUNDLE_URL` | 독립 검수 평가·서명 bundle HTTPS URL |
+| `CHEMIGUARD119_RELEASE_EVIDENCE_BUNDLE_SHA256` | 검수 bundle 바이트의 64자리 SHA-256 |
+| `CHEMIGUARD119_API_KEY` | 32바이트 난수의 64자리 hex 또는 43자리 base64url API Key |
+| `CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY` | 검수·빌드 전용 32바이트 이상 HMAC Secret |
 
 URL은 공개 문서에 쓰지 않습니다. 접근 제어가 필요하면 Secret에 만료 시간이 짧은 HTTPS 서명
 URL을 저장하고 릴리스 실행 후 교체합니다.
@@ -185,6 +195,29 @@ Secret의 SHA-256은 업로드 전 로컬에서 계산한 값과 정확히 같�
 
 검증된 파일만 `data/raw/`에 새로 추출됩니다.
 
+### 6.4 독립 검수 evidence bundle
+
+이 bundle은 모델 개발자가 임의로 만드는 운영 통과권이 아닙니다. 독립 라벨러·검수자가
+locked test와 평가 report를 확정하고 별도 검수 환경에서 attestation을 서명해야 합니다.
+루트에 다음 9개 파일만 포함한 flat `tar.gz`를 사용합니다.
+
+```text
+resolver_locked.csv
+resolver_hint_safety_locked.csv
+retriever_legacy_locked.csv
+retriever_sections_locked.jsonl
+parser_locked.jsonl
+parser_locked.report.json
+e2e_scenarios.jsonl
+e2e_scenarios.report.json
+release_attestation.json
+```
+
+`release_attestation.json`은 `config/release_attestation.schema.json` 계약을 따르며 평가
+dataset·report digest, clean Git commit, quality policy와 data registry digest를 결합합니다.
+HMAC 키는 검수·빌드 단계에서만 사용하고 실행 컨테이너에는 전달하지 않습니다. 실행 서버는
+신뢰 경로로 주입된 runtime manifest SHA-256에 고정된 빌드 검증 결과를 확인합니다.
+
 ## 7. 수동 모델 릴리스
 
 신뢰된 Python 3.11 환경과 원천 데이터가 있을 때 실행합니다.
@@ -200,6 +233,7 @@ git status --short
 
 ```bash
 export CHEMIGUARD119_GIT_COMMIT=40자리-clean-commit-sha
+export CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY="32바이트-이상-검수-Secret"
 
 chemiguard119 pipeline \
   --data-dir data/raw \
@@ -207,8 +241,16 @@ chemiguard119 pipeline \
   --resolver-model artifacts/resolver.joblib \
   --retriever-model artifacts/retriever.joblib \
   --config-dir config \
-  --resolver-evaluation data/evaluation/resolver_regression_queries.csv \
-  --retriever-evaluation data/evaluation/retrieval_regression_queries.csv \
+  --resolver-evaluation release-evidence/resolver_locked.csv \
+  --resolver-safety-evaluation release-evidence/resolver_hint_safety_locked.csv \
+  --retriever-evaluation release-evidence/retriever_legacy_locked.csv \
+  --retriever-section-evaluation release-evidence/retriever_sections_locked.jsonl \
+  --evaluation-profile PILOT_REVIEWED \
+  --parser-locked-report release-evidence/parser_locked.report.json \
+  --parser-locked-dataset release-evidence/parser_locked.jsonl \
+  --e2e-scenarios-report release-evidence/e2e_scenarios.report.json \
+  --e2e-scenarios-dataset release-evidence/e2e_scenarios.jsonl \
+  --release-attestation release-evidence/release_attestation.json \
   --report-dir outputs/modeling \
   --include-hash \
   --json
@@ -227,6 +269,20 @@ shasum -a 256 artifacts/runtime_manifest.json
 manifest SHA-256은 artifact와 별도 신뢰 경로에 기록해야 합니다. artifact와 같은 bundle에
 있는 hash 파일만 믿으면 변조 여부를 판단할 수 없습니다.
 
+현재 저장소 평가행은 모두 DRAFT이고 `config/data_source_registry.json`의 CAMEO·ICIS 계열은
+`REVIEW_REQUIRED`입니다. 따라서 위 staging·production 릴리스 명령은 의도적으로
+실패합니다. 이를 우회하지 말고 다음 두 조건을 먼저 충족해야 합니다.
+
+1. 독립 라벨러·검수자가 `locked_test` 평가행을 검수해 `PILOT_REVIEWED` gate를 통과
+2. 데이터 제공 조건을 확인하고 재배포 가능한 source만 `APPROVED`로 변경
+
+profile 문자열이나 사례 수 JSON만으로는 통과하지 않습니다. staging·production manifest는
+원본
+dataset·evaluator report SHA, locked-test provenance, 실제 품질 임계값, 0건 위험 CAS
+자동확정과 95% 단측 신뢰상한, 서명된 현장검증 attestation을 다시 계산합니다. 정책상 최소
+사례 수(Resolver 1,200, 안전 hard case 300, section qrel 400, parser 400, E2E 200)는 품질
+보장이 아니라 과소 표본 릴리스를 막는 하한입니다.
+
 ## 8. GitHub Actions 릴리스
 
 `.github/workflows/release-model.yml`은 `workflow_dispatch`로 수동 실행합니다.
@@ -236,23 +292,29 @@ manifest SHA-256은 artifact와 별도 신뢰 경로에 기록해야 합니다. 
 3. URL·SHA-256·archive 구조 검증 후 `data/raw/`에 추출
 4. 고정 운영 의존성 설치
 5. 전체 테스트
-6. audit → prepare → train → evaluate → manifest
+6. reviewed 평가·데이터 재배포 gate → audit → prepare → train → evaluate → manifest
 7. 호스트에서 운영 무결성 검증
 8. `Dockerfile.bundle` 이미지 빌드
 9. 읽기 전용 컨테이너 readiness·인증 smoke test
 10. runtime bundle을 Actions artifact로 보관
-11. 선택하면 immutable 태그로 GHCR push
+11. 선택하면 commit 기반 태그로 GHCR push 후 registry digest 기록
+
+workflow는 `main`에서만 실행되고 `PILOT_REVIEWED`를 강제합니다. DRAFT 평가나 미승인
+데이터가 남아 있으면 이미지 빌드·푸시 전에 실패하는 것이 정상입니다.
 
 Actions artifact 이름에는 commit SHA가 포함되며 보관 기간은 workflow 설정을 따릅니다. 아직
-공개 GitHub Release 다운로드 링크는 제공하지 않습니다.
+공개 GitHub Release 다운로드 링크는 제공하지 않습니다. 태그는 덮어쓸 수 있으므로 실제
+배포와 롤백에는 workflow summary의 `image@sha256:...` digest를 사용합니다.
 
-## 9. Compose 배포
+## 9. Compose 로컬 개발
 
-`compose.yaml`은 외부 artifact mount 방식을 사용합니다. `.env.example`을 참고해 실제 값으로
-별도 `.env`를 만듭니다. `.env`는 Git에 커밋하지 않습니다.
+`compose.yaml`은 외부 artifact bind mount 방식이므로 **로컬 개발 전용**입니다. 컨테이너의
+`:ro` mount도 호스트의 파일 교체까지 막지는 못하므로 staging·production에 사용하지
+않습니다. `.env.example`을 참고해 실제 값으로 별도 `.env`를 만들고 Git에는 커밋하지
+않습니다.
 
 ```text
-CHEMIGUARD119_API_KEY=32자-이상의-운영-키
+CHEMIGUARD119_API_KEY=64자리-hex-개발-키
 CHEMIGUARD119_RUNTIME_MANIFEST_SHA256=64자리-manifest-sha256
 CHEMIGUARD119_GIT_COMMIT=40자리-release-commit
 CHEMIGUARD119_RULE_POLICY=PUBLIC_SOURCE_PILOT_V1
@@ -274,15 +336,19 @@ curl http://127.0.0.1:8000/health/ready
 - 임시 파일은 제한된 tmpfs
 - 메모리 1GiB 제한, 768MiB reservation
 
-외부 사용자는 TLS를 종료하는 API Gateway나 서비스 백엔드를 통해 접근하게 하세요.
+staging·production은 다음 절의 artifact 포함 이미지를 사용하고, 외부 사용자는 TLS를
+종료하는 API Gateway나 서비스 백엔드를 통해 접근하게 하세요.
 
 ## 10. Artifact 포함 이미지
 
 `Dockerfile.bundle`은 검증된 artifact를 이미지에 포함합니다.
 
 ```bash
+export CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY="32바이트-이상-검수-Secret"
+
 docker build \
   --file Dockerfile.bundle \
+  --secret id=release_attestation_key,env=CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY \
   --build-arg RUNTIME_MANIFEST_SHA256=64자리-manifest-sha256 \
   --build-arg GIT_COMMIT=40자리-release-commit \
   --tag chemicheck119-model-api:release .
@@ -308,7 +374,8 @@ docker run --detach \
   chemicheck119-model-api:release
 ```
 
-실제 값은 shell history에 남기기보다 배포 플랫폼의 Secret 주입 기능을 사용하세요.
+API Key·manifest SHA·Git commit은 shell history에 남기기보다 배포 플랫폼 Secret으로
+주입하세요. attestation HMAC 키는 이미지 빌드가 끝난 뒤 실행 서버에 주입하지 않습니다.
 
 ## 11. 시작 후 smoke test
 
@@ -323,7 +390,7 @@ curl --fail http://127.0.0.1:8000/health/ready
 - `status=READY`
 - `ready=true`
 - `integrity.status=VERIFIED`
-- `integrity.environment=production`
+- `integrity.environment`가 요청한 `staging` 또는 `production`과 일치
 - `integrity.manifest_sha256_verified=true`
 - `integrity.git_commit`이 릴리스 commit과 일치
 - 공개 근거 파일럿 정책이 준비됨
@@ -381,7 +448,12 @@ runtime manifest SHA-256
 Git commit
 ```
 
-1. 마지막 정상 immutable 이미지와 trust anchor를 선택합니다.
+0.4.0부터 runtime manifest는 `chemicheck119-runtime-release-v4`입니다. v2·v3 artifact에
+코드만 0.4.0으로 교체하면 readiness가 503으로 차단되는 것이 정상입니다. 기존 DB·모델을
+그대로 복사해 manifest 문자열만 바꾸지 말고, 고정 Python 3.11 릴리스 workflow에서
+config·평가 evidence·attestation과 함께 v4 bundle을 다시 생성합니다.
+
+1. 마지막 정상 `image@sha256:...`와 trust anchor를 선택합니다.
 2. 모든 인스턴스를 같은 버전으로 교체합니다.
 3. readiness와 인증 smoke test를 다시 실행합니다.
 4. 문제가 발생한 commit·manifest·요청 ID를 기록합니다.
@@ -395,11 +467,15 @@ Git commit
 - [ ] clean commit인지 확인
 - [ ] Python 3.11 고정
 - [ ] 데이터 bundle URL·SHA Secret 설정
-- [ ] 운영 API Key Secret 설정
+- [ ] 독립 검수 evidence bundle URL·SHA Secret 설정
+- [ ] `openssl rand -hex 32`로 staging·production API Key Secret 생성
+- [ ] 별도 릴리스 attestation HMAC Secret을 검수·빌드 환경에만 설정
 - [ ] 전체 테스트 통과
 - [ ] 내부 평가 결과 확인
 - [ ] manifest에 정확한 commit 기록
+- [ ] manifest schema가 `chemicheck119-runtime-release-v4`인지 확인
 - [ ] 공개 근거 정책·crosswalk provenance 확인
+- [ ] staging·production은 bind mount가 아닌 bundle 이미지를 registry digest로 고정
 
 ### 배포 직후
 

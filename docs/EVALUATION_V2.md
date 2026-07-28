@@ -336,8 +336,10 @@ LLM 하나가 결정하면 안 됩니다. 비전문가 이중 검수라면 `DOUB
 
 1. 독립 보류 평가셋과 실제 현장 shadow 검증이 없습니다.
 2. 상세 KOSHA 근거와 공개 검증 CAMEO 지원 범위가 좁습니다.
-3. KOSHA는 제공 MSDS가 참고용이며 외부·상업적 이용 시 저작권 문제가 생길 수 있다고
-   안내합니다. 원문 재배포 전 별도 허가 또는 공식 Open API 이용 조건을 확인해야 합니다.
+3. KOSHA OpenAPI의 공공데이터포털 페이지는 이용허락범위 제한 없음으로 표시되지만,
+   CAMEO에는 제3자 권리·일부 필드 복제 제한이 있고 ICIS·PRTR 파생 artifact의 컨테이너
+   재배포 조건도 별도로 확인해야 합니다. `config/data_source_registry.json`에서 미확인
+   source를 `REVIEW_REQUIRED`로 두고 production 배포를 차단합니다.
 4. 여러 시설물질쌍 batch API와 화면 계약은 아직 v1에 없습니다.
 5. 실제 스테이징 배포·부하·장애·롤백 검증이 없습니다.
 6. 대응 문장별 section 인용 계약이 없어 화면의 “예상 대응”을 AI 권고로 표시할 수 없습니다.
@@ -351,7 +353,8 @@ LLM 하나가 결정하면 안 됩니다. 비전문가 이중 검수라면 `DOUB
 - [NIST Generative AI Profile](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence)
 - [NOAA CAMEO 반응성 그룹](https://m.cameochemicals.noaa.gov/browse/react)
 - [KOSHA MSDS 검색과 이용 안내](https://msds.kosha.or.kr/MSDSInfo/kcic/msdssearchMsds.do)
-- [KOSHA MSDS Open API](https://msds.kosha.or.kr/MSDSInfo/kcic/openapi.do)
+- [KOSHA MSDS Open API](https://www.data.go.kr/data/15157612/openapi.do)
+- [CAMEO 이용 조건](https://cameochemicals.noaa.gov/help/reference/terms_and_conditions.htm)
 - [ICIS 화학물질 통계 공개](https://icis.mcee.go.kr/search/searchType6.do)
 - [BEIR: Heterogeneous Information Retrieval Benchmark](https://arxiv.org/abs/2104.08663)
 - [BGE-M3: Dense·Sparse·Multi-vector Retrieval](https://aclanthology.org/2024.findings-acl.137/)

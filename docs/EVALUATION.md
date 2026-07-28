@@ -5,6 +5,35 @@
 > [평가 V2](EVALUATION_V2.md)를 먼저 확인하세요. `incident_parser_seed.jsonl` 6건은
 > 평가셋이 아니라 `DRAFT` 형식 시드이며 파서 성능 수치가 없습니다.
 
+## 평가 profile과 section 평가
+
+```bash
+chemiguard119 evaluate --evaluation-profile INTERNAL_REGRESSION --json
+chemiguard119 evaluate --evaluation-profile COMPETITION_REVIEWED --json
+chemiguard119 evaluate --evaluation-profile PILOT_REVIEWED --json
+```
+
+- `INTERNAL_REGRESSION`: DRAFT fixture를 허용하지만
+  `claim_scope=INTERNAL_REGRESSION_ONLY`
+- `COMPETITION_REVIEWED`: 서로 다른 라벨러·검수자와 locked test provenance 요구
+- `PILOT_REVIEWED`: staging·production manifest가 요구하는 최소 평가 claim
+
+현재 평가행은 모두 DRAFT이므로 뒤의 두 명령은 의도적으로 차단됩니다.
+
+신규 `retrieval_section_regression.jsonl`은 같은 CAS만 확인하던 기존 10건 평가와 달리
+`evidence_id`별 0~3 relevance를 사용합니다.
+
+```text
+내부 12건: nDCG@5 0.9284 / Recall@5 0.8750 / Precision@5 0.2333 /
+MRR@5 0.9444 / unjudged rate 0.7667
+claim_scope: INTERNAL_REGRESSION_ONLY
+```
+
+표준 nDCG·Precision은 unjudged 문서를 비관련으로 계산하지만, qrel pool 자체가 불완전해
+반환 문서 76.7%는 실제 관련 여부를 아직 판정하지 못했습니다. 따라서 이 수치는 section
+제목 기반 DRAFT 회귀일 뿐 현장 검색 정확도가 아닙니다. 비교와 artifact hash는
+`data/evaluation/retrieval_section_comparison_2026-07-28.json`에 고정했습니다.
+
 ## 공개 검증 CAMEO 물질쌍 회귀 평가
 
 공개 검증 crosswalk가 늘어날 때마다 모든 고유 물질쌍을 실제 CAMEO 원자료 DB에 연결해
@@ -187,10 +216,10 @@ Resolver가 신고 질의에서 자동으로 선택한 CAS 힌트를 포함한 �
 |---|---:|---|---:|
 | Resolver | 21 | 단일후보 확정 정확도 | 0.9524 |
 | Resolver | 21 | Top-3 Recall | 1.0000 |
-| Retriever 전체 흐름 | 10 | Recall@5 | 1.0000 |
-| Retriever 전체 흐름 | 10 | MRR@8 | 0.9000 |
-| Retriever 단독·정답 CAS 제공 | 10 | Recall@5 | 1.0000 |
-| Retriever 단독·정답 CAS 제공 | 10 | MRR@8 | 0.9000 |
+| Retriever 전체 흐름 | 10 | Recall@5 | 0.9000 |
+| Retriever 전체 흐름 | 10 | MRR@8 | 0.6500 |
+| Retriever 단독·정답 CAS 제공 | 10 | Recall@5 | 0.9000 |
+| Retriever 단독·정답 CAS 제공 | 10 | MRR@8 | 0.6500 |
 | 자동 CAS 힌트 | 10 | Coverage | 0.9000 |
 | 자동 CAS 힌트 | 10 | Precision when present | 1.0000 |
 
