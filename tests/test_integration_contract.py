@@ -112,7 +112,7 @@ def test_shared_unconfirmed_response_is_safe_dashboard_fixture() -> None:
 
     assert validated.state == "AWAITING_SUBSTANCE_CONFIRMATION"
     assert validated.confirmation_gate.all_required_confirmed is False
-    assert validated.conflict_review["executed"] is False
+    assert validated.conflict_review.executed is False
     facility = validated.model_outputs["facility_history_candidates"]["results"][0]
     assert facility["current_inventory_confirmed"] is False
     assert facility["rule_eligible"] is False

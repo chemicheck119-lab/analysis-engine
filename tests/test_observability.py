@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -99,7 +101,7 @@ def test_request_logs_are_correlated_without_secrets_or_payload(
         "level": logging.INFO,
         "request_id": "REQ-LIVE-LOG-001",
         "service_name": "chemicheck119-model-api",
-        "service_version": "0.3.0",
+        "service_version": "0.4.0",
         "deployment_environment": "development",
         "authentication_mode": "API_KEY",
         "http_request_method": "GET",
@@ -113,7 +115,7 @@ def test_request_logs_are_correlated_without_secrets_or_payload(
         "level": logging.WARNING,
         "request_id": "REQ-AUTH-LOG-001",
         "service_name": "chemicheck119-model-api",
-        "service_version": "0.3.0",
+        "service_version": "0.4.0",
         "deployment_environment": "development",
         "authentication_mode": "API_KEY",
         "http_request_method": "POST",
@@ -129,7 +131,7 @@ def test_request_logs_are_correlated_without_secrets_or_payload(
         "level": logging.WARNING,
         "request_id": "REQ-NOT-FOUND-LOG-001",
         "service_name": "chemicheck119-model-api",
-        "service_version": "0.3.0",
+        "service_version": "0.4.0",
         "deployment_environment": "development",
         "authentication_mode": "API_KEY",
         "http_request_method": "GET",
@@ -148,3 +150,31 @@ def test_request_logs_are_correlated_without_secrets_or_payload(
         "private-secret-in-path",
     ):
         assert secret not in serialized
+
+
+def test_console_server_disables_uvicorn_raw_access_log(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
+    fake_uvicorn = SimpleNamespace(
+        run=lambda *args, **kwargs: calls.append((args, kwargs))
+    )
+    monkeypatch.setitem(sys.modules, "uvicorn", fake_uvicorn)
+    monkeypatch.setenv("CHEMIGUARD119_API_HOST", "127.0.0.1")
+    monkeypatch.setenv("CHEMIGUARD119_API_PORT", "8000")
+    monkeypatch.delenv("CHEMIGUARD119_API_KEY", raising=False)
+    monkeypatch.delenv("CHEMIGUARD119_ALLOW_ANONYMOUS", raising=False)
+
+    api.run()
+
+    assert calls == [
+        (
+            ("chemiguard119.api:app",),
+            {
+                "host": "127.0.0.1",
+                "port": 8000,
+                "workers": 1,
+                "access_log": False,
+            },
+        )
+    ]

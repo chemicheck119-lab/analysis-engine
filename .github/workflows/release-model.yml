@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       push_ghcr:
-        description: 검증을 통과한 불변 SHA 태그 이미지를 GHCR에 푸시합니다.
+        description: 검증을 통과한 commit 기반 태그 이미지를 GHCR에 푸시하고 digest를 기록합니다.
         required: true
         default: false
         type: boolean
@@ -34,6 +34,15 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 1
+
+      - name: main 릴리스 소스 강제
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main" || {
+            echo "모델 릴리스는 main의 검토 완료 commit에서만 실행할 수 있습니다."
+            exit 1
+          }
 
       - name: Python 3.11 설정
         uses: actions/setup-python@v6
@@ -166,16 +175,110 @@ jobs:
           print(f"데이터 번들 검증·추출 완료: {len(extracted)}개 CSV")
           PY
 
-      - name: 운영 API 키 Secret 검사
+      - name: 독립 검수 평가·서명 번들 다운로드 및 검증
+        shell: bash
+        env:
+          EVIDENCE_BUNDLE_URL: ${{ secrets.CHEMIGUARD119_RELEASE_EVIDENCE_BUNDLE_URL }}
+          EVIDENCE_BUNDLE_SHA256: ${{ secrets.CHEMIGUARD119_RELEASE_EVIDENCE_BUNDLE_SHA256 }}
+        run: |
+          set -euo pipefail
+          bundle_path="$RUNNER_TEMP/chemicheck119-release-evidence.tar.gz"
+          python - <<'PY'
+          import os
+          import re
+          from urllib.parse import urlparse
+
+          url = os.environ.get("EVIDENCE_BUNDLE_URL", "").strip()
+          digest = os.environ.get("EVIDENCE_BUNDLE_SHA256", "").strip().lower()
+          parsed = urlparse(url)
+          if (
+              parsed.scheme != "https"
+              or not parsed.netloc
+              or parsed.username
+              or parsed.password
+              or any(character.isspace() for character in url)
+          ):
+              raise SystemExit("독립 검수 번들은 인증정보가 없는 HTTPS URL이어야 합니다.")
+          if re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+              raise SystemExit("독립 검수 번들 SHA-256 Secret 형식이 잘못되었습니다.")
+          PY
+          curl --fail --silent --show-error --location \
+            --proto '=https' --proto-redir '=https' --tlsv1.2 \
+            --retry 3 --retry-all-errors \
+            --output "$bundle_path" "$EVIDENCE_BUNDLE_URL"
+          BUNDLE_PATH="$bundle_path" python - <<'PY'
+          import hashlib
+          import os
+          import shutil
+          import tarfile
+          from pathlib import Path, PurePosixPath
+
+          required = {
+              "resolver_locked.csv",
+              "resolver_hint_safety_locked.csv",
+              "retriever_legacy_locked.csv",
+              "retriever_sections_locked.jsonl",
+              "parser_locked.jsonl",
+              "parser_locked.report.json",
+              "e2e_scenarios.jsonl",
+              "e2e_scenarios.report.json",
+              "release_attestation.json",
+          }
+          bundle = Path(os.environ["BUNDLE_PATH"])
+          if not bundle.is_file() or not 0 < bundle.stat().st_size <= 100_000_000:
+              raise SystemExit("독립 검수 번들 크기가 허용 범위를 벗어났습니다.")
+          with bundle.open("rb") as handle:
+              actual = hashlib.file_digest(handle, "sha256").hexdigest()
+          if actual != os.environ["EVIDENCE_BUNDLE_SHA256"].strip().lower():
+              raise SystemExit("독립 검수 번들 SHA-256이 Secret과 다릅니다.")
+          target = Path("release-evidence")
+          target.mkdir(parents=True, exist_ok=True)
+          extracted: set[str] = set()
+          total_size = 0
+          with tarfile.open(bundle, mode="r:gz") as archive:
+              members = archive.getmembers()
+              if len(members) > len(required):
+                  raise SystemExit("독립 검수 번들 항목 수가 제한을 초과했습니다.")
+              for member in members:
+                  path = PurePosixPath(member.name)
+                  if (
+                      path.is_absolute()
+                      or ".." in path.parts
+                      or not member.isfile()
+                      or len(path.parts) != 1
+                      or path.name not in required
+                      or path.name in extracted
+                      or not 0 < member.size <= 50_000_000
+                  ):
+                      raise SystemExit(f"허용되지 않은 검수 번들 항목: {member.name}")
+                  total_size += member.size
+                  if total_size > 100_000_000:
+                      raise SystemExit("독립 검수 번들의 압축 해제 크기가 제한을 초과했습니다.")
+                  source = archive.extractfile(member)
+                  if source is None:
+                      raise SystemExit(f"검수 파일을 읽을 수 없습니다: {member.name}")
+                  with source, (target / path.name).open("xb") as output:
+                      shutil.copyfileobj(source, output)
+                  extracted.add(path.name)
+          missing = sorted(required - extracted)
+          if missing:
+              raise SystemExit(f"독립 검수 번들 필수 파일 누락: {missing}")
+          print("독립 검수 평가·서명 번들 검증 완료")
+          PY
+
+      - name: 운영 API 키·릴리스 서명 Secret 검사
         shell: bash
         env:
           MODEL_API_KEY: ${{ secrets.CHEMIGUARD119_API_KEY }}
+          RELEASE_ATTESTATION_KEY: ${{ secrets.CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY }}
         run: |
           set -euo pipefail
           python - <<'PY'
           import os
+          import re
 
           key = os.environ.get("MODEL_API_KEY", "")
+          attestation_key = os.environ.get("RELEASE_ATTESTATION_KEY", "")
           lowered = key.lower()
           placeholder_tokens = (
               "교체",
@@ -185,13 +288,20 @@ jobs:
               "placeholder",
               "example",
           )
-          if len(key) < 32:
-              raise SystemExit("CHEMIGUARD119_API_KEY Secret은 32자 이상이어야 합니다.")
-          if key != key.strip() or any(character.isspace() for character in key):
-              raise SystemExit("CHEMIGUARD119_API_KEY Secret에는 공백을 사용할 수 없습니다.")
+          if re.fullmatch(r"(?:[0-9a-fA-F]{64}|[A-Za-z0-9_-]{43})", key) is None:
+              raise SystemExit(
+                  "CHEMIGUARD119_API_KEY는 32바이트 난수의 64자리 hex 또는 "
+                  "43자리 base64url이어야 합니다."
+              )
           if any(token in lowered for token in placeholder_tokens):
               raise SystemExit("예시용 placeholder API 키는 모델 릴리스에 사용할 수 없습니다.")
-          print("운영 API 키 형식 검사 통과")
+          if len(attestation_key.encode("utf-8")) < 32:
+              raise SystemExit("릴리스 attestation HMAC Secret은 32바이트 이상이어야 합니다.")
+          if attestation_key != attestation_key.strip() or any(
+              character.isspace() for character in attestation_key
+          ):
+              raise SystemExit("릴리스 attestation HMAC Secret에는 공백을 사용할 수 없습니다.")
+          print("운영 API 키·릴리스 서명 Secret 형식 검사 통과")
           PY
 
       - name: 고정 운영 의존성과 테스트 도구 설치
@@ -209,6 +319,8 @@ jobs:
 
       - name: 모델링 파이프라인과 배포 artifact 생성
         shell: bash
+        env:
+          CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY: ${{ secrets.CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY }}
         run: |
           set -euo pipefail
           mkdir -p outputs/release outputs/modeling
@@ -218,8 +330,16 @@ jobs:
             --resolver-model "$GITHUB_WORKSPACE/artifacts/resolver.joblib" \
             --retriever-model "$GITHUB_WORKSPACE/artifacts/retriever.joblib" \
             --config-dir "$GITHUB_WORKSPACE/config" \
-            --resolver-evaluation "$GITHUB_WORKSPACE/data/evaluation/resolver_regression_queries.csv" \
-            --retriever-evaluation "$GITHUB_WORKSPACE/data/evaluation/retrieval_regression_queries.csv" \
+            --resolver-evaluation "$GITHUB_WORKSPACE/release-evidence/resolver_locked.csv" \
+            --resolver-safety-evaluation "$GITHUB_WORKSPACE/release-evidence/resolver_hint_safety_locked.csv" \
+            --retriever-evaluation "$GITHUB_WORKSPACE/release-evidence/retriever_legacy_locked.csv" \
+            --retriever-section-evaluation "$GITHUB_WORKSPACE/release-evidence/retriever_sections_locked.jsonl" \
+            --evaluation-profile PILOT_REVIEWED \
+            --parser-locked-report "$GITHUB_WORKSPACE/release-evidence/parser_locked.report.json" \
+            --parser-locked-dataset "$GITHUB_WORKSPACE/release-evidence/parser_locked.jsonl" \
+            --e2e-scenarios-report "$GITHUB_WORKSPACE/release-evidence/e2e_scenarios.report.json" \
+            --e2e-scenarios-dataset "$GITHUB_WORKSPACE/release-evidence/e2e_scenarios.jsonl" \
+            --release-attestation "$GITHUB_WORKSPACE/release-evidence/release_attestation.json" \
             --report-dir "$GITHUB_WORKSPACE/outputs/modeling" \
             --include-hash \
             --json | tee outputs/release/pipeline-command.json
@@ -280,6 +400,7 @@ jobs:
         env:
           CHEMIGUARD119_ENVIRONMENT: production
           CHEMIGUARD119_RUNTIME_MANIFEST_SHA256: ${{ steps.runtime-manifest.outputs.sha256 }}
+          CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY: ${{ secrets.CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY }}
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -304,11 +425,14 @@ jobs:
 
       - name: Trust anchor를 포함한 bundle 이미지 빌드
         shell: bash
+        env:
+          CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY: ${{ secrets.CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY }}
         run: |
           set -euo pipefail
           test "$RUNTIME_MANIFEST_SHA256" = "${{ steps.runtime-manifest.outputs.sha256 }}"
           docker build \
             --file Dockerfile.bundle \
+            --secret id=release_attestation_key,env=CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY \
             --build-arg "RUNTIME_MANIFEST_SHA256=$RUNTIME_MANIFEST_SHA256" \
             --build-arg "GIT_COMMIT=$GITHUB_SHA" \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
@@ -330,10 +454,15 @@ jobs:
             docker image inspect "$LOCAL_IMAGE" \
               --format '{{range .Config.Env}}{{println .}}{{end}}'
           } | sed -n 's/^CHEMIGUARD119_GIT_COMMIT=//p')"
+          embedded_attestation_key="$({
+            docker image inspect "$LOCAL_IMAGE" \
+              --format '{{range .Config.Env}}{{println .}}{{end}}'
+          } | sed -n 's/^CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY=//p')"
           image_commit_label="$(docker image inspect "$LOCAL_IMAGE" \
             --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
           test -z "$embedded_anchor"
           test -z "$embedded_commit"
+          test -z "$embedded_attestation_key"
           test "$image_label" = "$RUNTIME_MANIFEST_SHA256"
           test "$image_commit_label" = "$GITHUB_SHA"
 
@@ -442,11 +571,25 @@ jobs:
             artifacts/runtime_manifest.sha256
             config/cameo_crosswalk.csv
             config/conflict_policy.json
+            config/data_source_registry.json
             config/pair_rules.csv
+            config/release_attestation.schema.json
+            config/release_quality_policy.json
             config/substance_overrides.csv
             outputs/modeling/pipeline_latest.json
             outputs/modeling/resolver_evaluation_latest.json
+            outputs/modeling/resolver_hint_safety_evaluation_latest.json
             outputs/modeling/retriever_evaluation_latest.json
+            outputs/modeling/retriever_section_evaluation_latest.json
+            release-evidence/parser_locked.jsonl
+            release-evidence/parser_locked.report.json
+            release-evidence/e2e_scenarios.jsonl
+            release-evidence/e2e_scenarios.report.json
+            release-evidence/resolver_locked.csv
+            release-evidence/resolver_hint_safety_locked.csv
+            release-evidence/retriever_legacy_locked.csv
+            release-evidence/retriever_sections_locked.jsonl
+            release-evidence/release_attestation.json
             requirements-production.txt
             Dockerfile.bundle
 
@@ -470,6 +613,7 @@ jobs:
 
       - name: 검증된 이미지 GHCR 푸시
         if: inputs.push_ghcr
+        id: ghcr-push
         shell: bash
         env:
           GHCR_IMAGE: ${{ steps.ghcr.outputs.image }}
@@ -478,7 +622,14 @@ jobs:
           remote_image="$GHCR_IMAGE:${GITHUB_SHA}-${RUNTIME_MANIFEST_SHA256}"
           docker tag "$LOCAL_IMAGE" "$remote_image"
           docker push "$remote_image"
+          digest_reference="$(docker image inspect "$remote_image" \
+            --format '{{index .RepoDigests 0}}')"
+          case "$digest_reference" in
+            "$GHCR_IMAGE@sha256:"*) ;;
+            *) echo "GHCR registry digest를 확인할 수 없습니다: $digest_reference"; exit 1 ;;
+          esac
           echo "GHCR_IMAGE=$remote_image" >> "$GITHUB_ENV"
+          echo "digest_reference=$digest_reference" >> "$GITHUB_OUTPUT"
 
       - name: 릴리스 검증 요약
         if: success()
@@ -491,7 +642,8 @@ jobs:
             echo "- Runtime manifest SHA-256: \`$RUNTIME_MANIFEST_SHA256\`"
             echo "- Bundle artifact: \`chemicheck119-runtime-$GITHUB_SHA\`"
             if [ "${{ inputs.push_ghcr }}" = "true" ]; then
-              echo "- GHCR image: \`$GHCR_IMAGE\`"
+              echo "- GHCR tag: \`$GHCR_IMAGE\`"
+              echo "- 배포 고정 digest: \`${{ steps.ghcr-push.outputs.digest_reference }}\`"
             else
               echo "- GHCR push: 비활성화"
             fi

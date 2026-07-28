@@ -1,0 +1,26 @@
+{
+  "schema_version": "chemicheck119-runtime-concurrency-smoke-v1",
+  "measured_at": "2026-07-28",
+  "claim_scope": "DEVELOPMENT_SMOKE_ONLY",
+  "environment": {
+    "client": "FastAPI TestClient",
+    "python_runtime": "local development venv",
+    "concurrency": 10,
+    "request_count": 40,
+    "endpoint": "POST /api/v1/substances/resolve"
+  },
+  "result": {
+    "successful_requests": 40,
+    "failed_requests": 0,
+    "mean_ms": 6.585,
+    "p95_ms": 8.24,
+    "max_ms": 8.533,
+    "readiness_http_status": 200,
+    "runtime_integrity_status": "VERIFIED_DEVELOPMENT"
+  },
+  "limitations": [
+    "ASGI TestClient 기반 smoke이며 실제 네트워크, gateway, 컨테이너 CPU·RAM 제한을 포함하지 않는다.",
+    "실제 서버 부하시험이나 운영 SLO 근거로 사용할 수 없다.",
+    "staging·production은 reviewed 평가와 데이터 재배포 승인 gate 때문에 현재 차단된다."
+  ]
+}

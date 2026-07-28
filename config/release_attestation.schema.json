@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://chemicheck119.example/schemas/release-attestation-v1.json",
+  "title": "케미체크119 파일럿 릴리스 검수 증명",
+  "x-schema-version": "chemicheck119-release-attestation-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "attestation_id",
+    "approval_status",
+    "profile",
+    "git_commit",
+    "quality_policy_sha256",
+    "data_registry_sha256",
+    "evidence_digest",
+    "issued_at_utc",
+    "expires_at_utc",
+    "reviewer",
+    "field_validation",
+    "signature"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "chemicheck119-release-attestation-v1"
+    },
+    "attestation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "approval_status": {
+      "const": "APPROVED"
+    },
+    "profile": {
+      "const": "PILOT_REVIEWED"
+    },
+    "git_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{40}$"
+    },
+    "quality_policy_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "data_registry_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "evidence_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "issued_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reviewer_id",
+        "organization",
+        "independence_statement"
+      ],
+      "properties": {
+        "reviewer_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "organization": {
+          "type": "string",
+          "minLength": 1
+        },
+        "independence_statement": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "field_validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "protocol_id",
+        "evidence_reference",
+        "completed_at_utc"
+      ],
+      "properties": {
+        "status": {
+          "const": "COMPLETED"
+        },
+        "protocol_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_reference": {
+          "type": "string",
+          "minLength": 1
+        },
+        "completed_at_utc": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "key_id",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "HMAC-SHA256"
+        },
+        "key_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}

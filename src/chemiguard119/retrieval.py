@@ -204,12 +204,40 @@ def _fts_query(query: str) -> str:
     return " OR ".join(f'"{token}"' for token in tokens[:20])
 
 
-def _bm25_ranks(db_path: Path, query: str, limit: int) -> list[str]:
+def _bm25_ranks(
+    db_path: Path,
+    query: str,
+    limit: int,
+    *,
+    cas_hint: str | None = None,
+) -> list[str]:
     match = _fts_query(query)
     if not match:
         return []
     try:
         with connect_readonly(db_path) as connection:
+            if cas_hint:
+                # CAS가 확인된 검색은 전역 후보를 자른 뒤 필터링하면 안 된다.
+                # 관련성이 높은 다른 물질 40건이 먼저 나오면 같은 CAS의 실제
+                # 근거가 41위 이후로 밀려 검색 결과가 비는 문제가 생긴다.
+                return [
+                    str(row[0])
+                    for row in connection.execute(
+                        """
+                        SELECT evidence_fts.evidence_id
+                        FROM evidence_fts
+                        JOIN evidence
+                          ON evidence.evidence_id = evidence_fts.evidence_id
+                        WHERE evidence_fts MATCH ?
+                          AND TRIM(COALESCE(evidence.cas_number, '')) = ?
+                          AND UPPER(TRIM(COALESCE(evidence.source, '')))
+                              IN ('KOSHA', 'CAMEO')
+                        ORDER BY bm25(evidence_fts)
+                        LIMIT ?
+                        """,
+                        (match, cas_hint, limit),
+                    )
+                ]
             return [
                 str(row[0])
                 for row in connection.execute(
@@ -253,7 +281,15 @@ def _exact_ranks_from_index(
     limit: int,
 ) -> list[str]:
     if cas_hint:
-        return list(runtime_index["ids_by_cas"].get(cas_hint, []))[:limit]
+        # CAS는 문서 집합을 제한하는 강한 필터이지, 같은 CAS 문서 안에서
+        # evidence_id가 빠른 문서를 더 관련 있다고 만드는 순위 신호가 아니다.
+        # 제목이 질의와 정확히 같을 때만 exact 점수를 부여한다.
+        query_norm = normalize_text(query)
+        return [
+            evidence_id
+            for evidence_id in runtime_index["ids_by_title"].get(query_norm, [])
+            if evidence_id in runtime_index["official_ids_by_cas"].get(cas_hint, set())
+        ][:limit]
 
     query_norm = normalize_text(query)
     matching_ids = set(runtime_index["ids_by_title"].get(query_norm, []))
@@ -264,6 +300,45 @@ def _exact_ranks_from_index(
         matching_ids,
         key=runtime_index["row_position"].__getitem__,
     )[:limit]
+
+
+def _focus_query_for_cas(
+    query: str,
+    cas_hint: str | None,
+    runtime_index: dict[str, Any],
+) -> str:
+    """동일 CAS 문서 내부 순위에서 물질명 반복 효과를 제거한다.
+
+    KOSHA의 한 물질 MSDS는 모든 section 제목에 같은 물질명이 들어간다.
+    물질명과 CAS를 그대로 BM25/TF-IDF 질의에 넣으면 ``제품명``·``CAS 번호``
+    section이 임의로 상위에 오를 수 있다. CAS로 문서 집합을 이미 엄격히
+    제한한 경우에는 같은 물질의 공식 제목에서 얻은 명칭만 제거하고,
+    ``보호구``·``저장``·``누출`` 같은 사고 대응 의도어를 순위화에 사용한다.
+    의도어가 남지 않으면 원문을 유지해 CAS 단독 검색도 계속 작동한다.
+    """
+
+    if not cas_hint:
+        return query
+    row_by_id: dict[str, dict[str, Any]] = runtime_index["row_by_id"]
+    labels: set[str] = {normalize_text(cas_hint)}
+    for evidence_id in runtime_index["ids_by_cas"].get(cas_hint, []):
+        title = str(row_by_id[evidence_id].get("title") or "")
+        if " MSDS" in title:
+            labels.add(normalize_text(title.split(" MSDS", 1)[0]))
+        if " — " in title:
+            chemical_heading = title.split(" — ", 1)[0]
+            labels.update(
+                normalize_text(part)
+                for part in chemical_heading.split("|")
+                if normalize_text(part)
+            )
+
+    focused = normalize_text(query)
+    for label in sorted(labels, key=len, reverse=True):
+        if len(label) >= 2:
+            focused = focused.replace(label, " ")
+    focused = " ".join(focused.split())
+    return focused if len(focused) >= 2 else query
 
 
 def _source_key(row: dict[str, Any]) -> str:
@@ -335,15 +410,31 @@ def _append_missing_cas_source_representatives_from_index(
 
 
 def _tfidf_ranks(
-    artifact: dict[str, Any], query: str, cas_hint: str | None, limit: int
+    artifact: dict[str, Any],
+    query: str,
+    cas_hint: str | None,
+    limit: int,
+    *,
+    eligible_ids: set[str] | None = None,
 ) -> list[str]:
     expanded = f"{query} {cas_hint or ''}".strip()
     vector = artifact["vectorizer"].transform([normalize_text(expanded)])
     scores = (artifact["matrix"] @ vector.T).toarray().ravel()
-    if not np.any(scores > 0):
+    positive_indices = np.flatnonzero(scores > 0)
+    if eligible_ids is not None:
+        positive_indices = np.asarray(
+            [
+                index
+                for index in positive_indices
+                if str(artifact["rows"][index]["evidence_id"]) in eligible_ids
+            ],
+            dtype=np.int64,
+        )
+    if positive_indices.size == 0:
         return []
-    take = min(limit, scores.size)
-    indices = np.argpartition(-scores, take - 1)[:take]
+    take = min(limit, positive_indices.size)
+    local_indices = np.argpartition(-scores[positive_indices], take - 1)[:take]
+    indices = positive_indices[local_indices]
     indices = indices[np.argsort(-scores[indices], kind="stable")]
     return [
         str(artifact["rows"][index]["evidence_id"])
@@ -484,21 +575,23 @@ def search_evidence(
         normalized_cas_hint,
         candidate_limit,
     )
-    exact = _append_missing_cas_source_representatives_from_index(
-        exact,
-        runtime_index,
+    ranking_query = _focus_query_for_cas(
+        query,
         normalized_cas_hint,
+        runtime_index,
     )
     bm25 = _bm25_ranks(
         db_path,
-        f"{query} {normalized_cas_hint or ''}",
+        ranking_query,
         candidate_limit,
+        cas_hint=normalized_cas_hint,
     )
     tfidf = _tfidf_ranks(
         artifact,
-        query,
-        normalized_cas_hint,
+        ranking_query,
+        None,
         candidate_limit,
+        eligible_ids=eligible_ids,
     )
     if eligible_ids is not None:
         exact = [evidence_id for evidence_id in exact if evidence_id in eligible_ids]
@@ -536,9 +629,10 @@ def search_evidence(
         "query": query,
         "cas_hint": normalized_cas_hint,
         "method": (
-            "exact(2x) + SQLite FTS5 BM25 + word/char TF-IDF + RRF(k=60) "
-            "+ 동일 CAS 공식출처 엄격 제한 및 상위 슬롯 보존"
+            "strict CAS filter + exact title(2x) + section-focused SQLite FTS5 "
+            "BM25 + word/char TF-IDF + RRF(k=60) + 공식출처 상위 슬롯 보존"
         ),
+        "ranking_query": ranking_query,
         "warning": "검색 순위는 위험등급이 아니며 결과 원문과 CAS를 확인해야 합니다.",
         "notice": None,
         "ranking_notice": (

@@ -31,6 +31,7 @@ csv.field_size_limit(100 * 1024 * 1024)
 
 
 SCHEMA_VERSION = "chemiguard119-preprocessing-1.3.0"
+KOSHA_OFFICIAL_SOURCE_URL = "https://www.data.go.kr/data/15157612/openapi.do"
 
 MINIMUM_KOSHA_SUBSTANCE_COUNT = 9
 EXPECTED_ICIS_VALID_CAS_COUNT = 4_299
@@ -777,6 +778,12 @@ def _load_kosha_evidence(
             )
             if part
         )
+        raw_source_url = (source_row.get("자료출처") or "").strip()
+        source_url = (
+            raw_source_url
+            if raw_source_url.startswith(("https://", "http://"))
+            else KOSHA_OFFICIAL_SOURCE_URL
+        )
         _insert_evidence(
             connection,
             (
@@ -787,7 +794,7 @@ def _load_kosha_evidence(
                 None,
                 title,
                 body,
-                (source_row.get("자료출처") or "").strip() or None,
+                source_url,
                 (source_row.get("최종개정일") or "").strip() or None,
                 "SOURCE_EXACT",
             ),

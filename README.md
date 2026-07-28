@@ -43,7 +43,8 @@ KOSHA·CAMEO 근거 검색
 | 물질 후보 검색 | 구현 | ICIS 중심 총 4,300개 물질 카탈로그 |
 | 자동 CAS 힌트 안전 회귀 | 구현 | 부분 문자열·모호 표현 12건, 위험 힌트 0건 |
 | 신고문 구조화 | 구현 | 기본 결정적 파서, LM Studio는 선택 실험 |
-| 공식 근거 검색 | 구현 | KOSHA 상세 근거 9종과 CAMEO 근거 |
+| 공식 근거 검색 | 구현 | KOSHA 상세 근거 9종과 CAMEO 근거, section 중심 BM25·TF-IDF |
+| Section 검색 평가 | 구현 | 12건 DRAFT graded qrel, 상용 주장은 자동 차단 |
 | KOSHA 근거 확장 | 수집기 구현 | 공식 OpenAPI staging 수집·검토 필요, 현재 artifact는 9종 |
 | 유사 사고 사례 RAG | 미구현 | 검증된 사고–대응 사례 corpus와 출처·라벨 부족 |
 | 시설 물질 후보 | 구현 | ICIS·PRTR 공개 **과거 취급 이력** 검색 |
@@ -51,7 +52,7 @@ KOSHA·CAMEO 근거 검색
 | 생성형 파인튜닝 | 준비도 점검만 | 데이터 gate만 구현, 실제 학습·운영 적용 안 함 |
 | FastAPI·CLI | 구현 | API Key, health check, 구조화된 오류 응답 |
 | 운영 요청 추적 | 구현 | 본문·Secret을 제외한 요청 ID·상태·지연시간 JSON 로그 |
-| 배포 무결성 검사 | 구현 | manifest, SHA-256, Git commit, 런타임 버전 확인 |
+| 배포 무결성 검사 | 구현 | manifest, SHA-256, Git commit, 평가 report·서명·재배포 gate |
 | 배관 피해 예측 | 사용하지 않음 | 현재 서비스 문제와 직접 관련이 없어 제외 |
 
 시설 이력은 현재 재고·수량·저장 위치를 의미하지 않습니다. 물질 후보 점수와 충돌 등급도
@@ -131,7 +132,7 @@ curl http://127.0.0.1:8000/health/ready
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - OpenAPI JSON: `http://127.0.0.1:8000/openapi.json`
 
-운영 환경에서는 익명 접근이 차단되며 API Key와 artifact 신뢰 기준점이 필요합니다.
+staging·production에서는 익명 접근이 차단되며 API Key와 artifact 신뢰 기준점이 필요합니다.
 [배포 가이드](docs/DEPLOYMENT.md)를 먼저 확인하세요.
 
 ## 6. 첫 API 요청 보내기
@@ -215,6 +216,23 @@ chemiguard119 pipeline \
   --config-dir config \
   --report-dir outputs/modeling \
   --include-hash \
+  --json
+```
+
+기본 profile은 CI용 `INTERNAL_REGRESSION`이며 결과를 현장 정확도로 사용할 수 없습니다.
+실제 production bundle은 `PILOT_REVIEWED`를 요구하고 DRAFT 평가행이 하나라도 있으면
+manifest 생성을 차단합니다.
+
+```bash
+chemiguard119 evaluate \
+  --only retriever \
+  --evaluation-profile INTERNAL_REGRESSION \
+  --json
+
+# 현재 저장소의 DRAFT 평가셋에서는 의도적으로 exit code 1
+chemiguard119 evaluate \
+  --only retriever \
+  --evaluation-profile PILOT_REVIEWED \
   --json
 ```
 
@@ -320,12 +338,17 @@ python -m pip check
 
 운영 배포는 Python 3.11과 다음 신뢰 기준점을 사용합니다.
 
-- 32자 이상의 `CHEMIGUARD119_API_KEY`
+- `openssl rand -hex 32`로 생성한 64자리 hex 또는 동등한 43자리 base64url API Key
 - `runtime_manifest.json`의 SHA-256인 `CHEMIGUARD119_RUNTIME_MANIFEST_SHA256`
 - manifest를 생성한 40자리 commit인 `CHEMIGUARD119_GIT_COMMIT`
+- 빌드·독립 검수 단계에서만 사용하는 별도
+  `CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY`(실행 서버 주입 금지)
 - 충돌 정책 `CHEMIGUARD119_RULE_POLICY=PUBLIC_SOURCE_PILOT_V1`
 - 읽기 전용 SQLite·모델·config
 - `GET /health/ready` 기반 readiness 확인
+
+`staging`과 `production`은 같은 무결성·인증 gate를 적용하며, 외부 bind mount가 아닌
+`Dockerfile.bundle` 불변 이미지와 registry digest로 배포합니다.
 
 자세한 절차는 [배포 가이드](docs/DEPLOYMENT.md)를 확인하세요.
 
@@ -337,6 +360,7 @@ python -m pip check
 - [데이터와 모델](docs/DATA_AND_MODEL.md): 출처, 전처리, 모델 역할과 평가
 - [모델 평가](docs/EVALUATION.md): 지표 정의, 기준선, 실패 원인 분리
 - [평가 V2](docs/EVALUATION_V2.md): 21·10·6의 출처, 상용 타당성, 공모전 AI 고도화 기준
+- [최종 브리핑](docs/BRIEFING.md): 발표문, 최신 AI 주제, 수치와 상용 준비 판정
 - [배포](docs/DEPLOYMENT.md): artifact, Secret, Docker, CI/CD, 롤백
 - [운영](docs/OPERATIONS.md): 구조화 로그, 요청 추적, 장애 확인 절차
 - [현재 상태](docs/PROJECT_STATUS.md): 실제 완료 범위, 재현 결과, P0~P3 기술 부채

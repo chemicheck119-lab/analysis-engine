@@ -69,7 +69,7 @@ BE 환경변수 권장 계약:
 
 ```text
 CHEMICHECK119_MODEL_API_BASE_URL=https://내부-모델-api
-CHEMICHECK119_MODEL_API_KEY=32자-이상-배포-secret
+CHEMICHECK119_MODEL_API_KEY=64자리-hex-또는-43자리-base64url-secret
 CHEMICHECK119_MODEL_API_SCHEMA=chemiguard119-api-v1
 CHEMICHECK119_MODEL_API_CONNECT_TIMEOUT_SECONDS=2
 CHEMICHECK119_MODEL_API_RESPONSE_TIMEOUT_SECONDS=15
@@ -218,9 +218,8 @@ BE 구현 언어가 확인되면 해당 저장소 안에 실제 HTTP client와 m
 먼저 병합하되, 호환성이 깨지는 변경은 `/api/v2` 또는 명시적인 schema 버전 변경으로
 진행합니다.
 
-## 11. 현재 접근 상태
+## 11. 저장소 경계
 
-2026-07-28 현재 연결된 GitHub 권한으로 `llm` 저장소와 병합된 PR #3은 확인했습니다.
-`FE_Repository`, `BE_Repository`는 이 작업 환경에서 저장소 내용을 읽을 수 없어 코드 언어와
-기존 endpoint를 검증하지 못했습니다. 두 저장소 접근이 연결되면 이 문서의 일반 계약을 실제
-BE 타입·FE DTO에 맞춰 구현하고 각 저장소 PR을 순서대로 병합해야 합니다.
+이 문서의 실행 예제와 계약 테스트는 `chemicheck119/llm` 저장소 범위에서 검증합니다.
+FE·BE 저장소의 실제 반영 여부는 각 담당자가 해당 저장소의 PR과 staging 통합 시험으로
+확인해야 하며, 이 문서만으로 세 저장소 연동 완료를 주장하지 않습니다.

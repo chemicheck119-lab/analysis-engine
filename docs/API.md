@@ -28,15 +28,17 @@ CHEMIGUARD119_ALLOW_ANONYMOUS=true chemiguard119-api
 
 ### 2.2 운영
 
-운영에서는 32자 이상의 API Key를 배포 Secret으로 주입하고 모든 분석 POST 요청에 헤더를
-포함합니다.
+staging·production에서는 32바이트 난수의 64자리 hex 또는 43자리 base64url API Key를
+배포 Secret으로 주입하고 모든 분석 POST 요청에 헤더를 포함합니다. hex 키는
+`openssl rand -hex 32`로 생성할 수 있습니다.
 
 ```text
 X-API-Key: 실제-배포-Secret
 ```
 
-운영 환경에서 익명 접근을 켜거나 API Key가 없으면 서비스는 fail-closed 상태가 되고 readiness가
-실패합니다. 브라우저·태블릿 앱에 모델 API Key를 저장하지 말고 서비스 백엔드에서만 호출하세요.
+staging·production에서 익명 접근을 켜거나 올바른 API Key가 없으면 서비스는 fail-closed
+상태가 되고 readiness가 실패합니다. 브라우저·태블릿 앱에 모델 API Key를 저장하지 말고
+서비스 백엔드에서만 호출하세요.
 
 ## 3. 공통 응답 헤더
 
@@ -79,7 +81,7 @@ X-API-Key: 실제-배포-Secret
   "status": "UP",
   "service": "chemicheck119-model-api",
   "service_name": "케미체크119",
-  "version": "0.3.0"
+  "version": "0.4.0"
 }
 ```
 

@@ -38,6 +38,7 @@ from chemiguard119.utils import normalize_cas, valid_cas_checksum
 PIPELINE_SCHEMA_VERSION = "incident-analysis-v1"
 RULE_GATE = "BOTH_CAS_RESPONDER_CONFIRMED"
 FINAL_DECISION_AUTHORITY = "현장 지휘관 판단"
+CAS_EVIDENCE_NO_MATCH_STATUS = "NO_EVIDENCE_FOUND"
 
 
 def _safety_fields() -> dict[str, Any]:
@@ -315,17 +316,45 @@ def validate_pipeline_output(
         ):
             errors.append("Rule facility CAS와 대원 확인 CAS가 다릅니다.")
 
+    seen_evidence_roles: set[str] = set()
     for item in payload.get("evidence", []):
         basis = item.get("cas_basis")
-        if (
-            basis == "PARSER_CANDIDATE"
-            and item.get("requires_responder_confirmation") is not True
-        ):
-            errors.append("Parser 후보 기반 근거 검색의 대원 확인 표시 누락")
+        role = item.get("role")
+        role_key = {
+            "INCIDENT": "incident",
+            "FACILITY": "facility",
+        }.get(role)
         if basis == "RESPONDER_CONFIRMED":
-            role_key = "incident" if item.get("role") == "INCIDENT" else "facility"
-            if item.get("cas_hint") != confirmed_values.get(role_key):
+            if role_key is None:
+                errors.append("확인 CAS 근거 검색의 역할이 올바르지 않습니다.")
+            elif item.get("cas_hint") != confirmed_values.get(role_key):
                 errors.append("근거 검색의 확인 CAS가 confirmed_substances와 다릅니다.")
+            if item.get("requires_responder_confirmation") is not False:
+                errors.append(
+                    "확인 CAS 근거 검색의 확인 완료 표시가 올바르지 않습니다."
+                )
+        elif basis == "PARSER_CANDIDATE":
+            if role_key is None:
+                errors.append("Parser 후보 기반 근거 검색의 역할이 올바르지 않습니다.")
+            elif confirmed_values.get(role_key):
+                errors.append("확인 완료 역할을 Parser 후보 근거로 낮출 수 없습니다.")
+            if item.get("requires_responder_confirmation") is not True:
+                errors.append("Parser 후보 기반 근거 검색의 대원 확인 표시 누락")
+        elif basis == "NO_CAS_HINT":
+            if (
+                role != "UNKNOWN"
+                or item.get("cas_hint") is not None
+                or item.get("requires_responder_confirmation") is not True
+                or any(confirmed_values.values())
+            ):
+                errors.append("CAS 미지정 근거 검색 상태가 확인 상태와 다릅니다.")
+        else:
+            errors.append("지원하지 않는 근거 검색 cas_basis입니다.")
+
+        if role_key is not None:
+            if role_key in seen_evidence_roles:
+                errors.append("동일 역할의 근거 검색이 중복되었습니다.")
+            seen_evidence_roles.add(role_key)
 
         cas_hint = item.get("cas_hint")
         retrieval = item.get("retrieval") or {}
@@ -339,13 +368,11 @@ def validate_pipeline_output(
                 for result in retrieval_results
             ):
                 errors.append("CAS 제한 근거 검색에 다른 CAS 문서가 포함되었습니다.")
-            if (
-                not retrieval_results
-                and retrieval.get("status") != CAS_EVIDENCE_NOT_LOADED_STATUS
-            ):
-                errors.append(
-                    "CAS 제한 검색의 빈 결과에 상세 근거 미적재 상태가 없습니다."
-                )
+            if not retrieval_results and retrieval.get("status") not in {
+                CAS_EVIDENCE_NOT_LOADED_STATUS,
+                CAS_EVIDENCE_NO_MATCH_STATUS,
+            }:
+                errors.append("CAS 제한 검색의 빈 결과 상태가 올바르지 않습니다.")
 
     if _contains_safe_severity(payload):
         errors.append("SAFE severity 사용 금지")

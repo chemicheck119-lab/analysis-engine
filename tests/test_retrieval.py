@@ -9,6 +9,7 @@ import chemiguard119.retrieval as retrieval_module
 from chemiguard119.retrieval import (
     RUNTIME_INDEX_KEY,
     _append_missing_cas_source_representatives,
+    _focus_query_for_cas,
     _rrf,
     _select_source_diverse_ids,
     evaluate_retriever,
@@ -129,7 +130,7 @@ def test_hybrid_search_uses_exact_bm25_tfidf_and_rrf(
     assert {row["cas_number"] for row in result["results"]} == {"7681-52-9"}
     assert result["results"][0]["evidence_id"] == "E1"
     assert result["results"][0]["cas_number"] == "7681-52-9"
-    assert result["results"][0]["rank_sources"]["exact"] == 1
+    assert result["results"][0]["rank_sources"]["exact"] is None
     assert result["results"][0]["rank_sources"]["bm25"] is not None
     assert result["results"][0]["rank_sources"]["tfidf"] is not None
     assert result["results"][0]["rrf_score"] > 0
@@ -239,7 +240,7 @@ def test_source_diversity_is_not_applied_without_cas_hint() -> None:
     ) == ["K1", "K2"]
 
 
-def test_search_keeps_each_same_cas_source_when_one_source_fills_candidate_limit(
+def test_search_does_not_promote_irrelevant_source_only_for_diversity(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -284,12 +285,15 @@ def test_search_keeps_each_same_cas_source_when_one_source_fills_candidate_limit
     monkeypatch.setattr(
         retrieval_module,
         "_bm25_ranks",
-        lambda _db_path, _query, _limit: ["K1", "K2"],
+        lambda _db_path, _query, _limit, *, cas_hint=None: ["K1", "K2"],
     )
     monkeypatch.setattr(
         retrieval_module,
         "_tfidf_ranks",
-        lambda _artifact, _query, _cas_hint, _limit: ["K1", "K2"],
+        lambda _artifact, _query, _cas_hint, _limit, *, eligible_ids=None: [
+            "K1",
+            "K2",
+        ],
     )
 
     result = search_evidence(
@@ -301,10 +305,182 @@ def test_search_keeps_each_same_cas_source_when_one_source_fills_candidate_limit
         candidate_limit=2,
     )
 
-    assert [row["evidence_id"] for row in result["results"]] == ["K1", "C1"]
-    assert {row["source"] for row in result["results"]} == {"KOSHA", "CAMEO"}
-    assert result["results"][1]["rank_sources"]["exact"] == 3
+    assert [row["evidence_id"] for row in result["results"]] == ["K1", "K2"]
+    assert {row["source"] for row in result["results"]} == {"KOSHA"}
+    assert result["results"][1]["rank_sources"]["exact"] is None
     assert result["cas_link_warning"] is None
+
+
+def test_cas_filtered_ranking_removes_repeated_material_name(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "section-evidence.sqlite"
+    evidence_rows = [
+        (
+            "E-PRODUCT",
+            "KOSHA",
+            "PRODUCT",
+            "7647-01-0",
+            None,
+            "염화수소 MSDS 01장 제품명",
+            "염화수소",
+            "https://example.test/product",
+            "2026-01",
+            "SOURCE_EXACT",
+        ),
+        (
+            "E-PPE",
+            "KOSHA",
+            "PPE",
+            "7647-01-0",
+            None,
+            "염화수소 MSDS 06장 인체 보호 조치 및 보호구",
+            "누출 시 적절한 호흡기와 신체 보호구를 착용한다.",
+            "https://example.test/ppe",
+            "2026-01",
+            "SOURCE_EXACT",
+        ),
+        (
+            "E-OTHER",
+            "KOSHA",
+            "OTHER",
+            "64-17-5",
+            None,
+            "에탄올 MSDS 06장 인체 보호 조치 및 보호구",
+            "누출 시 보호구를 착용한다.",
+            "https://example.test/other",
+            "2026-01",
+            "SOURCE_EXACT",
+        ),
+    ]
+    with sqlite3.connect(db_path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE evidence (
+                evidence_id TEXT PRIMARY KEY,
+                source TEXT NOT NULL,
+                source_record_id TEXT,
+                cas_number TEXT,
+                cameo_chemical_id TEXT,
+                title TEXT,
+                body TEXT,
+                source_url TEXT,
+                document_version TEXT,
+                cas_link_status TEXT NOT NULL
+            )
+            """
+        )
+        connection.executemany(
+            "INSERT INTO evidence VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            evidence_rows,
+        )
+        connection.execute(
+            "CREATE VIRTUAL TABLE evidence_fts USING fts5(evidence_id UNINDEXED, title, body)"
+        )
+        connection.executemany(
+            "INSERT INTO evidence_fts (evidence_id, title, body) VALUES (?, ?, ?)",
+            [(row[0], row[5], row[6]) for row in evidence_rows],
+        )
+
+    model_path = tmp_path / "retriever.joblib"
+    train_retriever(db_path, model_path, max_features_per_branch=100)
+    artifact = load_retriever(model_path)
+    result = search_evidence(
+        "염화수소 누출 시 보호구",
+        db_path,
+        artifact,
+        cas_hint="7647-01-0",
+        top_k=3,
+    )
+
+    assert (
+        _focus_query_for_cas(
+            "염화수소 누출 시 보호구",
+            "7647-01-0",
+            artifact[RUNTIME_INDEX_KEY],
+        )
+        == "누출 시 보호구"
+    )
+    assert result["ranking_query"] == "누출 시 보호구"
+    assert result["results"][0]["evidence_id"] == "E-PPE"
+    assert {row["cas_number"] for row in result["results"]} == {"7647-01-0"}
+
+
+def test_cas_filter_is_applied_before_candidate_cutoff(tmp_path: Path) -> None:
+    db_path = tmp_path / "candidate-cutoff.sqlite"
+    target = (
+        "TARGET",
+        "CAMEO",
+        "7794",
+        "7440-23-5",
+        "7794",
+        "나트륨 | Na | SODIUM — CAMEO 반응성",
+        "안정성 반응성 근거",
+        "https://example.test/target",
+        "2026-01",
+        "PUBLIC_SOURCE_VERIFIED",
+    )
+    distractors = [
+        (
+            f"OTHER-{index}",
+            "KOSHA",
+            f"OTHER-{index}",
+            "64-17-5",
+            None,
+            f"에탄올 안정성 반응성 상세 {index}",
+            "안정성 반응성 안정성 반응성",
+            f"https://example.test/other/{index}",
+            "2026-01",
+            "SOURCE_EXACT",
+        )
+        for index in range(6)
+    ]
+    rows = [target, *distractors]
+    with sqlite3.connect(db_path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE evidence (
+                evidence_id TEXT PRIMARY KEY,
+                source TEXT NOT NULL,
+                source_record_id TEXT,
+                cas_number TEXT,
+                cameo_chemical_id TEXT,
+                title TEXT,
+                body TEXT,
+                source_url TEXT,
+                document_version TEXT,
+                cas_link_status TEXT NOT NULL
+            )
+            """
+        )
+        connection.executemany(
+            "INSERT INTO evidence VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            rows,
+        )
+        connection.execute(
+            "CREATE VIRTUAL TABLE evidence_fts USING fts5("
+            "evidence_id UNINDEXED, title, body)"
+        )
+        connection.executemany(
+            "INSERT INTO evidence_fts (evidence_id, title, body) VALUES (?, ?, ?)",
+            [(row[0], row[5], row[6]) for row in rows],
+        )
+
+    model_path = tmp_path / "candidate-cutoff.joblib"
+    train_retriever(db_path, model_path, max_features_per_branch=100)
+    result = search_evidence(
+        "안정성 반응성",
+        db_path,
+        load_retriever(model_path),
+        cas_hint="7440-23-5",
+        top_k=1,
+        candidate_limit=2,
+    )
+
+    assert result["status"] == "COMPLETED"
+    assert [row["evidence_id"] for row in result["results"]] == ["TARGET"]
+    assert result["results"][0]["rank_sources"]["bm25"] == 1
+    assert result["results"][0]["rank_sources"]["tfidf"] == 1
 
 
 def test_evaluation_separates_automatic_hint_from_retriever_quality(

@@ -332,10 +332,10 @@ LM Studio 백엔드는 다음 실험에만 사용할 수 있습니다.
 | 금지된 자동 CAS 힌트 | 12 | 0건 |
 | Resolver Rule 입력 승인 위반 | 12 | 0건 |
 | Retriever 전체 흐름 Recall@5 | 10 | 0.9000 |
-| Retriever 전체 흐름 MRR@8 | 10 | 0.8500 |
-| Retriever 단독·정답 CAS 제공 Recall@5 | 10 | 1.0000 |
-| Retriever 단독·정답 CAS 제공 MRR@8 | 10 | 0.9000 |
-| 자동 CAS 힌트 Coverage | 10 | 0.8000 |
+| Retriever 전체 흐름 MRR@8 | 10 | 0.6500 |
+| Retriever 단독·정답 CAS 제공 Recall@5 | 10 | 0.9000 |
+| Retriever 단독·정답 CAS 제공 MRR@8 | 10 | 0.6500 |
+| 자동 CAS 힌트 Coverage | 10 | 0.9000 |
 | 자동 CAS 힌트 Precision when present | 10 | 1.0000 |
 
 이는 작은 내부 개발셋의 회귀 지표입니다. 현장 정확도, 전체 물질 성능, 사고 대응 성공률로

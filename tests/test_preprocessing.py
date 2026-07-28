@@ -119,7 +119,7 @@ def _make_fixture(root: Path) -> tuple[Path, Path, Path]:
                 "시나리오역할": "acid",
                 "검색기준_화학물질명": "염산",
                 "UN번호": "1050",
-                "자료출처": "https://example.test/kosha/hcl",
+                "자료출처": "KOSHA MSDS OpenAPI via data.go.kr",
             },
             {
                 "레코드ID": "KOSHA-NAOCL-1",
@@ -517,6 +517,15 @@ def test_prepare_dataset_builds_safe_lookup_artifacts(
                 "SELECT verification_status FROM alias WHERE alias_text = '물'"
             ).fetchone()[0]
             == "PUBLIC_CATALOG_CANDIDATE"
+        )
+        assert (
+            connection.execute(
+                """
+                SELECT source_url FROM evidence
+                WHERE evidence_id = 'KOSHA:KOSHA-HCL-1'
+                """
+            ).fetchone()[0]
+            == preprocessing.KOSHA_OFFICIAL_SOURCE_URL
         )
         assert connection.execute(
             """

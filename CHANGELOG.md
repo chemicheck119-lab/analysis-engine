@@ -14,6 +14,12 @@
 - 문장 내 공식 별칭 탐색용 첫 글자 runtime 인덱스와 Unicode 경계 검사
 - 21·10·6 내부 데이터의 출처와 한계를 바로잡은 평가 V2·상용 타당성 문서
 - 확인 전·후 카드 표시, 현재 검색 기능과 v1 단일 물질쌍 범위를 고정한 대시보드 계약
+- DRAFT·이중 검수·파일럿 검수를 분리하는 평가 profile과 provenance·split 누수 gate
+- evidence ID별 0~3 relevance로 nDCG·Recall·MRR을 계산하는 12건 section 회귀 평가
+- 데이터 출처별 재배포 상태를 기록하는 `data_source_registry.json`
+- 발표용 모델 파이프라인·수치·상용 준비 판정을 정리한 최종 브리핑
+- `chemicheck119-runtime-release-v4` manifest, 버전 고정 품질 정책, 평가
+  dataset·report digest 결합과 독립 검수 attestation
 
 ### Fixed
 
@@ -21,6 +27,23 @@
   승격되어 다른 물질의 근거로 검색을 제한하던 문제
 - 현장 확인 전 응답에 서수 위험등급·구체적 반응 또는 완료 상태가 섞여 대시보드에 노출될
   수 있던 출력 계약 문제
+- CAS 일치 문서의 ID 순서를 강한 순위 신호로 사용해 제품명·CAS 번호 절이 보호구·저장
+  질문보다 먼저 노출되던 근거 검색 문제
+- 확인 완료 응답의 미실행 Rule, 상태·CAS 불일치, 확률형 위험도와 후보 승격을 허용하던 문제
+
+### Security
+
+- Uvicorn 원 URL access log와 raw exception traceback을 비활성화하고 예외 타입·request ID만
+  구조화 로그로 기록
+- 알 수 없는 배포 환경과 staging·production의 미검증 runtime을 readiness에서 fail-closed
+- `PILOT_REVIEWED` 평가 또는 데이터 재배포 승인이 없으면 staging·production manifest
+  검증 차단
+- 저수준 runtime 검증에서도 알 수 없는 배포 환경을 차단
+- staging에도 production과 같은 외부 trust anchor·검수 평가·인증 gate 적용
+- staging·production API Key를 32바이트 난수 형식으로 제한
+- attestation HMAC 서명키를 실행 컨테이너에서 제거하고 외부 manifest digest로 빌드 검증
+  결과를 고정
+- 외부 bind mount Compose를 로컬 개발로 제한하고 배포 이미지는 GHCR registry digest로 기록
 
 ## [0.3.0] - 2026-07-28
 
