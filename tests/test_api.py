@@ -782,6 +782,233 @@ def test_api_blocks_forged_risk_output_without_two_confirmations(
     }
 
 
+@pytest.mark.parametrize(
+    ("target", "forged_value"),
+    [
+        (
+            "rule_review",
+            {
+                "risk_scale": {
+                    "type": "ORDINAL_CAMEO_COMPATIBILITY_CLASS",
+                    "raw_class_id": 2,
+                    "is_probability": False,
+                }
+            },
+        ),
+        ("rule_review", {"risk_level_ko": "중간"}),
+        ("parsed_report", {"specific_risk": "유독성 가스 생성"}),
+        ("substance_candidates", {"reaction": "독성 가스 발생"}),
+    ],
+)
+def test_api_blocks_every_unconfirmed_risk_output_location(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+    target: str,
+    forged_value: dict[str, Any],
+) -> None:
+    safe_result: dict[str, Any] = {
+        "schema_version": "incident-analysis-v1",
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "parsed_report": {},
+        "substance_candidates": [],
+        "evidence": [],
+        "rule_review": {
+            "executed": False,
+            "status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+            "gate": "BOTH_CAS_RESPONDER_CONFIRMED",
+            "missing_confirmations": ["incident_cas", "facility_cas"],
+            "reason": "현장 확인이 필요합니다.",
+        },
+        "output_validation": {"status": "PASSED", "errors": []},
+    }
+    if target == "substance_candidates":
+        safe_result[target] = [forged_value]
+    else:
+        safe_result[target].update(forged_value)
+    monkeypatch.setattr(
+        api,
+        "analyze_incident",
+        lambda *_args, **_kwargs: safe_result,
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/incidents/analyze",
+            json=_analyze_payload("현장 미확인 물질 신고"),
+        )
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "UNCONFIRMED_RISK_OUTPUT_BLOCKED"
+
+
+def test_api_blocks_risk_in_unconfirmed_facility_history(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        api,
+        "analyze_incident",
+        lambda *_args, **_kwargs: {
+            "schema_version": "incident-analysis-v1",
+            "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+            "parsed_report": {},
+            "substance_candidates": [],
+            "evidence": [],
+            "rule_review": {
+                "executed": False,
+                "status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+                "gate": "BOTH_CAS_RESPONDER_CONFIRMED",
+                "missing_confirmations": ["incident_cas", "facility_cas"],
+                "reason": "현장 확인이 필요합니다.",
+            },
+            "output_validation": {"status": "PASSED", "errors": []},
+        },
+    )
+    monkeypatch.setattr(
+        api,
+        "search_facility_history",
+        lambda *_args, **_kwargs: {
+            "status": "CANDIDATES_FOUND",
+            "results": [
+                {
+                    "cas_number": "7647-01-0",
+                    "current_inventory_confirmed": False,
+                    "risk_level_ko": "중간",
+                }
+            ],
+        },
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+    request = _analyze_payload("미상 물질 신고")
+    request["location"] = {"facility_name": "OO전자 공장", "province": "경기도"}
+
+    with TestClient(application) as client:
+        response = client.post("/api/v1/incidents/analyze", json=request)
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "UNCONFIRMED_RISK_OUTPUT_BLOCKED"
+
+
+@pytest.mark.parametrize(
+    "forged_status",
+    [
+        "SCREENING_COMPLETED",
+        "VERIFY_REQUIRED",
+        "UNCLASSIFIED",
+        "CAMEO_GROUP_SCREENING_ONLY",
+    ],
+)
+def test_api_blocks_completed_or_uncertain_state_without_two_confirmations(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+    forged_status: str,
+) -> None:
+    monkeypatch.setattr(
+        api,
+        "analyze_incident",
+        lambda *_args, **_kwargs: {
+            "schema_version": "incident-analysis-v1",
+            "status": forged_status,
+            "parsed_report": {},
+            "substance_candidates": [],
+            "evidence": [],
+            "rule_review": {
+                "executed": False,
+                "status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+                "gate": "BOTH_CAS_RESPONDER_CONFIRMED",
+                "missing_confirmations": ["incident_cas", "facility_cas"],
+                "reason": "현장 확인이 필요합니다.",
+            },
+            "output_validation": {"status": "PASSED", "errors": []},
+        },
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/incidents/analyze",
+            json=_analyze_payload("현장 미확인 물질 신고"),
+        )
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "UNCONFIRMED_RISK_OUTPUT_BLOCKED"
+
+
+def test_api_blocks_missing_confirmation_role_mismatch(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        api,
+        "analyze_incident",
+        lambda *_args, **_kwargs: {
+            "schema_version": "incident-analysis-v1",
+            "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+            "parsed_report": {},
+            "substance_candidates": [],
+            "evidence": [],
+            "rule_review": {
+                "executed": False,
+                "status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+                "gate": "BOTH_CAS_RESPONDER_CONFIRMED",
+                "missing_confirmations": ["incident_cas"],
+                "reason": "현장 확인이 필요합니다.",
+            },
+            "output_validation": {"status": "PASSED", "errors": []},
+        },
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/incidents/analyze",
+            json=_analyze_payload("현장 미확인 물질 신고"),
+        )
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "UNCONFIRMED_RISK_OUTPUT_BLOCKED"
+
+
+@pytest.mark.parametrize(
+    ("pipeline_status", "expected_http_status", "expected_error_code"),
+    [
+        ("INVALID_INPUT", 422, "INVALID_PIPELINE_INPUT"),
+        ("OUTPUT_VALIDATION_FAILED", 500, "OUTPUT_VALIDATION_FAILED"),
+    ],
+)
+def test_pipeline_failure_state_is_reported_before_confirmation_gate(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+    pipeline_status: str,
+    expected_http_status: int,
+    expected_error_code: str,
+) -> None:
+    monkeypatch.setattr(
+        api,
+        "analyze_incident",
+        lambda *_args, **_kwargs: {
+            "schema_version": "incident-analysis-v1",
+            "status": pipeline_status,
+            "parsed_report": {},
+            "substance_candidates": [],
+            "evidence": [],
+            "rule_review": {},
+            "output_validation": {"status": "FAILED", "errors": ["test"]},
+        },
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/incidents/analyze",
+            json=_analyze_payload("파이프라인 실패 상태 시험"),
+        )
+
+    assert response.status_code == expected_http_status
+    assert response.json()["error"]["code"] == expected_error_code
+
+
 def test_rule_requires_two_complete_confirmation_records_and_forces_demo_off(
     runtime: ModelRuntime,
     stub_pipeline_boundaries: list[dict[str, Any]],

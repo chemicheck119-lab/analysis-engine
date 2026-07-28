@@ -11,7 +11,14 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 from chemiguard119.utils import normalize_cas, valid_cas_checksum
 
@@ -20,34 +27,94 @@ API_SCHEMA_VERSION = "chemiguard119-api-v1"
 PUBLIC_SERVICE_NAME = "케미체크119"
 CONFIRMATION_GATE_POLICY = "TWO_AUTHENTICATED_ON_SITE_CONFIRMATIONS_REQUIRED"
 IDENTIFIER_PATTERN = r"^[A-Za-z0-9_.:-]+$"
+AnalysisState = Literal[
+    "AWAITING_SUBSTANCE_CONFIRMATION",
+    "AWAITING_INCIDENT_CONFIRMATION",
+    "AWAITING_FACILITY_CONFIRMATION",
+    "COMPLETED",
+    "SCREENING_COMPLETED",
+    "VERIFY_REQUIRED",
+    "UNCLASSIFIED",
+    "CAMEO_GROUP_SCREENING_ONLY",
+]
 
 
-def _contains_risk_decision(value: Any) -> bool:
+def contains_unconfirmed_risk_output(value: Any) -> bool:
     """확인 전 응답에 위험 확정 필드가 섞였는지 재귀적으로 검사한다."""
 
     risk_fields = {
+        "brief_text",
+        "concrete_risk",
+        "conflict_level",
+        "expected_response",
+        "expert_reviewed",
+        "final_decision",
+        "hazard_codes",
+        "hazard_summary",
+        "is_probability",
+        "priority_checks",
+        "probability",
+        "probability_percent",
+        "raw_class_id",
+        "reaction",
+        "reactions",
+        "recommended_actions",
+        "recommended_response",
+        "required_checks",
+        "response_actions",
+        "risk_level_en",
+        "risk_level_ko",
+        "risk_scale",
         "severity",
         "risk_level",
-        "conflict_level",
+        "scope",
+        "specific_risk",
         "rule_id",
-        "hazard_codes",
-        "brief_text",
-        "required_checks",
-        "final_decision",
     }
     if isinstance(value, dict):
         for key, item in value.items():
             if key in risk_fields and item not in (None, "", [], {}):
                 return True
-            if _contains_risk_decision(item):
+            if contains_unconfirmed_risk_output(item):
                 return True
     elif isinstance(value, list):
-        return any(_contains_risk_decision(item) for item in value)
+        return any(contains_unconfirmed_risk_output(item) for item in value)
     return False
 
 
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+
+class UnconfirmedConflictReview(StrictModel):
+    """두 현장 확인 전 공개할 수 있는 충돌 검토 보류 상태의 전부."""
+
+    executed: Literal[False]
+    status: Literal["NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS"]
+    gate: Literal["BOTH_CAS_RESPONDER_CONFIRMED"]
+    missing_confirmations: list[Literal["incident_cas", "facility_cas"]] = Field(
+        min_length=1,
+        max_length=2,
+    )
+    reason: str = Field(min_length=1, max_length=500)
+
+    @field_validator("missing_confirmations")
+    @classmethod
+    def missing_confirmations_must_be_unique(
+        cls,
+        value: list[Literal["incident_cas", "facility_cas"]],
+    ) -> list[Literal["incident_cas", "facility_cas"]]:
+        if len(value) != len(set(value)):
+            raise ValueError("missing_confirmations에는 중복 역할을 넣을 수 없습니다.")
+        return value
+
+
+def _valid_unconfirmed_conflict_review(value: Any) -> bool:
+    try:
+        UnconfirmedConflictReview.model_validate(value)
+    except ValidationError:
+        return False
+    return True
 
 
 class IncidentInputType(str, Enum):
@@ -282,7 +349,7 @@ class AnalysisResponse(StrictModel):
     analysis_id: str
     request_id: str
     incident_id: str | None = None
-    state: str
+    state: AnalysisState
     input_fingerprint: str
     model_outputs: dict[str, Any]
     evidence: list[dict[str, Any]]
@@ -296,9 +363,37 @@ class AnalysisResponse(StrictModel):
     def unconfirmed_candidates_cannot_publish_risk(self) -> "AnalysisResponse":
         if self.confirmation_gate.all_required_confirmed:
             return self
-        if self.conflict_review.get("executed") is True:
-            raise ValueError("두 현장 확인 레코드 없이 충돌 검토를 실행할 수 없습니다.")
-        if _contains_risk_decision(
+        expected_state = {
+            (False, False): "AWAITING_SUBSTANCE_CONFIRMATION",
+            (True, False): "AWAITING_FACILITY_CONFIRMATION",
+            (False, True): "AWAITING_INCIDENT_CONFIRMATION",
+        }[
+            (
+                self.confirmation_gate.incident_confirmed,
+                self.confirmation_gate.facility_confirmed,
+            )
+        ]
+        if self.state != expected_state:
+            raise ValueError(
+                "현장 미확인 응답 상태가 confirmation gate와 일치하지 않습니다."
+            )
+        if not _valid_unconfirmed_conflict_review(self.conflict_review):
+            raise ValueError(
+                "현장 미확인 conflict_review는 엄격한 보류 상태만 포함할 수 있습니다."
+            )
+        expected_missing = {
+            role
+            for role, confirmed in (
+                ("incident_cas", self.confirmation_gate.incident_confirmed),
+                ("facility_cas", self.confirmation_gate.facility_confirmed),
+            )
+            if not confirmed
+        }
+        if set(self.conflict_review["missing_confirmations"]) != expected_missing:
+            raise ValueError(
+                "conflict_review의 누락 확인 역할이 confirmation gate와 일치하지 않습니다."
+            )
+        if contains_unconfirmed_risk_output(
             {
                 "conflict_review": self.conflict_review,
                 "model_outputs": self.model_outputs,
@@ -307,8 +402,6 @@ class AnalysisResponse(StrictModel):
             raise ValueError(
                 "현장 미확인 후보 응답에는 위험도·충돌 확정값을 포함할 수 없습니다."
             )
-        if self.state == "COMPLETED":
-            raise ValueError("현장 미확인 후보 응답은 COMPLETED 상태일 수 없습니다.")
         return self
 
 
@@ -329,6 +422,7 @@ class ErrorResponse(StrictModel):
 
 __all__ = [
     "API_SCHEMA_VERSION",
+    "AnalysisState",
     "AnalysisResponse",
     "CONFIRMATION_GATE_POLICY",
     "ConfirmationGateState",
@@ -340,4 +434,6 @@ __all__ = [
     "IncidentAnalyzeRequest",
     "PUBLIC_SERVICE_NAME",
     "ResolveRequest",
+    "UnconfirmedConflictReview",
+    "contains_unconfirmed_risk_output",
 ]

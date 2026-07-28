@@ -1,0 +1,76 @@
+{
+  "schema_version": "chemiguard119-api-v1",
+  "analysis_id": "ANL-EXAMPLE-0001",
+  "request_id": "REQ-EXAMPLE-0001",
+  "incident_id": "INC-EXAMPLE-0001",
+  "state": "AWAITING_SUBSTANCE_CONFIRMATION",
+  "input_fingerprint": "19b684d72c0f92431e7793d4590867890feb9f17cc0549a2d73654fe5f667c44",
+  "model_outputs": {
+    "pipeline_schema_version": "incident-analysis-v1",
+    "parser": {
+      "backend": "DETERMINISTIC_BASELINE",
+      "incident_types": [
+        "LEAK"
+      ],
+      "fire_status": "UNKNOWN",
+      "substance_mentions": [],
+      "planned_actions": [],
+      "needs_substance_confirmation": true,
+      "missing_fields": [
+        "confirmed_substance"
+      ]
+    },
+    "substance_candidates": [],
+    "candidate_score_notice": "후보 점수는 이름 유사도·정렬값이며 사고확률, 위험확률 또는 Rule 실행 권한이 아닙니다.",
+    "output_validation": {
+      "status": "PASSED",
+      "errors": []
+    },
+    "facility_history_candidates": {
+      "status": "CANDIDATES_FOUND",
+      "warning": "시설 후보는 과거 신고·취급 이력이며 현재 재고를 의미하지 않습니다.",
+      "results": [
+        {
+          "facility_name": "예시 사업장",
+          "cas_number": "7647-01-0",
+          "latest_survey_year": "2024",
+          "evidence_class": "REPORTED_HANDLING_HISTORY",
+          "current_inventory_confirmed": false,
+          "rule_eligible": false,
+          "requires_on_site_confirmation": true,
+          "source_url": "https://icis.mcee.go.kr/search/searchType6.do"
+        }
+      ]
+    }
+  },
+  "evidence": [],
+  "conflict_review": {
+    "executed": false,
+    "status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+    "gate": "BOTH_CAS_RESPONDER_CONFIRMED",
+    "missing_confirmations": [
+      "incident_cas",
+      "facility_cas"
+    ],
+    "reason": "사고물질과 시설물질 CAS의 현장 확인이 모두 필요합니다."
+  },
+  "confirmation_gate": {
+    "policy": "TWO_AUTHENTICATED_ON_SITE_CONFIRMATIONS_REQUIRED",
+    "incident_confirmed": false,
+    "facility_confirmed": false,
+    "all_required_confirmed": false,
+    "rule_execution_allowed": false
+  },
+  "required_next_steps": [
+    "인증된 대원이 사고물질 CAS를 확인해 백엔드 confirmation_id를 생성합니다.",
+    "시설물질의 현재 존재와 CAS를 확인해 백엔드 confirmation_id를 생성합니다."
+  ],
+  "provenance": {
+    "model_version": "example",
+    "data_version": "example",
+    "rule_policy": "PUBLIC_SOURCE_PILOT_V1",
+    "expert_reviewed": false,
+    "final_decision_authority": "현장 지휘관"
+  },
+  "safety_notice": "후보와 이력은 확인 전 충돌 판정에 사용할 수 없으며 최종 판단은 현장 지휘관이 수행합니다."
+}
