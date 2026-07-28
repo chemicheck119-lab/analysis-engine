@@ -42,6 +42,7 @@ from chemiguard119.paths import (
     DEFAULT_RESOLVER_MODEL,
     DEFAULT_RETRIEVER_MODEL,
 )
+from chemiguard119.observability import configure_json_logging, emit_json_event
 from chemiguard119.facility import search_facility_history
 from chemiguard119.pipeline import PIPELINE_SCHEMA_VERSION, analyze_incident
 from chemiguard119.resolver import load_resolver, resolve_substance
@@ -394,6 +395,32 @@ def _request_id(request: Request, body_request_id: str | None = None) -> str:
     return value
 
 
+def _request_route(request: Request) -> str:
+    """쿼리 문자열이나 본문 없이 저카디널리티 API route만 반환한다."""
+
+    route = request.scope.get("route")
+    route_path = getattr(route, "path", None)
+    if isinstance(route_path, str) and route_path:
+        return route_path
+    return "<unmatched>"
+
+
+def _request_outcome(status_code: int) -> str:
+    if status_code >= 500:
+        return "SERVER_ERROR"
+    if status_code >= 400:
+        return "CLIENT_ERROR"
+    return "SUCCESS"
+
+
+def _request_log_level(status_code: int) -> int:
+    if status_code >= 500:
+        return logging.ERROR
+    if status_code >= 400:
+        return logging.WARNING
+    return logging.INFO
+
+
 def _error_payload(
     *,
     code: str,
@@ -730,6 +757,8 @@ def create_app(
 ) -> FastAPI:
     """테스트 주입과 실제 artifact 로딩을 모두 지원하는 app factory."""
 
+    configure_json_logging()
+
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.startup_error = None
@@ -798,17 +827,36 @@ def create_app(
 
     @application.middleware("http")
     async def contract_headers(request: Request, call_next: Any) -> Any:
+        started = time.perf_counter()
+        response_status = status.HTTP_500_INTERNAL_SERVER_ERROR
         request.state.request_id = _valid_request_id(
             request.headers.get(REQUEST_ID_HEADER_NAME)
         ) or _new_id("REQ")
-        response = await call_next(request)
-        response.headers[REQUEST_ID_HEADER_NAME] = _request_id(request)
-        response.headers["X-API-Schema-Version"] = API_SCHEMA_VERSION
-        response.headers["X-Service-Id"] = SERVICE_ID
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        if request.url.path.startswith("/api/"):
-            response.headers["Cache-Control"] = "no-store"
-        return response
+        try:
+            response = await call_next(request)
+            response_status = response.status_code
+            response.headers[REQUEST_ID_HEADER_NAME] = _request_id(request)
+            response.headers["X-API-Schema-Version"] = API_SCHEMA_VERSION
+            response.headers["X-Service-Id"] = SERVICE_ID
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            if request.url.path.startswith("/api/"):
+                response.headers["Cache-Control"] = "no-store"
+            return response
+        finally:
+            emit_json_event(
+                "http_request_completed",
+                level=_request_log_level(response_status),
+                request_id=_request_id(request),
+                service_name=SERVICE_ID,
+                service_version=__version__,
+                deployment_environment=request.app.state.deployment_environment,
+                authentication_mode=_auth_mode(request),
+                http_request_method=request.method,
+                http_route=_request_route(request),
+                http_response_status_code=response_status,
+                duration_ms=round((time.perf_counter() - started) * 1_000, 3),
+                outcome=_request_outcome(response_status),
+            )
 
     @application.exception_handler(APIBoundaryError)
     async def boundary_error_handler(
