@@ -1,0 +1,51 @@
+{
+  "schema_version": "chemicheck119-retrieval-section-comparison-v2",
+  "metrics_version": "retriever-section-qrel-v2",
+  "created_at_utc": "2026-07-28T00:00:00+00:00",
+  "claim_scope": "INTERNAL_REGRESSION_ONLY",
+  "field_validated": false,
+  "baseline_git_commit": "9b2ab94bd160a7bb9801113fb352a72c423fa90b",
+  "dataset": "data/evaluation/retrieval_section_regression.jsonl",
+  "dataset_case_count": 12,
+  "dataset_sha256": "a7c0c641a3e7482d4e6c10fa23b161938f72151a4282ae49a9b41c449bafbd32",
+  "database_sha256": "ed162d0fb1729f065df1e04f017122fdb65acaaba2c583bdc7be3e1ce8aaff46",
+  "retriever_sha256": "24c3e89c0c55b2fc8d396046640c9b09d1e4d041fe73dd4238d575607cdfc354",
+  "baseline": {
+    "description": "PR 직전 동작을 동일 artifact에서 재현: CAS 일치 문서 전체를 evidence_id 순으로 exact 2x RRF에 투입하고 원 질의를 사용",
+    "ndcg_at_5": 0.15950977936833113,
+    "recall_at_5": 0.3333333333333333,
+    "precision_at_5": 0.08333333333333333,
+    "mrr_at_5": 0.08750000000000001,
+    "same_cas_judged_wrong_section_rate_at_5": 0.6666666666666666,
+    "wrong_cas_rate_at_5": 0.0,
+    "unjudged_rate_at_5": 0.75,
+    "judged_coverage_at_5": 0.25,
+    "judged_relevant_rate_at_5": 0.3333333333333333,
+    "mean_latency_ms": 20.142514,
+    "p95_latency_ms": 22.422069,
+    "valid_source_url_coverage_at_5": 1.0
+  },
+  "section_focused": {
+    "description": "CAS를 엄격 필터로만 사용하고 반복 물질명·CAS를 제거한 section 의도 질의로 BM25와 단어/문자 TF-IDF를 결합",
+    "ndcg_at_5": 0.9283527514118513,
+    "recall_at_5": 0.875,
+    "precision_at_5": 0.2333333333333334,
+    "mrr_at_5": 0.9444444444444443,
+    "same_cas_judged_wrong_section_rate_at_5": 0.0,
+    "wrong_cas_rate_at_5": 0.0,
+    "unjudged_rate_at_5": 0.7666666666666667,
+    "judged_coverage_at_5": 0.23333333333333334,
+    "judged_relevant_rate_at_5": 1.0,
+    "mean_latency_ms": 21.725469,
+    "p95_latency_ms": 31.310189,
+    "valid_source_url_coverage_at_5": 1.0
+  },
+  "limitations": [
+    "12건 모두 KOSHA section 제목에서 만든 DRAFT 내부 회귀 사례이며 독립 현장 평가가 아니다.",
+    "표준 nDCG와 Precision@5는 unjudged 문서를 비관련으로 계산하며, 별도로 unjudged와 judged coverage를 보고한다.",
+    "개선 경로도 반환 문서의 76.7%가 unjudged라 높은 nDCG·MRR을 외부 성능으로 인용할 수 없다.",
+    "전처리는 비URL KOSHA 출처 표기를 공식 data.go.kr URL로 정규화하며 현재 artifact의 URL coverage는 1.0이다.",
+    "지연시간은 같은 로컬 프로세스의 단일 warm-run 결과이며 운영 SLO가 아니다.",
+    "이 결과만으로 공모전 외부 검증, 현장 파일럿 또는 상용 정확도를 주장할 수 없다."
+  ]
+}
