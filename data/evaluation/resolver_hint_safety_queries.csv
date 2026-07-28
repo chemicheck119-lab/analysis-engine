@@ -1,0 +1,13 @@
+case_id,query,query_type,expected_behavior,expected_cas,review_status,source_type,source_reference,split,duplicate_group
+HINT-POS-HCL-001,염산 누출,authoritative_name,ALLOW_EXACT_HINT,7647-01-0,DRAFT_INTERNAL_REGRESSION,SYNTHETIC_SAFETY_REGRESSION,embedded-alias-v1,locked_safety_regression,hcl-positive
+HINT-POS-HCL-002,염산이 누출됨,korean_postposition,ALLOW_EXACT_HINT,7647-01-0,DRAFT_INTERNAL_REGRESSION,SYNTHETIC_SAFETY_REGRESSION,embedded-alias-v1,locked_safety_regression,hcl-positive
+HINT-POS-HCL-003,시설에 염산이 있습니다,korean_postposition,ALLOW_EXACT_HINT,7647-01-0,DRAFT_INTERNAL_REGRESSION,SYNTHETIC_SAFETY_REGRESSION,embedded-alias-v1,locked_safety_regression,hcl-positive
+HINT-POS-NAOCL-001,차아염소산나트륨 저장탱크 누출,authoritative_name,ALLOW_EXACT_HINT,7681-52-9,DRAFT_INTERNAL_REGRESSION,SYNTHETIC_SAFETY_REGRESSION,embedded-alias-v1,locked_safety_regression,naocl-positive
+HINT-NEG-HCL-001,염산염 누출 신고,embedded_korean_suffix,WITHHOLD_AUTO_HINT,7647-01-0,DRAFT_INTERNAL_REGRESSION,SYNTHETIC_SAFETY_REGRESSION,embedded-alias-v1,locked_safety_regression,hcl-embedded
+HINT-NEG-HCL-002,염산성 세척제 누출,embedded_korean_suffix,WITHHOLD_AUTO_HINT,7647-01-0,DRAFT_INTERNAL_REGRESSION,SYNTHETIC_SAFETY_REGRESSION,embedded-alias-v1,locked_safety_regression,hcl-embedded
+HINT-NEG-TOL-001,톨루엔느 누출 신고,embedded_korean_suffix,WITHHOLD_AUTO_HINT,108-88-3,DRAFT_INTERNAL_REGRESSION,SYNTHETIC_SAFETY_REGRESSION,embedded-alias-v1,locked_safety_regression,toluene-embedded
+HINT-NEG-TOL-002,톨루엔계 용제 누출,embedded_korean_suffix,WITHHOLD_AUTO_HINT,108-88-3,DRAFT_INTERNAL_REGRESSION,SYNTHETIC_SAFETY_REGRESSION,embedded-alias-v1,locked_safety_regression,toluene-embedded
+HINT-NEG-ETOH-001,에탄올성 용제 누출,embedded_korean_suffix,WITHHOLD_AUTO_HINT,64-17-5,DRAFT_INTERNAL_REGRESSION,SYNTHETIC_SAFETY_REGRESSION,embedded-alias-v1,locked_safety_regression,ethanol-embedded
+HINT-NEG-MEOH-001,methanolic solvent leak,embedded_ascii_suffix,WITHHOLD_AUTO_HINT,67-56-1,DRAFT_INTERNAL_REGRESSION,SYNTHETIC_SAFETY_REGRESSION,embedded-alias-v1,locked_safety_regression,methanol-embedded
+HINT-MULTI-001,염산과 질산이 누출,multiple_substances,WITHHOLD_AUTO_HINT,7647-01-0|7697-37-2,DRAFT_INTERNAL_REGRESSION,SYNTHETIC_SAFETY_REGRESSION,embedded-alias-v1,locked_safety_regression,multiple-substances
+HINT-AMB-NH3-001,암모니아,ambiguous_alias,PRESERVE_AMBIGUITY,62948-80-5|7664-41-7,DRAFT_INTERNAL_REGRESSION,ACTUAL_CATALOG_AMBIGUITY,artifacts/chemiguard119.sqlite alias surface,locked_safety_regression,ammonia-ambiguous

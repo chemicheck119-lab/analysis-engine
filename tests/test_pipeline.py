@@ -183,6 +183,32 @@ def test_ambiguous_name_never_uses_first_candidate_as_evidence_cas_hint(
     assert result["evidence"][0]["cas_basis"] == "NO_CAS_HINT"
 
 
+@pytest.mark.parametrize(
+    "source",
+    [
+        "염산염 누출 신고",
+        "염산성 세척제 누출",
+    ],
+)
+def test_embedded_alias_never_restricts_pipeline_evidence_by_cas(
+    tmp_path: Path,
+    resolver_artifact: dict,
+    source: str,
+) -> None:
+    result = analyze_incident(
+        source,
+        db_path=tmp_path / "unused.sqlite",
+        resolver_artifact=resolver_artifact,
+        retriever_artifact={},
+    )
+
+    assert result["substance_candidates"] == []
+    assert result["evidence"][0]["cas_hint"] is None
+    assert result["evidence"][0]["cas_basis"] == "NO_CAS_HINT"
+    assert result["rule_review"]["executed"] is False
+    assert result["output_validation"] == {"status": "PASSED", "errors": []}
+
+
 def test_two_confirmed_cas_execute_rule_and_preserve_trace(
     tmp_path: Path,
     resolver_artifact: dict,

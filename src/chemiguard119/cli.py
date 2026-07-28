@@ -218,12 +218,22 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
                 )
     elif command == "evaluate":
         resolver = payload.get("resolver")
+        resolver_safety = payload.get("resolver_hint_safety")
         retriever = payload.get("retriever")
         if resolver:
             print(
                 "Resolver: "
                 f"Top-1 {resolver.get('top1_accuracy', 0):.3f}, "
                 f"Top-3 {resolver.get('top3_recall', 0):.3f}, MRR {resolver.get('mrr', 0):.3f}"
+            )
+        if resolver_safety:
+            print(
+                "Resolver 자동 CAS 힌트 안전성: "
+                f"통과율 {resolver_safety.get('safety_pass_rate', 0):.3f}, "
+                "위험 힌트 "
+                f"{resolver_safety.get('unsafe_auto_hint_count', 0)}건, "
+                "Resolver Rule 입력 승인 위반 "
+                f"{resolver_safety.get('resolver_rule_eligibility_violation_count', 0)}건"
             )
         if retriever:
             end_to_end = retriever.get("end_to_end") or retriever
@@ -477,15 +487,29 @@ def _evaluate(args: argparse.Namespace) -> dict[str, Any]:
         "evaluation_warning": "내부 회귀셋이며 현장 성능 주장 금지",
     }
     if args.only in {"all", "resolver"}:
-        from chemiguard119.resolver import evaluate_resolver
+        from chemiguard119.resolver import (
+            evaluate_resolver,
+            evaluate_resolver_hint_safety,
+        )
 
         resolver_report = args.report_dir / "resolver_evaluation.json"
+        resolver_safety_report = (
+            args.report_dir / "resolver_hint_safety_evaluation.json"
+        )
         payload["resolver"] = evaluate_resolver(
             args.resolver_model,
             args.resolver_evaluation,
             resolver_report,
         )
+        payload["resolver_hint_safety"] = evaluate_resolver_hint_safety(
+            args.resolver_model,
+            args.resolver_safety_evaluation,
+            resolver_safety_report,
+        )
+        if not payload["resolver_hint_safety"]["deployment_gate"]["passed"]:
+            payload["status"] = "BLOCKED_SAFETY_GATE"
         payload["resolver_report_path"] = str(resolver_report)
+        payload["resolver_safety_report_path"] = str(resolver_safety_report)
     if args.only in {"all", "retriever"}:
         from chemiguard119.retrieval import evaluate_retriever
 
@@ -649,7 +673,11 @@ def _release_manifest(args: argparse.Namespace) -> dict[str, Any]:
 
 def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
     from chemiguard119.audit import audit_dataset
-    from chemiguard119.resolver import evaluate_resolver, train_resolver
+    from chemiguard119.resolver import (
+        evaluate_resolver,
+        evaluate_resolver_hint_safety,
+        train_resolver,
+    )
     from chemiguard119.retrieval import evaluate_retriever, train_retriever
 
     args.report_dir.mkdir(parents=True, exist_ok=True)
@@ -699,12 +727,20 @@ def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
         _write_json(report_path, report)
 
         resolver_eval_path = args.report_dir / "resolver_evaluation_latest.json"
+        resolver_safety_eval_path = (
+            args.report_dir / "resolver_hint_safety_evaluation_latest.json"
+        )
         retriever_eval_path = args.report_dir / "retriever_evaluation_latest.json"
         report["stages"]["evaluate"] = {
             "resolver": evaluate_resolver(
                 args.resolver_model,
                 args.resolver_evaluation,
                 resolver_eval_path,
+            ),
+            "resolver_hint_safety": evaluate_resolver_hint_safety(
+                args.resolver_model,
+                args.resolver_safety_evaluation,
+                resolver_safety_eval_path,
             ),
             "retriever": evaluate_retriever(
                 args.db,
@@ -714,6 +750,10 @@ def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
                 retriever_eval_path,
             ),
         }
+        if not report["stages"]["evaluate"]["resolver_hint_safety"]["deployment_gate"][
+            "passed"
+        ]:
+            raise RuntimeError("Resolver 자동 CAS 힌트 안전 회귀 gate가 실패했습니다.")
         report["last_completed_stage"] = "evaluate"
         from chemiguard119.release import create_runtime_manifest
 
@@ -885,6 +925,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=EVALUATION_DIR / "resolver_regression_queries.csv",
     )
     evaluate.add_argument(
+        "--resolver-safety-evaluation",
+        type=_path,
+        default=EVALUATION_DIR / "resolver_hint_safety_queries.csv",
+    )
+    evaluate.add_argument(
         "--retriever-evaluation",
         type=_path,
         default=EVALUATION_DIR / "retrieval_regression_queries.csv",
@@ -1006,6 +1051,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--resolver-evaluation",
         type=_path,
         default=EVALUATION_DIR / "resolver_regression_queries.csv",
+    )
+    pipeline.add_argument(
+        "--resolver-safety-evaluation",
+        type=_path,
+        default=EVALUATION_DIR / "resolver_hint_safety_queries.csv",
     )
     pipeline.add_argument(
         "--retriever-evaluation",
