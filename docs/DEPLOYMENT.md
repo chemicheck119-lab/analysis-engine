@@ -350,18 +350,24 @@ API Key가 없거나 틀린 요청이 `401`로 차단되는지도 확인합니�
 
 ## 12. 운영 관측
 
-최소한 다음을 수집합니다.
+모델 API는 각 HTTP 요청이 끝날 때 stdout에 한 줄 JSON을 기록합니다. 구현된 공통 필드는
+다음과 같습니다.
 
-- HTTP 상태별 요청 수
-- endpoint별 latency
-- readiness 실패 횟수와 원인 코드
-- `X-Request-Id`, `analysis_id`, `incident_id`
-- 업무 상태별 건수
-- `UNRESOLVED`, `CAS_EVIDENCE_NOT_LOADED`, `UNCLASSIFIED` 비율
-- 실행 중인 Git commit, manifest SHA-256, 정책 ID
+- `request_id`
+- 서비스명·패키지 버전·배포 환경
+- HTTP 메서드와 정규화된 API route
+- HTTP 상태 코드와 성공·클라이언트 오류·서버 오류 구분
+- 밀리초 단위 처리시간
+- 인증 구성 방식
 
-신고 원문, 사용자 식별정보, 시설 세부정보를 일반 애플리케이션 로그에 그대로 남기지 않습니다.
-필요한 감사 로그는 접근 제어·보존 기간이 있는 서비스 백엔드에서 관리합니다.
+쿼리 문자열, 요청·응답 본문, API Key, 신고 원문, 사용자 식별정보와 시설 세부정보는 기록하지
+않습니다. 로그 수집 플랫폼은 이 JSON을 이용해 HTTP 상태별 요청 수, endpoint별 latency와
+readiness 실패 횟수를 집계합니다. 업무 상태별 지표와 장기 감사 기록은 접근 제어·보존 기간이
+있는 서비스 백엔드에서 관리합니다.
+
+`CHEMIGUARD119_LOG_LEVEL`은 `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`을 지원하며
+기본값은 `INFO`입니다. 운영 기준과 장애 확인 절차는 [운영 가이드](OPERATIONS.md)를
+참고하세요.
 
 ## 13. 롤백
 
@@ -426,4 +432,5 @@ PYTHONPATH=src python scripts/integration/smoke_model_api.py \
 - [API](API.md)
 - [FE·BE·AI 연동 및 병합 계약](BACKEND_INTEGRATION.md)
 - [데이터와 모델](DATA_AND_MODEL.md)
+- [운영](OPERATIONS.md)
 - [안전 및 한계](SAFETY_AND_LIMITATIONS.md)

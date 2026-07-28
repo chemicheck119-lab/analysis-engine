@@ -49,6 +49,7 @@ KOSHA·CAMEO 근거 검색
 | 물질 충돌 검토 | 공개 근거 파일럿 | 현재 공개 검증 crosswalk CAS 6개, `expert_reviewed=false` |
 | 생성형 파인튜닝 | 준비도 점검만 | 데이터 gate만 구현, 실제 학습·운영 적용 안 함 |
 | FastAPI·CLI | 구현 | API Key, health check, 구조화된 오류 응답 |
+| 운영 요청 추적 | 구현 | 본문·Secret을 제외한 요청 ID·상태·지연시간 JSON 로그 |
 | 배포 무결성 검사 | 구현 | manifest, SHA-256, Git commit, 런타임 버전 확인 |
 | 배관 피해 예측 | 사용하지 않음 | 현재 서비스 문제와 직접 관련이 없어 제외 |
 
@@ -334,6 +335,8 @@ python -m pip check
 - [데이터와 모델](docs/DATA_AND_MODEL.md): 출처, 전처리, 모델 역할과 평가
 - [모델 평가](docs/EVALUATION.md): 지표 정의, 기준선, 실패 원인 분리
 - [배포](docs/DEPLOYMENT.md): artifact, Secret, Docker, CI/CD, 롤백
+- [운영](docs/OPERATIONS.md): 구조화 로그, 요청 추적, 장애 확인 절차
+- [현재 상태](docs/PROJECT_STATUS.md): 실제 완료 범위, 재현 결과, P0~P3 기술 부채
 - [안전 및 한계](docs/SAFETY_AND_LIMITATIONS.md): 반드시 지켜야 할 해석 경계
 - [기여 가이드](CONTRIBUTING.md): 브랜치, 테스트, 커밋 규칙
 

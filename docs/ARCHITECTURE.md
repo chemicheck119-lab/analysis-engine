@@ -57,6 +57,7 @@ flowchart LR
 | 구성요소 | 주요 파일 | 역할 | 위험 판정 권한 |
 |---|---|---|---|
 | API 경계 | `src/chemiguard119/api.py` | 인증, 요청 검증, 응답 조립, health check | 없음 |
+| 운영 관측 | `src/chemiguard119/observability.py` | 민감정보를 제외한 JSON 요청 완료 로그 | 없음 |
 | API 스키마 | `src/chemiguard119/api_models.py` | Pydantic 요청·응답 계약 | 없음 |
 | 사고 오케스트레이터 | `src/chemiguard119/pipeline.py` | 각 단계를 순서대로 실행 | 게이트 통과 시 Rule 호출만 허용 |
 | 신고문 파서 | `src/chemiguard119/incident.py` | 물질 표현·역할·상황 구조화 | 없음 |

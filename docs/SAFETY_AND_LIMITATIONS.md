@@ -187,6 +187,7 @@ LM Studio는 선택적인 신고문 구조화 실험에만 사용합니다. 운�
 - 사용자 신원과 확인 원본은 서비스 백엔드에서 접근 제어
 - 보존 기간과 삭제 정책을 별도로 정의
 - API Key, 데이터 bundle URL, manifest trust anchor를 로그에 출력하지 않음
+- HTTP query string과 요청·응답 body를 운영 요청 로그에 출력하지 않음
 
 ## 14. 실패 시 기본 동작
 
