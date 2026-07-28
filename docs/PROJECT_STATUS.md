@@ -18,7 +18,8 @@
 | 충돌 검토 | 파일럿 | 공개 검증 CAMEO CAS 6종, 15개 조합 회귀 검사 |
 | 유사 사고사례 RAG | 미완료 | 출처와 대응 라벨이 검증된 corpus 없음 |
 | 파인튜닝 | 보류 | 준비도 검사만 존재, 기준선 대비 필요성이 입증되지 않음 |
-| FastAPI | 완료 | 통합 분석과 보조 API, 인증·오류 계약·확인 게이트 구현 |
+| FastAPI | 구현 | 통합 분석과 보조 API, 인증·오류 계약·확인 게이트 구현 |
+| 대시보드 표시 계약 | 구현 | 확인 전 위험 결과 금지, v1 단일 물질쌍과 검색 기능 범위 고정 |
 | 운영 로그 | 완료 | 요청 ID·route·상태·지연시간 JSON 로그, 본문·Secret 제외 |
 | Docker | 부분 완료 | 일반·bundle Dockerfile과 CI 구성 존재, 로컬 Docker CLI 없음 |
 | 실제 배포 | 미완료 | 검증된 공개 스테이징 URL 없음 |
@@ -32,7 +33,7 @@
 Python 3.11.15 환경에서 다음을 확인했습니다.
 
 ```text
-전체 테스트: 173 passed
+전체 테스트: 188 passed
 Ruff: 통과
 형식 검사: 통과
 compileall: 통과
@@ -88,12 +89,16 @@ conflict executed: false
 3. 공개 검증 CAMEO 범위가 CAS 6종·물질쌍 15개로 제한됩니다.
 4. 검증된 스테이징 URL과 실제 서버 배포 성공 기록이 없습니다.
 5. 릴리스 artifact는 반드시 고정된 Python 3.11 환경에서 새로 생성해야 합니다.
-6. 미확인 응답에 중첩 위험 필드를 주입하는 경우의 strict 출력 계약이 불충분합니다.
-7. Uvicorn access log와 예외 traceback의 민감정보 제거가 아직 공통 정책으로 고정되지 않았습니다.
+6. Uvicorn access log와 예외 traceback의 민감정보 제거가 아직 공통 정책으로 고정되지 않았습니다.
+
+현재 브랜치에서는 미확인 응답의 충돌 검토 타입, 상태·게이트·누락 역할 일관성을 강제하고
+중첩 위험 필드를 차단했습니다. 이는 API 경계 P0를 줄인 것이며 독립 현장 검증을 대체하지
+않습니다.
 
 ### P1 — 제한된 파일럿 전에 필요한 항목
 
-1. parser 6건, resolver 21건, retrieval 10건인 평가셋을 독립 보류셋으로 확장해야 합니다.
+1. parser는 평가 없음, resolver 21건과 retrieval 10건은 내부 회귀뿐이므로 독립 보류셋을
+   새로 구축해야 합니다.
 2. API 동시성·부하·timeout·장애 복구 시험이 없습니다.
 3. 중앙 로그 저장소, 보존 기간, 알림 기준이 정해지지 않았습니다.
 4. 현재 작업 브랜치는 아직 원격 PR과 GitHub Actions 실행이 없습니다.
@@ -114,21 +119,26 @@ conflict executed: false
 ## 5. 다음 권장 순서
 
 1. 자동 CAS 힌트 경계·안전 회귀 PR을 검토하고 병합합니다.
-2. 미확인 응답의 허용 필드를 strict schema로 제한합니다.
+2. 현재 엄격해진 미확인 충돌 타입에 이어 `model_outputs`·`evidence`·`provenance`의
+   중첩 객체도 strict schema로 전환합니다.
 3. Uvicorn query access log와 예외 traceback의 민감정보 노출 경로를 차단합니다.
 4. Retriever의 실제 정답 evidence·MSDS 장을 포함한 관련성 골드셋을 만듭니다.
 5. 데이터 출처·라이선스 manifest를 릴리스 gate와 연결합니다.
 6. Python 3.11 릴리스 workflow로 bundle을 생성하고 스테이징에 배포합니다.
 7. 기준선 평가가 안정된 뒤 임베딩·reranker를 오프라인 실험으로 비교합니다.
 
+21·10·6의 정확한 출처, 단계별 목표 규모와 화면 적용 기준은
+[평가 V2](EVALUATION_V2.md)에 정리했습니다.
+
 ## 6. GitHub 관리 상태
 
-- 원격 `main`: GitHub에서 PR #5 병합 완료 확인
-- 로컬 기준점: 병합된 PR #5 head `ee09ec3`
-- 현재 작업 브랜치: `codex/p0-safe-substance-hints`
-- GitHub 앱: PR·Actions 읽기는 가능하지만 쓰기 작업은 `403`
-- 사용자 터미널 `gh`: `hywznn` 계정과 `repo` scope 인증 확인
-- Codex 샌드박스: keyring과 GitHub DNS에 접근하지 못해 원격 쓰기 미검증
+- 원격 `main`: GitHub에서 PR #6 병합 완료 확인
+- PR #6 head: `e146f7d`, merge commit: `1a383d2`
+- 현재 작업 브랜치: `codex/p0-dashboard-output-gate`
+- GitHub 앱: 저장소·PR 읽기는 가능하지만 이슈 생성 쓰기는 `403`
+- Codex 환경의 `gh auth status`: 저장된 `hywznn` token을 유효하지 않은 상태로 보고
+- Codex 샌드박스: `github.com` DNS를 해석하지 못해 fetch·push 불가
 
-현재 연결로는 코드·테스트·문서와 PR·CI 상태 확인은 가능하지만, 이슈·PR·마일스톤 수정과
-병합은 완료했다고 주장하지 않습니다.
+현재 연결로는 코드·테스트·문서와 PR·CI 상태 확인은 가능하지만, 이슈 생성·브랜치 push·PR
+생성은 완료했다고 주장하지 않습니다. 로컬 한국어 커밋 뒤 사용자의 일반 터미널에서 push가
+필요합니다.

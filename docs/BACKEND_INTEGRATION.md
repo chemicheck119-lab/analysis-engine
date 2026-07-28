@@ -37,7 +37,11 @@ FE가 모델 API를 직접 부르면 안 됩니다. 모델 API 키가 브라우�
 3. BE가 `POST /api/v1/incidents/analyze`를 호출합니다.
 4. AI가 물질 후보, 시설 이력 후보, 근거와 `confirmation_gate`를 반환합니다.
 5. BE가 원본 응답과 `analysis_id`, `request_id`, 모델·데이터 버전을 저장합니다.
-6. FE는 후보와 “현장 확인 필요” 상태를 표시합니다.
+6. FE는 후보와 “현장 확인 필요” 상태만 표시합니다.
+
+이 단계에서는 `risk_level_ko`, 구체적 반응과 AI 대응 권고를 표시하지 않습니다.
+시설 이력은 현재 재고가 아니라 **과거 공개 이력 기반 시설물질 후보**입니다. 사용자가 입력한
+`planned_actions`도 AI가 검증한 대응 권고가 아닙니다.
 
 ### 3.2 물질 두 개를 현장에서 확인한 뒤
 
@@ -104,6 +108,10 @@ API Key는 `.env` 예제에 실제 값을 쓰지 않고 배포 플랫폼의 Secr
 [`examples/api/incident_confirmed_request.json`](../examples/api/incident_confirmed_request.json)을
 사용합니다.
 
+확인 전 대시보드의 안전한 응답 fixture는
+[`examples/api/incident_unconfirmed_response.json`](../examples/api/incident_unconfirmed_response.json)
+입니다. FE·BE는 이 fixture를 mock과 계약 테스트에 사용할 수 있습니다.
+
 ## 6. BE 저장 최소 필드
 
 모델 응답 전체를 감사용 JSON으로 보관하되 최소한 다음 필드를 별도 조회 가능하게 저장합니다.
@@ -129,7 +137,9 @@ BE는 HTTP 성공 여부와 모델 워크플로 상태를 분리합니다.
 
 | AI 결과 | BE가 FE에 전달할 의미 |
 |---|---|
-| `AWAITING_SUBSTANCE_CONFIRMATION` | 후보 표시, 물질 확인 입력 요청 |
+| `AWAITING_SUBSTANCE_CONFIRMATION` | 사고·시설물질 후보 표시, 두 확인 입력 요청, 위험 카드 잠금 |
+| `AWAITING_INCIDENT_CONFIRMATION` | 사고물질 확인 입력 요청, 위험 카드 잠금 |
+| `AWAITING_FACILITY_CONFIRMATION` | 시설물질 확인 입력 요청, 위험 카드 잠금 |
 | `COMPLETED` 또는 스크리닝 완료 상태 | 근거·서수 위험등급·우선 확인 표시 |
 | `UNCLASSIFIED` | 근거 부족, 외부 MSDS 확인 안내 |
 | `CAS_EVIDENCE_NOT_LOADED` | 다른 물질 근거로 대체하지 않고 상세 근거 미적재 표시 |
@@ -139,6 +149,31 @@ BE는 HTTP 성공 여부와 모델 워크플로 상태를 분리합니다.
 
 FE는 `schema_version`, `state`, `confirmation_gate`, `conflict_review`,
 `required_next_steps`, `safety_notice`가 없는 성공 응답을 정상 결과로 표시하지 않습니다.
+
+### 7.1 대시보드 표시 규칙
+
+현재 디자인의 “대응충돌검토 결과” 영역은 API 상태에 따라 완전히 다른 카드로 렌더링해야
+합니다.
+
+| 조건 | 제목 | 표시 | 숨김 |
+|---|---|---|---|
+| 확인 전 | 물질 후보 확인 필요 | 신고문 후보, 과거 이력 후보, 확인 버튼 | 위험등급, 반응, 대응 권고 |
+| 한 물질만 확인 | 추가 물질 확인 필요 | 확인된 CAS, 남은 확인 역할 | 위험등급, 반응, 대응 권고 |
+| 두 물질 확인 + 규칙 실행 | 대응충돌검토 결과 | 서수 등급, 반응, 근거 URL·버전 | 확률·백분율 |
+| 두 물질 확인 + 근거 부족 | 공개 근거 부족 | 확인된 두 CAS, 추가 확인 안내 | 임의 위험등급 |
+
+기계 판독 가능한 원본은
+[`contracts/model-api-integration-v1.json`](../contracts/model-api-integration-v1.json)의
+`presentation_policy`입니다.
+
+물질검색 모드는 현재 **물질명·별칭·CAS** 검색만 약속합니다. 성상만으로 물질을 식별하는
+모델은 아직 없으므로 FE 안내문에 포함하지 않습니다.
+
+### 7.2 v1의 물질쌍 제한
+
+v1 통합 요청은 사고물질 1개와 시설물질 1개, 응답은 충돌 검토 1개만 지원합니다. 화면에
+시설물질 후보가 두 개 이상 있어도 확인 전에는 후보 카드로만 표시합니다. 여러 확인 물질쌍을
+한 번에 실행하는 `pair_reviews[]`는 API 하위 호환성 검토가 필요한 v2 후속 작업입니다.
 
 ## 8. Timeout과 재시도
 

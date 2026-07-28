@@ -469,16 +469,23 @@ API는 두 현장 확인 게이트를 통과한 뒤 `PUBLIC_SOURCE_PILOT_V1`로 
 `AWAITING_SUBSTANCE_CONFIRMATION`, `VERIFY_REQUIRED`, `UNCLASSIFIED`는 정상적인 업무 상태일
 수 있으며 HTTP 오류와 구분해야 합니다.
 
+`UNCONFIRMED_RISK_OUTPUT_BLOCKED`는 현장 확인 두 건이 없는데 내부 출력에 위험등급·반응·
+완료 상태가 섞였거나, 누락된 확인 역할과 상태가 모순될 때 반환하는 fail-closed `500`
+오류입니다. 클라이언트는 이 응답을 후보 또는 정상 결과로 표시하지 않고 운영자가 같은
+`request_id`를 조사하게 해야 합니다.
+
 ## 12. 프론트·백엔드 구현 규칙
 
 1. Resolver 첫 후보를 자동 확정하지 않습니다.
 2. 백엔드가 인증된 현장 확인 레코드를 만든 후 확인 객체를 전송합니다.
-3. UI는 `risk_level_ko`를 표시할 수 있지만 백분율을 만들지 않습니다.
-4. `expert_reviewed=false`와 공개 근거 파일럿 라벨을 결과 근처에 표시합니다.
-5. `mapping_provenance`와 `evidence_provenance`를 “대응 근거”에서 확인할 수 있게 합니다.
-6. 시설 이력은 “과거 공개 이력 후보”로 표시합니다.
-7. `required_next_steps`와 업무 상태를 사용자에게 그대로 전달합니다.
-8. `X-Request-Id`, `analysis_id`, `incident_id`를 함께 기록해 장애를 추적합니다.
+3. UI는 `confirmation_gate.all_required_confirmed=true`이고
+   `conflict_review.executed=true`일 때만 `risk_level_ko`를 표시할 수 있습니다.
+4. 서수 등급을 백분율로 바꾸지 않고 `LOW`를 안전 보장으로 표현하지 않습니다.
+5. `expert_reviewed=false`와 공개 근거 파일럿 라벨을 결과 근처에 표시합니다.
+6. `mapping_provenance`와 `evidence_provenance`를 “대응 근거”에서 확인할 수 있게 합니다.
+7. 시설 이력은 “과거 공개 이력 후보”로 표시합니다.
+8. `required_next_steps`와 업무 상태를 사용자에게 그대로 전달합니다.
+9. `X-Request-Id`, `analysis_id`, `incident_id`를 함께 기록해 장애를 추적합니다.
 
 ## 13. TypeScript 호출 예시
 
