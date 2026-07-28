@@ -3,16 +3,22 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 
-def connect_readonly(db_path: str | Path) -> sqlite3.Connection:
-    """변경되지 않는 배포 artifact를 read-only/immutable URI로 연결한다."""
+@contextmanager
+def connect_readonly(db_path: str | Path) -> Iterator[sqlite3.Connection]:
+    """읽기 전용 연결을 열고 성공·예외 여부와 관계없이 즉시 닫는다."""
 
     path = Path(db_path).expanduser().resolve(strict=True)
     connection = sqlite3.connect(f"{path.as_uri()}?mode=ro&immutable=1", uri=True)
-    connection.execute("PRAGMA query_only = ON")
-    return connection
+    try:
+        connection.execute("PRAGMA query_only = ON")
+        yield connection
+    finally:
+        connection.close()
 
 
 __all__ = ["connect_readonly"]

@@ -33,6 +33,8 @@ from chemiguard119.utils import (
 
 
 MODEL_SCHEMA_VERSION = "evidence-hybrid-tfidf-v2"
+RUNTIME_INDEX_VERSION = "retriever-runtime-index-v1"
+RUNTIME_INDEX_KEY = "_runtime_index"
 OFFICIAL_EVIDENCE_SOURCES = frozenset({"KOSHA", "CAMEO"})
 CAS_EVIDENCE_NOT_LOADED_STATUS = "CAS_EVIDENCE_NOT_LOADED"
 INVALID_CAS_HINT_STATUS = "INVALID_CAS_HINT"
@@ -135,7 +137,65 @@ def load_retriever(model_path: Path = DEFAULT_RETRIEVER_MODEL) -> dict[str, Any]
         raise RuntimeError(
             "지원하지 않는 retriever artifact 버전입니다. 다시 학습하세요."
         )
+    artifact[RUNTIME_INDEX_KEY] = build_retriever_runtime_index(artifact)
     return artifact
+
+
+def build_retriever_runtime_index(
+    artifact: dict[str, Any],
+) -> dict[str, Any]:
+    """문서 식별자·CAS·제목 조회표를 프로세스 시작 시 한 번만 만든다."""
+
+    rows: list[dict[str, Any]] = artifact.get("rows", [])
+    row_by_id: dict[str, dict[str, Any]] = {}
+    row_position: dict[str, int] = {}
+    ids_by_cas: dict[str, list[str]] = {}
+    official_ids_by_cas: dict[str, set[str]] = {}
+    ids_by_title: dict[str, list[str]] = {}
+    source_representatives_by_cas: dict[str, list[str]] = {}
+    seen_sources_by_cas: dict[str, set[str]] = {}
+
+    for position, row in enumerate(rows):
+        evidence_id = str(row["evidence_id"])
+        row_by_id[evidence_id] = row
+        row_position[evidence_id] = position
+
+        title = normalize_text(str(row.get("title") or ""))
+        if title:
+            ids_by_title.setdefault(title, []).append(evidence_id)
+
+        cas_number = normalize_cas(str(row.get("cas_number") or ""))
+        if not cas_number:
+            continue
+        ids_by_cas.setdefault(cas_number, []).append(evidence_id)
+        source = _source_key(row)
+        if source in OFFICIAL_EVIDENCE_SOURCES:
+            official_ids_by_cas.setdefault(cas_number, set()).add(evidence_id)
+        if source:
+            seen_sources = seen_sources_by_cas.setdefault(cas_number, set())
+            if source not in seen_sources:
+                source_representatives_by_cas.setdefault(cas_number, []).append(
+                    evidence_id
+                )
+                seen_sources.add(source)
+
+    return {
+        "version": RUNTIME_INDEX_VERSION,
+        "row_by_id": row_by_id,
+        "row_position": row_position,
+        "ids_by_cas": ids_by_cas,
+        "official_ids_by_cas": official_ids_by_cas,
+        "ids_by_title": ids_by_title,
+        "source_representatives_by_cas": source_representatives_by_cas,
+    }
+
+
+def _runtime_index(artifact: dict[str, Any]) -> dict[str, Any]:
+    index = artifact.get(RUNTIME_INDEX_KEY)
+    if not isinstance(index, dict) or index.get("version") != RUNTIME_INDEX_VERSION:
+        index = build_retriever_runtime_index(artifact)
+        artifact[RUNTIME_INDEX_KEY] = index
+    return index
 
 
 def _fts_query(query: str) -> str:
@@ -186,6 +246,26 @@ def _exact_ranks(
     return ranked
 
 
+def _exact_ranks_from_index(
+    runtime_index: dict[str, Any],
+    query: str,
+    cas_hint: str | None,
+    limit: int,
+) -> list[str]:
+    if cas_hint:
+        return list(runtime_index["ids_by_cas"].get(cas_hint, []))[:limit]
+
+    query_norm = normalize_text(query)
+    matching_ids = set(runtime_index["ids_by_title"].get(query_norm, []))
+    for cas_number, evidence_ids in runtime_index["ids_by_cas"].items():
+        if cas_number and cas_number in query_norm:
+            matching_ids.update(evidence_ids)
+    return sorted(
+        matching_ids,
+        key=runtime_index["row_position"].__getitem__,
+    )[:limit]
+
+
 def _source_key(row: dict[str, Any]) -> str:
     """출처 표기의 대소문자·주변 공백 차이만 정규화한다."""
 
@@ -224,6 +304,32 @@ def _append_missing_cas_source_representatives(
         if not source or source in present_sources:
             continue
         augmented.append(str(row["evidence_id"]))
+        present_sources.add(source)
+    return augmented
+
+
+def _append_missing_cas_source_representatives_from_index(
+    exact: list[str],
+    runtime_index: dict[str, Any],
+    cas_hint: str | None,
+) -> list[str]:
+    if not cas_hint:
+        return exact
+    augmented = list(exact)
+    row_by_id = runtime_index["row_by_id"]
+    present_sources = {
+        _source_key(row_by_id[evidence_id])
+        for evidence_id in exact
+        if evidence_id in row_by_id
+        and normalize_cas(str(row_by_id[evidence_id].get("cas_number") or ""))
+        == cas_hint
+        and _source_key(row_by_id[evidence_id])
+    }
+    for evidence_id in runtime_index["source_representatives_by_cas"].get(cas_hint, []):
+        source = _source_key(row_by_id[evidence_id])
+        if source in present_sources:
+            continue
+        augmented.append(evidence_id)
         present_sources.add(source)
     return augmented
 
@@ -336,8 +442,8 @@ def search_evidence(
     top_k: int = 8,
     candidate_limit: int = 40,
 ) -> dict[str, Any]:
-    rows: list[dict[str, Any]] = artifact["rows"]
-    row_by_id = {str(row["evidence_id"]): row for row in rows}
+    runtime_index = _runtime_index(artifact)
+    row_by_id: dict[str, dict[str, Any]] = runtime_index["row_by_id"]
 
     normalized_cas_hint: str | None = None
     eligible_ids: set[str] | None = None
@@ -354,12 +460,9 @@ def search_evidence(
                     "용기 라벨 또는 외부 공식 MSDS에서 CAS를 다시 확인해야 합니다."
                 ),
             )
-        eligible_ids = {
-            str(row["evidence_id"])
-            for row in rows
-            if normalize_cas(str(row.get("cas_number") or "")) == normalized_cas_hint
-            and _source_key(row) in OFFICIAL_EVIDENCE_SOURCES
-        }
+        eligible_ids = runtime_index["official_ids_by_cas"].get(
+            normalized_cas_hint, set()
+        )
         if not eligible_ids:
             return _empty_cas_retrieval(
                 query,
@@ -375,10 +478,15 @@ def search_evidence(
                 ),
             )
 
-    exact = _exact_ranks(rows, query, normalized_cas_hint, candidate_limit)
-    exact = _append_missing_cas_source_representatives(
+    exact = _exact_ranks_from_index(
+        runtime_index,
+        query,
+        normalized_cas_hint,
+        candidate_limit,
+    )
+    exact = _append_missing_cas_source_representatives_from_index(
         exact,
-        rows,
+        runtime_index,
         normalized_cas_hint,
     )
     bm25 = _bm25_ranks(

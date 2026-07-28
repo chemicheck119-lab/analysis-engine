@@ -172,3 +172,30 @@ CAS로 근거를 검색하는 전체 흐름입니다.
 - [아키텍처](ARCHITECTURE.md)
 - [API](API.md)
 - [안전 및 한계](SAFETY_AND_LIMITATIONS.md)
+
+## 9. 온라인 경로 상대 성능 측정
+
+검색 정확도 평가와 API 지연시간 측정은 별개입니다. 아래 명령은 동일 장비와 동일
+artifact에서 런타임 인덱스 변경 전후를 비교하기 위한 개발용 벤치마크입니다.
+
+```bash
+PYTHONPATH=src python scripts/evaluation/benchmark_runtime.py \
+  --label local \
+  --output outputs/runtime_benchmark.json
+```
+
+2026-07-28 Mac ARM64 로컬 비교에서 별칭 9,685개, 근거 문서 5,858개를 사용했습니다.
+요청마다 전체 행을 정규화하던 기준선과 서버 시작 시 조회표를 한 번 구성하는 구현의
+중앙값은 다음과 같습니다.
+
+| 경로 | 변경 전 p50 | 변경 후 p50 | 감소율 |
+|---|---:|---:|---:|
+| Resolver 정확 별칭 | 16.648ms | 0.004ms | 99.98% |
+| Resolver 유사 후보 | 18.891ms | 2.020ms | 89.31% |
+| Retriever 동일 CAS | 34.089ms | 20.176ms | 40.81% |
+| Retriever 일반 텍스트 | 33.582ms | 19.881ms | 40.80% |
+
+상세 입력, artifact SHA-256과 반복 횟수는
+`data/evaluation/runtime_performance_snapshot_2026-07-28.json`에 기록했습니다.
+이 수치는 해당 개발 장비의 상대 비교일 뿐 운영 서버 SLO나 현장 성능 보장이 아닙니다.
+배포 후보 이미지에서도 같은 명령을 실행해 별도의 값을 남겨야 합니다.

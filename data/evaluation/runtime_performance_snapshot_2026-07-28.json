@@ -1,0 +1,51 @@
+{
+  "schema_version": "runtime-performance-comparison-v1",
+  "comparison_date": "2026-07-28",
+  "baseline_git_commit": "57b109b513afed351c4ac0931a79cef542238c72",
+  "interpretation": "동일 Mac ARM64 장비·Python 3.13.9·동일 artifact의 상대 비교용이다. 운영 SLO, 현장 정확도 또는 다른 서버의 지연시간을 의미하지 않는다.",
+  "iterations": {
+    "exact": 100,
+    "model": 30,
+    "warmups": 3
+  },
+  "artifact_sha256": {
+    "database": "94e7ddec8016aab43ff5c847eb05ae994d2ca694ccb71fc4bd7311e12b536c46",
+    "resolver": "1a1eb39b72b75b811dc70e323f5d1eff9f654224d8e08140c284b18cd4936244",
+    "retriever": "a40821af7ce7b644fcfd28e1712ad58e4a48adf5788ea04f3130a3bf8b0e3f1a"
+  },
+  "corpus": {
+    "resolver_alias_count": 9685,
+    "retriever_document_count": 5858
+  },
+  "measurements_p50_ms": {
+    "resolver_exact_alias": {
+      "before": 16.648,
+      "after": 0.004,
+      "reduction_percent": 99.98
+    },
+    "resolver_exact_cas": {
+      "before": 0.139,
+      "after": 0.003,
+      "reduction_percent": 97.84
+    },
+    "resolver_fuzzy": {
+      "before": 18.891,
+      "after": 2.02,
+      "reduction_percent": 89.31
+    },
+    "retriever_same_cas": {
+      "before": 34.089,
+      "after": 20.176,
+      "reduction_percent": 40.81
+    },
+    "retriever_text": {
+      "before": 33.582,
+      "after": 19.881,
+      "reduction_percent": 40.8
+    }
+  },
+  "safety_regression": {
+    "resolver_and_retriever_tests_passed": 49,
+    "ranking_or_safety_policy_changed": false
+  }
+}

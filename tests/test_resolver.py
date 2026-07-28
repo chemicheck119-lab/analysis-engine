@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from chemiguard119.resolver import (
+    RUNTIME_INDEX_KEY,
     evaluate_resolver,
     load_resolver,
     resolve_substance,
@@ -131,6 +132,19 @@ def test_resolver_accepts_checksum_valid_cas_as_exact_identifier(
     assert result["candidates"][0]["match_type"] == "CAS_EXACT"
     assert result["candidates"][0]["has_kosha_detail"] is True
     assert result["candidates"][0]["rule_eligible"] is False
+
+
+def test_loaded_resolver_reuses_one_runtime_normalization_index(
+    resolver_artifact: dict,
+) -> None:
+    runtime_index = resolver_artifact[RUNTIME_INDEX_KEY]
+
+    resolve_substance("염산", resolver_artifact)
+    resolve_substance("7647-01-0", resolver_artifact)
+
+    assert resolver_artifact[RUNTIME_INDEX_KEY] is runtime_index
+    assert runtime_index["cas_rows"]["7647-01-0"]
+    assert runtime_index["exact_aliases"]["염산"]
 
 
 def test_resolver_keeps_name_exact_match_as_confirmation_candidate(

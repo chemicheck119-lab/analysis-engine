@@ -26,6 +26,8 @@ from chemiguard119.utils import (
 
 
 MODEL_SCHEMA_VERSION = "resolver-char-tfidf-v2"
+RUNTIME_INDEX_VERSION = "resolver-runtime-index-v1"
+RUNTIME_INDEX_KEY = "_runtime_index"
 
 ICIS_CANDIDATE_STATUS = "PUBLIC_CATALOG_CANDIDATE"
 AUTHORITATIVE_ALIAS_TYPES = {
@@ -169,7 +171,58 @@ def load_resolver(model_path: Path = DEFAULT_RESOLVER_MODEL) -> dict[str, Any]:
         raise RuntimeError(
             "지원하지 않는 resolver artifact 버전입니다. 다시 학습하세요."
         )
+    artifact[RUNTIME_INDEX_KEY] = build_resolver_runtime_index(artifact)
     return artifact
+
+
+def build_resolver_runtime_index(
+    artifact: dict[str, Any],
+) -> dict[str, Any]:
+    """배포 artifact는 바꾸지 않고 반복 정규화 결과만 메모리에 구성한다."""
+
+    rows: list[dict[str, Any]] = artifact.get("rows", [])
+    cas_rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    exact_aliases: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    alias_groups: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        cas_number = normalize_cas(str(row.get("cas_number") or ""))
+        if cas_number:
+            cas_rows[cas_number].append(row)
+
+        alias = str(row.get("alias_text") or "").strip()
+        normalized_alias = compact_text(alias)
+        if not normalized_alias:
+            continue
+        exact_aliases[normalized_alias].append(row)
+        if not valid_cas_checksum(cas_number):
+            continue
+        group = alias_groups.setdefault(
+            normalized_alias,
+            {"cas_numbers": set(), "eligible_surfaces": set()},
+        )
+        group["cas_numbers"].add(cas_number)
+        if (
+            len(alias) >= 2
+            and _alias_class(str(row.get("alias_type") or "")) == "AUTHORITATIVE_NAME"
+            and _authority_level(row)
+            in {"PUBLIC_AUTHORITY_SOURCE", "PUBLIC_CATALOG_CANDIDATE"}
+        ):
+            group["eligible_surfaces"].add(alias)
+
+    return {
+        "version": RUNTIME_INDEX_VERSION,
+        "cas_rows": dict(cas_rows),
+        "exact_aliases": dict(exact_aliases),
+        "alias_groups": alias_groups,
+    }
+
+
+def _runtime_index(artifact: dict[str, Any]) -> dict[str, Any]:
+    index = artifact.get(RUNTIME_INDEX_KEY)
+    if not isinstance(index, dict) or index.get("version") != RUNTIME_INDEX_VERSION:
+        index = build_resolver_runtime_index(artifact)
+        artifact[RUNTIME_INDEX_KEY] = index
+    return index
 
 
 def _as_bool(value: Any) -> bool:
@@ -270,9 +323,10 @@ def resolve_substance(
     minimum_score: float = 0.20,
 ) -> dict[str, Any]:
     rows: list[dict[str, Any]] = artifact["rows"]
+    runtime_index = _runtime_index(artifact)
     cas_query = normalize_cas(query)
     if valid_cas_checksum(cas_query):
-        exact_rows = [row for row in rows if row["cas_number"] == cas_query]
+        exact_rows = runtime_index["cas_rows"].get(cas_query, [])
         if exact_rows:
             representative = sorted(
                 exact_rows,
@@ -318,11 +372,9 @@ def resolve_substance(
         )
 
     compact_query = compact_text(query)
-    exact_aliases = [
-        row
-        for row in rows
-        if compact_text(row["alias_text"]) == compact_query and compact_query
-    ]
+    exact_aliases = (
+        runtime_index["exact_aliases"].get(compact_query, []) if compact_query else []
+    )
     exact_grouped: dict[str, list[dict[str, str]]] = defaultdict(list)
     for row in exact_aliases:
         exact_grouped[row["cas_number"]].append(row)
@@ -471,25 +523,7 @@ def select_evidence_cas_hint_from_text(
     if direct_hint:
         return direct_hint
 
-    alias_groups: dict[str, dict[str, Any]] = {}
-    for row in artifact.get("rows", []):
-        alias = str(row.get("alias_text") or "").strip()
-        normalized_alias = compact_text(alias)
-        cas_number = normalize_cas(str(row.get("cas_number") or ""))
-        if not normalized_alias or not valid_cas_checksum(cas_number):
-            continue
-        group = alias_groups.setdefault(
-            normalized_alias,
-            {"cas_numbers": set(), "eligible_surfaces": set()},
-        )
-        group["cas_numbers"].add(cas_number)
-        if (
-            len(alias) >= 2
-            and _alias_class(str(row.get("alias_type") or "")) == "AUTHORITATIVE_NAME"
-            and _authority_level(row)
-            in {"PUBLIC_AUTHORITY_SOURCE", "PUBLIC_CATALOG_CANDIDATE"}
-        ):
-            group["eligible_surfaces"].add(alias)
+    alias_groups: dict[str, dict[str, Any]] = _runtime_index(artifact)["alias_groups"]
 
     grouped: dict[tuple[int, int, str], set[str]] = defaultdict(set)
     compact_query = compact_text(query)
