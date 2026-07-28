@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chemiguard119"
-version = "0.3.0"
+version = "0.4.0"
 description = "케미체크119 화학사고 대응충돌 검토 모델 API와 CLI"
 readme = "README.md"
 requires-python = ">=3.11"

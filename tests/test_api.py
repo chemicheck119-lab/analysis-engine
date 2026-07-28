@@ -9,10 +9,15 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from chemiguard119 import api, pipeline
 from chemiguard119.api import ModelRuntime, create_app
+from chemiguard119.api_models import AnalysisResponse
 from chemiguard119.rules import APPROVED_ONLY_POLICY, PUBLIC_SOURCE_PILOT_POLICY
+
+
+DEPLOYED_API_KEY = "0123456789abcdef" * 4
 
 
 def _write_policy_config(
@@ -184,6 +189,104 @@ def _analyze_payload(text: str = "미상 물질 냄새 신고") -> dict[str, Any
     }
 
 
+def _analyze_payload_with_confirmed_pair() -> dict[str, Any]:
+    payload = _analyze_payload("차아염소산나트륨과 염산 현장 확인")
+    payload["confirmed_incident_substance"] = _confirmed(
+        role="INCIDENT",
+        cas_number="7681-52-9",
+        confirmation_id="CNF-INC-001",
+    )
+    payload["confirmed_facility_substance"] = _confirmed(
+        role="FACILITY",
+        cas_number="7647-01-0",
+        confirmation_id="CNF-FAC-001",
+    )
+    return payload
+
+
+def _safe_unconfirmed_pipeline_result() -> dict[str, Any]:
+    return {
+        "schema_version": "incident-analysis-v1",
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "parsed_report": {},
+        "substance_candidates": [],
+        "evidence": [],
+        "rule_review": {
+            "executed": False,
+            "status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+            "gate": "BOTH_CAS_RESPONDER_CONFIRMED",
+            "missing_confirmations": ["incident_cas", "facility_cas"],
+            "reason": "현장 확인이 필요합니다.",
+        },
+        "output_validation": {"status": "PASSED", "errors": []},
+    }
+
+
+def _safe_confirmed_pipeline_result() -> dict[str, Any]:
+    return {
+        "schema_version": "incident-analysis-v1",
+        "status": "VERIFY_REQUIRED",
+        "conflict_policy_mode": PUBLIC_SOURCE_PILOT_POLICY,
+        "parsed_report": {},
+        "substance_candidates": [],
+        "evidence": [],
+        "rule_review": {
+            "executed": True,
+            "status": "VERIFY_REQUIRED",
+            "gate": "BOTH_CAS_RESPONDER_CONFIRMED",
+            "policy_mode": PUBLIC_SOURCE_PILOT_POLICY,
+            "result": {
+                "status": "VERIFY_REQUIRED",
+                "severity": None,
+                "reason": "공개 근거 추가 확인이 필요합니다.",
+                "policy_mode": PUBLIC_SOURCE_PILOT_POLICY,
+                "expert_reviewed": False,
+                "human_confirmation_required": True,
+            },
+        },
+        "output_validation": {"status": "PASSED", "errors": []},
+    }
+
+
+def _completed_rule_result() -> dict[str, Any]:
+    return {
+        "status": "COMPLETED",
+        "scope": "APPROVED",
+        "incident_cas": "7681-52-9",
+        "facility_cas": "7647-01-0",
+        "rule_id": "TEST-APPROVED-RULE",
+        "rule_version": "test-v1",
+        "severity": "HIGH_RISK",
+        "risk_level": "HIGH",
+        "risk_level_ko": "높음",
+        "risk_scale": {
+            "type": "ORDINAL_RULE_CLASSIFICATION",
+            "is_probability": False,
+            "probability_percent": None,
+        },
+        "hazard_codes": ["TEST"],
+        "brief_text": "테스트용 충돌 위험",
+        "required_checks": ["현장 상태 확인"],
+        "evidence_urls": ["https://example.test/evidence"],
+        "planned_actions": [],
+        "limitations": ["테스트 fixture"],
+        "final_decision": "현장 지휘관 판단",
+        "human_confirmation_required": True,
+    }
+
+
+def _enable_approved_policy_for_test(runtime: ModelRuntime) -> None:
+    """APPROVED_ONLY 출력 계약 테스트가 readiness 게이트를 통과하게 한다."""
+
+    _write_policy_config(
+        runtime.config_dir,
+        pair_rules=(
+            "rule_id,cas_a,cas_b,approval_status\n"
+            "CHEM-DIRECT-001,7681-52-9,7647-01-0,APPROVED\n"
+        ),
+    )
+
+
 def _seed_facility_history(db_path: Path) -> None:
     with sqlite3.connect(db_path) as connection:
         connection.execute(
@@ -282,6 +385,7 @@ def test_health_and_readiness_with_injected_runtime(runtime: ModelRuntime) -> No
             "rule_policy_ready": True,
             "rule_policy": "PUBLIC_SOURCE_PILOT_V1",
             "conflict_review_ready": True,
+            "production_integrity_ready": True,
         },
     }
 
@@ -422,6 +526,76 @@ def test_production_rejects_placeholder_or_weak_api_key(runtime: ModelRuntime) -
     assert ready.json()["operational_checks"]["authentication_ready"] is False
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "BACKEND_AUTH_CONFIGURATION_INVALID"
+
+
+def test_production_readiness_rejects_injected_runtime_without_verified_manifest(
+    runtime: ModelRuntime,
+) -> None:
+    application = create_app(
+        runtime=runtime,
+        api_key=DEPLOYED_API_KEY,
+        deployment_environment="production",
+    )
+
+    with TestClient(application) as client:
+        ready = client.get("/health/ready")
+        response = client.post(
+            "/api/v1/substances/resolve",
+            headers={"X-API-Key": DEPLOYED_API_KEY},
+            json={"query": "염산"},
+        )
+
+    assert ready.status_code == 503
+    assert ready.json()["operational_checks"]["production_integrity_ready"] is False
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "MODEL_RUNTIME_INTEGRITY_NOT_READY"
+
+
+def test_unknown_deployment_environment_fails_closed(runtime: ModelRuntime) -> None:
+    application = create_app(
+        runtime=runtime,
+        api_key=DEPLOYED_API_KEY,
+        deployment_environment="prod",
+    )
+
+    with TestClient(application) as client:
+        ready = client.get("/health/ready")
+        response = client.post(
+            "/api/v1/substances/resolve",
+            headers={"X-API-Key": DEPLOYED_API_KEY},
+            json={"query": "염산"},
+        )
+
+    assert ready.status_code == 503
+    assert (
+        ready.json()["operational_checks"]["authentication_mode"]
+        == "MISCONFIGURED_FAIL_CLOSED"
+    )
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "BACKEND_AUTH_CONFIGURATION_INVALID"
+
+
+def test_unknown_deployment_environment_does_not_load_serialized_artifacts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    load_calls: list[dict[str, Any]] = []
+
+    def unexpected_load(**kwargs: Any) -> ModelRuntime:
+        load_calls.append(kwargs)
+        raise AssertionError("잘못된 환경에서는 artifact를 역직렬화하면 안 됩니다.")
+
+    monkeypatch.setattr(ModelRuntime, "load", unexpected_load)
+    application = create_app(
+        api_key=DEPLOYED_API_KEY,
+        deployment_environment="prod",
+    )
+
+    with TestClient(application) as client:
+        ready = client.get("/health/ready")
+
+    assert ready.status_code == 503
+    assert ready.json()["reason"] == "DEPLOYMENT_ENVIRONMENT_INVALID"
+    assert load_calls == []
 
 
 def test_invalid_rule_policy_fails_readiness_and_protected_requests(
@@ -632,13 +806,48 @@ def test_deployment_environment_uses_canonical_environment_variable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("CHEMIGUARD119_ENVIRONMENT", "staging")
-    application = create_app(runtime=runtime, api_key="", allow_anonymous=True)
+    application = create_app(
+        runtime=runtime,
+        api_key=DEPLOYED_API_KEY,
+        allow_anonymous=False,
+    )
 
     with TestClient(application) as client:
-        response = client.get("/api/v1/meta")
+        metadata = client.get("/api/v1/meta")
+        ready = client.get("/health/ready")
+        response = client.post(
+            "/api/v1/substances/resolve",
+            headers={"X-API-Key": DEPLOYED_API_KEY},
+            json={"query": "염산"},
+        )
 
-    assert response.status_code == 200
-    assert response.json()["deployment_environment"] == "staging"
+    assert metadata.status_code == 200
+    assert metadata.json()["deployment_environment"] == "staging"
+    assert ready.status_code == 503
+    assert ready.json()["operational_checks"]["production_integrity_ready"] is False
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "MODEL_RUNTIME_INTEGRITY_NOT_READY"
+
+
+def test_staging_rejects_anonymous_and_weak_api_key(runtime: ModelRuntime) -> None:
+    application = create_app(
+        runtime=runtime,
+        api_key="a" * 32,
+        allow_anonymous=True,
+        deployment_environment="staging",
+    )
+
+    with TestClient(application) as client:
+        ready = client.get("/health/ready")
+        response = client.post(
+            "/api/v1/substances/resolve",
+            json={"query": "염산"},
+        )
+
+    assert ready.status_code == 503
+    assert ready.json()["operational_checks"]["authentication_ready"] is False
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "BACKEND_AUTH_CONFIGURATION_INVALID"
 
 
 @pytest.mark.parametrize(
@@ -970,6 +1179,460 @@ def test_api_blocks_missing_confirmation_role_mismatch(
     assert response.json()["error"]["code"] == "UNCONFIRMED_RISK_OUTPUT_BLOCKED"
 
 
+def test_api_blocks_risk_nested_in_unconfirmed_evidence(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline_result = _safe_unconfirmed_pipeline_result()
+    pipeline_result["evidence"] = [
+        {
+            "role": "UNKNOWN",
+            "cas_hint": None,
+            "cas_basis": "NO_CAS_HINT",
+            "requires_responder_confirmation": True,
+            "risk_level_ko": "높음",
+            "recommended_actions": ["위험구역 통제"],
+            "retrieval": {"status": "NO_EVIDENCE_FOUND", "results": []},
+        }
+    ]
+    monkeypatch.setattr(
+        api, "analyze_incident", lambda *_args, **_kwargs: pipeline_result
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/incidents/analyze",
+            json=_analyze_payload("미확인 물질 신고"),
+        )
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "UNCONFIRMED_RISK_OUTPUT_BLOCKED"
+
+
+@pytest.mark.parametrize(
+    ("field", "forged_value"),
+    [
+        ("rule_eligible", True),
+        ("current_inventory_confirmed", True),
+        ("requires_responder_confirmation", False),
+        ("presence_status", "CONFIRMED_PRESENT"),
+    ],
+)
+def test_api_blocks_candidate_promotion_without_confirmation(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+    field: str,
+    forged_value: Any,
+) -> None:
+    pipeline_result = _safe_unconfirmed_pipeline_result()
+    pipeline_result["substance_candidates"] = [
+        {
+            "cas_number": "7681-52-9",
+            "requires_responder_confirmation": True,
+            field: forged_value,
+        }
+    ]
+    monkeypatch.setattr(
+        api, "analyze_incident", lambda *_args, **_kwargs: pipeline_result
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/incidents/analyze",
+            json=_analyze_payload("미확인 물질 신고"),
+        )
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "UNCONFIRMED_RISK_OUTPUT_BLOCKED"
+
+
+def test_api_blocks_facility_history_promotion_to_current_inventory(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        api,
+        "analyze_incident",
+        lambda *_args, **_kwargs: _safe_unconfirmed_pipeline_result(),
+    )
+    monkeypatch.setattr(
+        api,
+        "search_facility_history",
+        lambda *_args, **_kwargs: {
+            "status": "CANDIDATES_FOUND",
+            "results": [
+                {
+                    "cas_number": "7647-01-0",
+                    "current_inventory_confirmed": True,
+                    "rule_eligible": False,
+                    "requires_on_site_confirmation": True,
+                }
+            ],
+        },
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+    payload = _analyze_payload("미확인 물질 신고")
+    payload["location"] = {"facility_name": "OO전자 공장"}
+
+    with TestClient(application) as client:
+        response = client.post("/api/v1/incidents/analyze", json=payload)
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "UNCONFIRMED_RISK_OUTPUT_BLOCKED"
+
+
+@pytest.mark.parametrize(
+    ("field", "forged_value"),
+    [
+        ("expert_reviewed", True),
+        ("decision_support_only", False),
+        ("responder_confirmation_required", False),
+        ("confirmations", {"incident": {"confirmation_id": "FORGED"}}),
+    ],
+)
+def test_analysis_contract_blocks_unconfirmed_provenance_promotion(
+    runtime: ModelRuntime,
+    stub_pipeline_boundaries: list[dict[str, Any]],
+    field: str,
+    forged_value: Any,
+) -> None:
+    application = create_app(runtime=runtime, allow_anonymous=True)
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/incidents/analyze",
+            json=_analyze_payload("미확인 물질 신고"),
+        )
+    assert response.status_code == 200
+    forged_response = response.json()
+    forged_response["provenance"][field] = forged_value
+
+    with pytest.raises(ValidationError):
+        AnalysisResponse.model_validate(forged_response)
+
+
+@pytest.mark.parametrize(
+    "review",
+    [
+        {},
+        {
+            "executed": False,
+            "status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+            "gate": "BOTH_CAS_RESPONDER_CONFIRMED",
+            "missing_confirmations": ["incident_cas"],
+            "reason": "현장 확인이 필요합니다.",
+        },
+    ],
+)
+def test_api_requires_executed_review_after_two_confirmations(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+    review: dict[str, Any],
+) -> None:
+    pipeline_result = _safe_confirmed_pipeline_result()
+    pipeline_result["rule_review"] = review
+    monkeypatch.setattr(
+        api, "analyze_incident", lambda *_args, **_kwargs: pipeline_result
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/incidents/analyze",
+            json=_analyze_payload_with_confirmed_pair(),
+        )
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "OUTPUT_VALIDATION_FAILED"
+
+
+def test_api_blocks_confirmed_state_that_disagrees_with_rule_result(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pipeline_result = _safe_confirmed_pipeline_result()
+    pipeline_result["status"] = "NEEDS_SUBSTANCE_CONFIRMATION"
+    monkeypatch.setattr(
+        api, "analyze_incident", lambda *_args, **_kwargs: pipeline_result
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/incidents/analyze",
+            json=_analyze_payload_with_confirmed_pair(),
+        )
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "OUTPUT_VALIDATION_FAILED"
+
+
+@pytest.mark.parametrize(
+    ("review_status", "scope", "policy_mode", "extra_fields"),
+    [
+        ("COMPLETED_DEMO", "DRAFT", APPROVED_ONLY_POLICY, {}),
+        ("COMPLETED", "DRAFT", APPROVED_ONLY_POLICY, {}),
+        ("COMPLETED", "APPROVED", PUBLIC_SOURCE_PILOT_POLICY, {}),
+        (
+            "COMPLETED",
+            "APPROVED",
+            APPROVED_ONLY_POLICY,
+            {
+                "expected_response": ["근거 계약 밖의 임의 대응"],
+                "recommended_actions": ["근거 계약 밖의 임의 대응"],
+            },
+        ),
+    ],
+)
+def test_api_blocks_demo_draft_policy_mismatch_and_unknown_action_fields(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+    review_status: str,
+    scope: str,
+    policy_mode: str,
+    extra_fields: dict[str, Any],
+) -> None:
+    if policy_mode == APPROVED_ONLY_POLICY:
+        _enable_approved_policy_for_test(runtime)
+    result = {
+        **_completed_rule_result(),
+        "status": review_status,
+        "scope": scope,
+        **extra_fields,
+    }
+    pipeline_result = _safe_confirmed_pipeline_result()
+    pipeline_result["status"] = "COMPLETED_WITH_WARNINGS"
+    pipeline_result["conflict_policy_mode"] = policy_mode
+    pipeline_result["rule_review"] = {
+        "executed": True,
+        "status": review_status,
+        "gate": "BOTH_CAS_RESPONDER_CONFIRMED",
+        "policy_mode": policy_mode,
+        "result": result,
+    }
+    monkeypatch.setattr(
+        api, "analyze_incident", lambda *_args, **_kwargs: pipeline_result
+    )
+    application = create_app(
+        runtime=runtime,
+        allow_anonymous=True,
+        rule_policy=policy_mode,
+    )
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/incidents/analyze",
+            json=_analyze_payload_with_confirmed_pair(),
+        )
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "OUTPUT_VALIDATION_FAILED"
+
+
+@pytest.mark.parametrize(
+    "forged_evidence",
+    [
+        {
+            "role": "INCIDENT",
+            "cas_hint": "7664-93-9",
+            "cas_basis": "RESPONDER_CONFIRMED",
+            "requires_responder_confirmation": False,
+            "retrieval": {
+                "status": "CAS_EVIDENCE_NOT_LOADED",
+                "cas_hint": "7664-93-9",
+                "results": [],
+            },
+        },
+        {
+            "role": "INCIDENT",
+            "cas_hint": "7664-93-9",
+            "cas_basis": "PARSER_CANDIDATE",
+            "requires_responder_confirmation": True,
+            "retrieval": {
+                "status": "CAS_EVIDENCE_NOT_LOADED",
+                "cas_hint": "7664-93-9",
+                "results": [],
+            },
+        },
+        {
+            "role": "UNKNOWN",
+            "cas_hint": None,
+            "cas_basis": "NO_CAS_HINT",
+            "requires_responder_confirmation": True,
+            "retrieval": {
+                "status": "NO_EVIDENCE_FOUND",
+                "cas_hint": None,
+                "results": [],
+            },
+        },
+    ],
+)
+def test_api_blocks_evidence_that_disagrees_with_confirmation_gate(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+    forged_evidence: dict[str, Any],
+) -> None:
+    pipeline_result = _safe_confirmed_pipeline_result()
+    pipeline_result["evidence"] = [forged_evidence]
+    monkeypatch.setattr(
+        api, "analyze_incident", lambda *_args, **_kwargs: pipeline_result
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/incidents/analyze",
+            json=_analyze_payload_with_confirmed_pair(),
+        )
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "OUTPUT_VALIDATION_FAILED"
+
+
+def test_api_blocks_probability_disguised_as_completed_risk(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _enable_approved_policy_for_test(runtime)
+    result = _completed_rule_result()
+    result["risk_scale"] = {
+        "type": "ORDINAL_RULE_CLASSIFICATION",
+        "is_probability": True,
+        "probability_percent": 99,
+    }
+    pipeline_result = _safe_confirmed_pipeline_result()
+    pipeline_result["status"] = "COMPLETED_WITH_WARNINGS"
+    pipeline_result["conflict_policy_mode"] = APPROVED_ONLY_POLICY
+    pipeline_result["rule_review"] = {
+        "executed": True,
+        "status": "COMPLETED",
+        "gate": "BOTH_CAS_RESPONDER_CONFIRMED",
+        "policy_mode": APPROVED_ONLY_POLICY,
+        "result": result,
+    }
+    monkeypatch.setattr(
+        api, "analyze_incident", lambda *_args, **_kwargs: pipeline_result
+    )
+    application = create_app(
+        runtime=runtime,
+        allow_anonymous=True,
+        rule_policy=APPROVED_ONLY_POLICY,
+    )
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/incidents/analyze",
+            json=_analyze_payload_with_confirmed_pair(),
+        )
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "OUTPUT_VALIDATION_FAILED"
+
+
+def test_api_blocks_completed_rule_cas_mismatch(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _enable_approved_policy_for_test(runtime)
+    result = _completed_rule_result()
+    result["incident_cas"] = "7664-93-9"
+    pipeline_result = _safe_confirmed_pipeline_result()
+    pipeline_result["status"] = "COMPLETED_WITH_WARNINGS"
+    pipeline_result["conflict_policy_mode"] = APPROVED_ONLY_POLICY
+    pipeline_result["rule_review"] = {
+        "executed": True,
+        "status": "COMPLETED",
+        "gate": "BOTH_CAS_RESPONDER_CONFIRMED",
+        "policy_mode": APPROVED_ONLY_POLICY,
+        "result": result,
+    }
+    monkeypatch.setattr(
+        api, "analyze_incident", lambda *_args, **_kwargs: pipeline_result
+    )
+    application = create_app(
+        runtime=runtime,
+        allow_anonymous=True,
+        rule_policy=APPROVED_ONLY_POLICY,
+    )
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/incidents/analyze",
+            json=_analyze_payload_with_confirmed_pair(),
+        )
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "OUTPUT_VALIDATION_FAILED"
+
+
+def test_direct_conflict_review_blocks_risk_fields_on_inconclusive_result(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        api,
+        "review_pair",
+        lambda *_args, **_kwargs: {
+            "status": "VERIFY_REQUIRED",
+            "severity": None,
+            "reason": "근거 추가 확인이 필요합니다.",
+            "human_confirmation_required": True,
+            "risk_level": "HIGH",
+            "risk_level_ko": "높음",
+            "recommended_actions": ["위험구역 통제"],
+        },
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+    payload = {
+        "incident": _analyze_payload_with_confirmed_pair()[
+            "confirmed_incident_substance"
+        ],
+        "facility": _analyze_payload_with_confirmed_pair()[
+            "confirmed_facility_substance"
+        ],
+    }
+
+    with TestClient(application) as client:
+        response = client.post("/api/v1/conflicts/review", json=payload)
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "OUTPUT_VALIDATION_FAILED"
+
+
+@pytest.mark.parametrize(
+    "validation_record",
+    [
+        None,
+        {"status": "FAILED", "errors": ["검증 실패"]},
+        {"status": "PASSED", "errors": ["숨겨진 오류"]},
+    ],
+)
+def test_api_requires_clean_pipeline_output_validation_record(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+    validation_record: dict[str, Any] | None,
+) -> None:
+    pipeline_result = _safe_unconfirmed_pipeline_result()
+    if validation_record is None:
+        pipeline_result.pop("output_validation")
+    else:
+        pipeline_result["output_validation"] = validation_record
+    monkeypatch.setattr(
+        api, "analyze_incident", lambda *_args, **_kwargs: pipeline_result
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/incidents/analyze",
+            json=_analyze_payload("미확인 물질 신고"),
+        )
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "OUTPUT_VALIDATION_FAILED"
+
+
 @pytest.mark.parametrize(
     ("pipeline_status", "expected_http_status", "expected_error_code"),
     [
@@ -1007,6 +1670,69 @@ def test_pipeline_failure_state_is_reported_before_confirmation_gate(
 
     assert response.status_code == expected_http_status
     assert response.json()["error"]["code"] == expected_error_code
+
+
+def test_confirmed_canonical_request_allows_same_cas_without_query_hit(
+    runtime: ModelRuntime,
+    stub_pipeline_boundaries: list[dict[str, Any]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def search_with_loaded_but_unmatched_facility(
+        query: str,
+        _db_path: Path,
+        _artifact: dict[str, Any],
+        cas_hint: str | None = None,
+        top_k: int = 5,
+    ) -> dict[str, Any]:
+        results = (
+            []
+            if cas_hint == "7647-01-0"
+            else [
+                {
+                    "evidence_id": "KOSHA:TEST",
+                    "source": "KOSHA",
+                    "cas_number": cas_hint,
+                }
+            ]
+        )
+        return {
+            "status": "COMPLETED" if results else "NO_EVIDENCE_FOUND",
+            "query": query,
+            "cas_hint": cas_hint,
+            "top_k": top_k,
+            "results": results,
+        }
+
+    monkeypatch.setattr(
+        pipeline,
+        "search_evidence",
+        search_with_loaded_but_unmatched_facility,
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/incidents/analyze",
+            json=_analyze_payload_with_confirmed_pair()
+            | {
+                "input": {
+                    "type": "MANUAL_TEXT",
+                    "text": "○○전자 공장, 차아염소산나트륨 저장탱크 누출",
+                }
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["state"] == "VERIFY_REQUIRED"
+    assert body["confirmation_gate"]["all_required_confirmed"] is True
+    facility_evidence = next(
+        item for item in body["evidence"] if item["role"] == "FACILITY"
+    )
+    assert facility_evidence["cas_hint"] == "7647-01-0"
+    assert facility_evidence["retrieval"]["status"] == "NO_EVIDENCE_FOUND"
+    assert facility_evidence["retrieval"]["results"] == []
+    assert len(stub_pipeline_boundaries) == 1
 
 
 def test_rule_requires_two_complete_confirmation_records_and_forces_demo_off(

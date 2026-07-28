@@ -32,12 +32,16 @@ from chemiguard119.api_models import (
     AnalysisResponse,
     ConflictReviewRequest,
     ErrorResponse,
+    ExecutedConflictReview,
     EvidenceSearchRequest,
     FacilityHistorySearchRequest,
     IncidentAnalyzeRequest,
     ResolveRequest,
     UnconfirmedConflictReview,
+    analysis_state_for_review_status,
+    contains_candidate_promotion,
     contains_unconfirmed_risk_output,
+    validate_evidence_confirmation_gate,
 )
 from chemiguard119.paths import (
     CONFIG_DIR,
@@ -50,7 +54,11 @@ from chemiguard119.facility import search_facility_history
 from chemiguard119.pipeline import PIPELINE_SCHEMA_VERSION, analyze_incident
 from chemiguard119.resolver import load_resolver, resolve_substance
 from chemiguard119.retrieval import load_retriever, search_evidence
-from chemiguard119.release import verify_runtime_release
+from chemiguard119.release import (
+    SUPPORTED_DEPLOYMENT_ENVIRONMENTS,
+    TRUSTED_DEPLOYMENT_ENVIRONMENTS,
+    verify_runtime_release,
+)
 from chemiguard119.rules import (
     APPROVED_ONLY_POLICY,
     PUBLIC_SOURCE_METHOD,
@@ -59,7 +67,6 @@ from chemiguard119.rules import (
     PUBLIC_SOURCE_VERIFIED,
     SUPPORTED_POLICY_MODES,
     review_pair,
-    validate_review_output,
 )
 
 
@@ -104,15 +111,28 @@ def _env_flag(name: str, default: bool = False) -> bool:
 
 
 def _production_api_key_error(api_key: str | None, environment: str) -> str | None:
-    if environment.strip().lower() != "production":
+    if environment.strip().lower() not in TRUSTED_DEPLOYMENT_ENVIRONMENTS:
         return None
-    if not api_key or len(api_key) < 32:
-        return "운영 API 키는 32자 이상이어야 합니다."
+    if (
+        not api_key
+        or re.fullmatch(r"(?:[0-9a-fA-F]{64}|[A-Za-z0-9_-]{43})", api_key) is None
+    ):
+        return (
+            "staging·production API 키는 32바이트 난수의 64자리 hex 또는 "
+            "43자리 base64url 형식이어야 합니다."
+        )
     lowered = api_key.lower()
     if any(
         token in lowered for token in ("교체", "change-me", "changeme", "replace-me")
     ):
         return "예시용 API 키는 운영에서 사용할 수 없습니다."
+    return None
+
+
+def _deployment_environment_error(environment: str) -> str | None:
+    if environment not in SUPPORTED_DEPLOYMENT_ENVIRONMENTS:
+        allowed = ", ".join(sorted(SUPPORTED_DEPLOYMENT_ENVIRONMENTS))
+        return f"지원하지 않는 배포 환경입니다: {environment!r} (허용: {allowed})"
     return None
 
 
@@ -303,12 +323,14 @@ class ModelRuntime:
         resolver_model_path: Path = DEFAULT_RESOLVER_MODEL,
         retriever_model_path: Path = DEFAULT_RETRIEVER_MODEL,
         config_dir: Path = CONFIG_DIR,
+        environment: str | None = None,
     ) -> "ModelRuntime":
         integrity = verify_runtime_release(
             db_path=db_path,
             resolver_model_path=resolver_model_path,
             retriever_model_path=retriever_model_path,
             config_dir=config_dir,
+            environment=environment,
         )
         conflict_capabilities = {
             policy_mode: _conflict_review_capability(config_dir, policy_mode)
@@ -475,6 +497,29 @@ def _runtime_or_error(request: Request) -> ModelRuntime:
     return runtime
 
 
+def _production_integrity_ready(
+    runtime: ModelRuntime | None,
+    environment: str,
+) -> bool:
+    """운영 요청은 검증된 manifest와 고정 commit을 가진 runtime만 사용한다."""
+
+    if environment not in TRUSTED_DEPLOYMENT_ENVIRONMENTS:
+        return True
+    if runtime is None:
+        return False
+    integrity = runtime.integrity or {}
+    return bool(
+        integrity.get("status") == "VERIFIED"
+        and integrity.get("environment") == environment
+        and integrity.get("manifest_sha256_verified") is True
+        and re.fullmatch(
+            r"[0-9a-fA-F]{40}",
+            str(integrity.get("git_commit") or ""),
+        )
+        is not None
+    )
+
+
 def _authorize(
     request: Request,
     x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
@@ -497,6 +542,16 @@ def _authorize(
             fields=[RULE_POLICY_ENV_VAR],
         )
     active_runtime = getattr(request.app.state, "runtime", None)
+    if not _production_integrity_ready(
+        active_runtime,
+        request.app.state.deployment_environment,
+    ):
+        raise APIBoundaryError(
+            "MODEL_RUNTIME_INTEGRITY_NOT_READY",
+            "운영 모델 artifact의 manifest, checksum 또는 commit 검증이 완료되지 않았습니다.",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            retryable=False,
+        )
     if active_runtime is not None:
         capability = active_runtime.conflict_review_capability(
             request.app.state.rule_policy
@@ -591,12 +646,90 @@ def _enforce_confirmation_gate(
     """후보만 있는 결과가 위험 확정 응답으로 승격되는 것을 API에서 재차 차단한다."""
 
     gate = _confirmation_gate(payload)
+    review = pipeline_result.get("rule_review") or {}
+    candidate_outputs = {
+        "parsed_report": pipeline_result.get("parsed_report"),
+        "substance_candidates": pipeline_result.get("substance_candidates"),
+        "facility_history_candidates": facility_history,
+    }
+    evidence = pipeline_result.get("evidence") or []
+    evidence_errors = (
+        validate_evidence_confirmation_gate(
+            evidence,
+            incident_confirmed=gate["incident_confirmed"],
+            facility_confirmed=gate["facility_confirmed"],
+            incident_cas=(
+                payload.confirmed_incident_substance.cas_number
+                if payload.confirmed_incident_substance
+                else None
+            ),
+            facility_cas=(
+                payload.confirmed_facility_substance.cas_number
+                if payload.confirmed_facility_substance
+                else None
+            ),
+        )
+        if isinstance(evidence, list)
+        and all(isinstance(item, dict) for item in evidence)
+        else ["evidence는 객체 목록이어야 합니다."]
+    )
+    unsafe_candidate_output = contains_candidate_promotion(
+        candidate_outputs
+    ) or contains_unconfirmed_risk_output(candidate_outputs)
+
     if gate["all_required_confirmed"]:
+        try:
+            validated_review = ExecutedConflictReview.model_validate(review)
+        except ValidationError as error:
+            raise APIBoundaryError(
+                "OUTPUT_VALIDATION_FAILED",
+                "확인 완료 Rule 출력이 안전 계약을 만족하지 않아 차단했습니다.",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                retryable=False,
+            ) from error
+
+        expected_state = analysis_state_for_review_status(validated_review.status)
+        actual_state = _state(str(pipeline_result.get("status") or ""))
+        reported_policy = pipeline_result.get("conflict_policy_mode")
+        if (
+            unsafe_candidate_output
+            or evidence_errors
+            or actual_state != expected_state
+            or (
+                reported_policy is not None
+                and validated_review.policy_mode != reported_policy
+            )
+        ):
+            raise APIBoundaryError(
+                "OUTPUT_VALIDATION_FAILED",
+                "확인 완료 분석 상태 또는 후보·근거 출력이 안전 계약과 다릅니다.",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                retryable=False,
+            )
+
+        completed = validated_review.status in {
+            "COMPLETED",
+            "SCREENING_COMPLETED",
+        }
+        expected_cas = {
+            "incident_cas": payload.confirmed_incident_substance.cas_number,
+            "facility_cas": payload.confirmed_facility_substance.cas_number,
+        }
+        for field, confirmed_cas in expected_cas.items():
+            result_cas = validated_review.result.get(field)
+            if (completed and result_cas != confirmed_cas) or (
+                result_cas is not None and result_cas != confirmed_cas
+            ):
+                raise APIBoundaryError(
+                    "OUTPUT_VALIDATION_FAILED",
+                    "Rule 결과 CAS가 현장 확인 CAS와 일치하지 않습니다.",
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    retryable=False,
+                )
         return gate
 
-    review = pipeline_result.get("rule_review") or {}
     try:
-        UnconfirmedConflictReview.model_validate(review)
+        validated_review = UnconfirmedConflictReview.model_validate(review)
     except ValidationError as error:
         raise APIBoundaryError(
             "UNCONFIRMED_RISK_OUTPUT_BLOCKED",
@@ -617,15 +750,11 @@ def _enforce_confirmation_gate(
         )
         if not confirmed
     }
-    candidate_outputs = {
-        "parsed_report": pipeline_result.get("parsed_report"),
-        "substance_candidates": pipeline_result.get("substance_candidates"),
-        "facility_history_candidates": facility_history,
-    }
     if (
-        contains_unconfirmed_risk_output(candidate_outputs)
+        unsafe_candidate_output
+        or evidence_errors
         or pipeline_result.get("status") != expected_pipeline_status
-        or set(review["missing_confirmations"]) != expected_missing
+        or set(validated_review.missing_confirmations) != expected_missing
     ):
         raise APIBoundaryError(
             "UNCONFIRMED_RISK_OUTPUT_BLOCKED",
@@ -658,6 +787,18 @@ def _public_analysis_response(
         raise APIBoundaryError(
             "OUTPUT_VALIDATION_FAILED",
             "안전 불변조건을 통과하지 못한 모델 출력이 차단되었습니다.",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            retryable=False,
+        )
+    output_validation = pipeline_result.get("output_validation")
+    if (
+        not isinstance(output_validation, dict)
+        or output_validation.get("status") != "PASSED"
+        or output_validation.get("errors") != []
+    ):
+        raise APIBoundaryError(
+            "OUTPUT_VALIDATION_FAILED",
+            "파이프라인 출력 검증 기록이 없거나 실패 상태여서 응답을 차단했습니다.",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             retryable=False,
         )
@@ -703,6 +844,7 @@ def _public_analysis_response(
         item.pop("query", None)
         retrieval = item.get("retrieval") or {}
         retrieval.pop("query", None)
+        retrieval.pop("ranking_query", None)
     reported_policy = pipeline_result.get("conflict_policy_mode")
     if reported_policy is not None and reported_policy != rule_policy:
         raise APIBoundaryError(
@@ -765,22 +907,42 @@ def create_app(
     """테스트 주입과 실제 artifact 로딩을 모두 지원하는 app factory."""
 
     configure_json_logging()
+    resolved_deployment_environment = (
+        (
+            deployment_environment
+            or os.getenv(DEPLOYMENT_ENVIRONMENT_ENV_VAR)
+            or "development"
+        )
+        .strip()
+        .lower()
+    )
+    deployment_environment_error = _deployment_environment_error(
+        resolved_deployment_environment
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.startup_error = None
         if runtime is not None:
             app.state.runtime = runtime
+        elif deployment_environment_error is not None:
+            app.state.runtime = None
+            app.state.startup_error = "DEPLOYMENT_ENVIRONMENT_INVALID"
         else:
             try:
-                app.state.runtime = ModelRuntime.load()
+                app.state.runtime = ModelRuntime.load(
+                    environment=resolved_deployment_environment
+                )
             except (
                 Exception
             ) as error:  # health/readiness에서 복구 가능한 상태로 노출한다.
                 app.state.runtime = None
                 app.state.startup_error = "ARTIFACT_LOAD_FAILED"
-                LOGGER.exception(
-                    "Model runtime startup failed (%s)", type(error).__name__
+                emit_json_event(
+                    "model_runtime_startup_failed",
+                    level=logging.ERROR,
+                    service_name=SERVICE_ID,
+                    error_type=type(error).__name__,
                 )
         yield
 
@@ -796,11 +958,7 @@ def create_app(
     )
     application.state.runtime = runtime
     application.state.startup_error = None
-    application.state.deployment_environment = (
-        deployment_environment
-        or os.getenv(DEPLOYMENT_ENVIRONMENT_ENV_VAR)
-        or "development"
-    ).strip()
+    application.state.deployment_environment = resolved_deployment_environment
     application.state.rule_policy = (
         rule_policy or os.getenv(RULE_POLICY_ENV_VAR) or PUBLIC_SOURCE_PILOT_POLICY
     ).strip()
@@ -820,16 +978,20 @@ def create_app(
         if allow_anonymous is not None
         else _env_flag("CHEMIGUARD119_ALLOW_ANONYMOUS", False)
     )
-    application.state.auth_config_error = _production_api_key_error(
-        application.state.api_key,
-        application.state.deployment_environment,
+    application.state.auth_config_error = (
+        deployment_environment_error
+        or _production_api_key_error(
+            application.state.api_key,
+            application.state.deployment_environment,
+        )
     )
     if (
-        application.state.deployment_environment.lower() == "production"
+        application.state.deployment_environment.lower()
+        in TRUSTED_DEPLOYMENT_ENVIRONMENTS
         and application.state.allow_anonymous
     ):
         application.state.auth_config_error = (
-            "운영 환경에서는 익명 API 접근을 허용할 수 없습니다."
+            "staging·production 환경에서는 익명 API 접근을 허용할 수 없습니다."
         )
 
     @application.middleware("http")
@@ -920,7 +1082,14 @@ def create_app(
     async def unexpected_error_handler(
         request: Request, error: Exception
     ) -> JSONResponse:
-        LOGGER.exception("Unhandled model API error (%s)", type(error).__name__)
+        emit_json_event(
+            "model_api_unhandled_error",
+            level=logging.ERROR,
+            request_id=_request_id(request),
+            service_name=SERVICE_ID,
+            deployment_environment=request.app.state.deployment_environment,
+            error_type=type(error).__name__,
+        )
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content=_error_payload(
@@ -969,8 +1138,15 @@ def create_app(
         )
         auth_mode = _auth_mode(request)
         authentication_ready = auth_mode in {"API_KEY", "EXPLICIT_ANONYMOUS"}
+        production_integrity_ready = _production_integrity_ready(
+            active_runtime,
+            request.app.state.deployment_environment,
+        )
         overall_ready = bool(
-            readiness["ready"] and authentication_ready and rule_policy_ready
+            readiness["ready"]
+            and authentication_ready
+            and rule_policy_ready
+            and production_integrity_ready
         )
         conflict_review_ready = bool(
             readiness["conflict_review_capability"]["conflict_review_ready"]
@@ -1002,6 +1178,7 @@ def create_app(
                     "rule_policy_ready": rule_policy_ready,
                     "rule_policy": policy_mode,
                     "conflict_review_ready": conflict_review_ready,
+                    "production_integrity_ready": production_integrity_ready,
                 },
             },
         )
@@ -1205,13 +1382,41 @@ def create_app(
             policy_mode=request.app.state.rule_policy,
             config_dir=active_runtime.config_dir,
         )
-        validation_errors = validate_review_output(result)
-        if validation_errors:
+        try:
+            validated_review = ExecutedConflictReview.model_validate(
+                {
+                    "executed": True,
+                    "status": result.get("status"),
+                    "gate": "BOTH_CAS_RESPONDER_CONFIRMED",
+                    "policy_mode": request.app.state.rule_policy,
+                    "result": result,
+                }
+            )
+        except ValidationError as error:
             raise APIBoundaryError(
                 "OUTPUT_VALIDATION_FAILED",
                 "Rule 출력 안전 검증에 실패했습니다.",
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+                retryable=False,
+            ) from error
+        completed = validated_review.status in {
+            "COMPLETED",
+            "SCREENING_COMPLETED",
+        }
+        for field, confirmed_cas in (
+            ("incident_cas", payload.incident.cas_number),
+            ("facility_cas", payload.facility.cas_number),
+        ):
+            result_cas = validated_review.result.get(field)
+            if (completed and result_cas != confirmed_cas) or (
+                result_cas is not None and result_cas != confirmed_cas
+            ):
+                raise APIBoundaryError(
+                    "OUTPUT_VALIDATION_FAILED",
+                    "Rule 결과 CAS가 현장 확인 CAS와 일치하지 않습니다.",
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    retryable=False,
+                )
         capability = active_runtime.conflict_review_capability(
             request.app.state.rule_policy
         )
@@ -1259,7 +1464,13 @@ def run() -> None:
         raise RuntimeError(
             "로컬호스트 외 주소에서는 API 키가 필수이며 익명 접근을 허용할 수 없습니다."
         )
-    uvicorn.run("chemiguard119.api:app", host=host, port=port, workers=1)
+    uvicorn.run(
+        "chemiguard119.api:app",
+        host=host,
+        port=port,
+        workers=1,
+        access_log=False,
+    )
 
 
 __all__ = ["ModelRuntime", "app", "create_app", "run"]
