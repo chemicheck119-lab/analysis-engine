@@ -126,13 +126,30 @@ def _semantic_checks(data_dir: Path) -> dict[str, Any]:
     ulsan_path = data_dir / "06_울산소방_화학물정보.csv"
     ulsan_rows = list(_read_dicts(ulsan_path))
     ulsan_cas = [normalize_cas(row.get("CAS번호")) for row in ulsan_rows]
+    property_columns = ("상온상태", "색상", "냄새", "사용용도_설명")
+    property_rows = [
+        row
+        for row in ulsan_rows
+        if any((row.get(column) or "").strip() for column in property_columns)
+    ]
+    valid_property_cas = {
+        normalize_cas(row.get("CAS번호"))
+        for row in property_rows
+        if valid_cas_checksum(normalize_cas(row.get("CAS번호")))
+    }
     checks["ulsan_substances"] = {
         "record_count": len(ulsan_rows),
         "blank_cas_count": sum(not cas for cas in ulsan_cas),
         "invalid_nonblank_cas_count": sum(
             bool(cas) and not valid_cas_checksum(cas) for cas in ulsan_cas
         ),
-        "interpretation": "CAS 결측·훼손 의심 행은 자동 식별 학습에서 제외해야 합니다.",
+        "property_bearing_record_count": len(property_rows),
+        "valid_property_cas_count": len(valid_property_cas),
+        "property_columns": list(property_columns),
+        "interpretation": (
+            "CAS 결측·훼손 의심 행은 제외합니다. 성상 필드는 후보 검색에만 쓰며 "
+            "CAS 확정이나 충돌 Rule 입력으로 사용하지 않습니다."
+        ),
     }
 
     model_input_path = data_dir / "19_ICIS_2024_시설후보_통합모델입력.csv"

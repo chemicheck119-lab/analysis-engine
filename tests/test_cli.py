@@ -17,6 +17,7 @@ from chemiguard119 import cli
         (["train"], "train"),
         (["evaluate"], "evaluate"),
         (["resolve", "염산"], "resolve"),
+        (["discover", "무색 휘발성 액체"], "discover"),
         (["search", "염산 누출"], "search"),
         (["parse", "염산 탱크 누출"], "parse"),
         (["incident", "염산 탱크 누출"], "incident"),

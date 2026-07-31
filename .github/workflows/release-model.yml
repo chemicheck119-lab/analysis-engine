@@ -517,6 +517,10 @@ jobs:
               "environment": integrity.get("environment") == "production",
               "trust_anchor": integrity.get("manifest_sha256_verified") is True,
               "git_commit": integrity.get("git_commit") == os.environ["GITHUB_SHA"],
+              "material_discovery": (
+                  (payload.get("material_discovery_capability") or {}).get("ready")
+                  is True
+              ),
           }
           failed = [name for name, passed in checks.items() if not passed]
           if failed:

@@ -1,0 +1,57 @@
+{
+  "schema_version": "chemiguard119-api-v1",
+  "query": "무색 투명하고 박하 냄새가 나는 휘발성 액체",
+  "status": "CANDIDATES_FOUND",
+  "search_mode": "PROPERTY_PROFILE_RETRIEVAL",
+  "method": "exact CAS/alias Resolver + NFA Ulsan property-profile FTS5 BM25 + KOSHA/CAMEO evidence retrieval",
+  "profile_index_available": true,
+  "candidates": [
+    {
+      "rank": 1,
+      "cas_number": "78-93-3",
+      "display_name": "메틸 에틸 케톤",
+      "match_basis": "PUBLIC_PROPERTY_PROFILE",
+      "matched_expression": null,
+      "matched_properties": [
+        {
+          "field": "physical_state",
+          "label": "상온 상태",
+          "value": "액체(휘발성)"
+        },
+        {
+          "field": "color",
+          "label": "색상",
+          "value": "무색 투명"
+        },
+        {
+          "field": "odor",
+          "label": "냄새",
+          "value": "박하 및 달콤한 냄새| 아세톤 냄새"
+        }
+      ],
+      "property_profile": {
+        "physical_state": "액체(휘발성)",
+        "color": "무색 투명",
+        "odor": "박하 및 달콤한 냄새| 아세톤 냄새",
+        "use_description": "질산셀룰로이드 또는 각종 합성수지용제| 락카용 용제| 인쇄용 잉크| 인조피혁| 세정제| 가황촉진제| 윤활유 용제| 캐톤류| 아민류 합성중간체",
+        "source_id": "NFA_ULSAN_CHEMICAL_INFORMATION",
+        "source_url": "https://www.data.go.kr/data/15081005/fileData.do",
+        "document_version": "2021-01-15 기준"
+      },
+      "evidence_status": "CAS_EVIDENCE_NOT_LOADED",
+      "evidence_warning": "CAS 78-93-3의 상세 근거가 시스템에 적재되어 있지 않습니다.",
+      "evidence_notice": "상세 근거 미적재 — 다른 물질의 근거로 대체하지 않습니다. 외부 공식 MSDS 확인이 필요합니다.",
+      "cas_link_warning": null,
+      "evidence": [],
+      "requires_responder_confirmation": true,
+      "rule_eligible": false,
+      "risk_determination_allowed": false
+    }
+  ],
+  "requires_responder_confirmation": true,
+  "rule_eligible": false,
+  "risk_determination_allowed": false,
+  "candidate_score_is_probability": false,
+  "notice": "색상·냄새·상태는 여러 물질이 공유하므로 후보를 하나로 확정하지 않습니다. 용기 라벨·현장 MSDS 등으로 CAS와 현장 존재를 확인해야 합니다.",
+  "safety_notice": "이 결과는 케미체크119의 의사결정 보조 정보이며 현장 명령이 아닙니다. 물질과 시설 상태를 대원이 확인하고 최종 결정은 현장 지휘관이 수행합니다."
+}

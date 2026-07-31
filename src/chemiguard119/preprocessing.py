@@ -30,8 +30,9 @@ from chemiguard119.utils import (
 csv.field_size_limit(100 * 1024 * 1024)
 
 
-SCHEMA_VERSION = "chemiguard119-preprocessing-1.3.0"
+SCHEMA_VERSION = "chemiguard119-preprocessing-1.4.0"
 KOSHA_OFFICIAL_SOURCE_URL = "https://www.data.go.kr/data/15157612/openapi.do"
+ULSAN_CHEMICAL_SOURCE_URL = "https://www.data.go.kr/data/15081005/fileData.do"
 
 MINIMUM_KOSHA_SUBSTANCE_COUNT = 9
 EXPECTED_ICIS_VALID_CAS_COUNT = 4_299
@@ -40,6 +41,7 @@ EXPECTED_CAMEO_CHEMICAL_COUNT = 5_094
 EXPECTED_REACTIVE_GROUP_COUNT = 68
 EXPECTED_CAMEO_MAPPING_COUNT = 9_231
 EXPECTED_COMPATIBILITY_PAIR_COUNT = 2_346
+MINIMUM_ULSAN_PROFILE_COUNT = 700
 
 SOURCE_FILES: Mapping[str, str] = {
     "kosha": "01_KOSHA_물질안전보건자료.csv",
@@ -550,6 +552,37 @@ def _create_schema(connection: sqlite3.Connection) -> None:
             );
             CREATE INDEX alias_normalized_idx ON alias(normalized_text);
 
+            CREATE TABLE substance_profile (
+                cas_number TEXT PRIMARY KEY REFERENCES substance(cas_number),
+                canonical_name_ko TEXT NOT NULL,
+                canonical_name_en TEXT NOT NULL,
+                physical_state TEXT NOT NULL,
+                color TEXT NOT NULL,
+                odor TEXT NOT NULL,
+                use_description TEXT NOT NULL,
+                source_id TEXT NOT NULL CHECK(
+                    source_id = 'NFA_ULSAN_CHEMICAL_INFORMATION'
+                ),
+                source_url TEXT NOT NULL,
+                document_version TEXT NOT NULL,
+                source_record_count INTEGER NOT NULL CHECK(source_record_count > 0),
+                requires_responder_confirmation INTEGER NOT NULL CHECK(
+                    requires_responder_confirmation = 1
+                ),
+                rule_eligible INTEGER NOT NULL CHECK(rule_eligible = 0)
+            );
+
+            CREATE VIRTUAL TABLE substance_profile_fts USING fts5(
+                cas_number UNINDEXED,
+                canonical_name_ko,
+                canonical_name_en,
+                physical_state,
+                color,
+                odor,
+                use_description,
+                tokenize = 'unicode61'
+            );
+
             CREATE TABLE evidence (
                 evidence_id TEXT PRIMARY KEY,
                 source TEXT NOT NULL,
@@ -710,6 +743,140 @@ def _insert_substances_and_aliases(
             for row in aliases
         ],
     )
+
+
+def _load_substance_profiles(
+    connection: sqlite3.Connection,
+    path: Path,
+) -> dict[str, int]:
+    """울산소방 공개 물성 설명을 CAS별 관찰 후보 검색 프로필로 적재한다."""
+
+    identities = {
+        str(row[0]): {
+            "canonical_name_ko": str(row[1] or ""),
+            "canonical_name_en": str(row[2] or ""),
+        }
+        for row in connection.execute(
+            """
+            SELECT cas_number, canonical_name_ko, canonical_name_en
+            FROM substance
+            """
+        )
+    }
+    profiles: dict[str, dict[str, Any]] = {}
+    stats = {
+        "ulsan_profile_source_rows": 0,
+        "ulsan_profile_invalid_cas_rows": 0,
+        "ulsan_profile_not_in_catalog_rows": 0,
+        "ulsan_profile_without_properties_rows": 0,
+        "ulsan_profile_count": 0,
+    }
+
+    def append_unique(values: list[str], raw_value: str | None) -> None:
+        value = (raw_value or "").strip()
+        if not value or value.upper() in {"N/A", "NULL", "자료없음", "정보없음"}:
+            return
+        if value not in values:
+            values.append(value)
+
+    for row in _read_dicts(path):
+        stats["ulsan_profile_source_rows"] += 1
+        cas_number = normalize_cas(row.get("CAS번호"))
+        if not valid_cas_checksum(cas_number):
+            stats["ulsan_profile_invalid_cas_rows"] += 1
+            continue
+        if cas_number not in identities:
+            stats["ulsan_profile_not_in_catalog_rows"] += 1
+            continue
+        property_values = [
+            (row.get("상온상태") or "").strip(),
+            (row.get("색상") or "").strip(),
+            (row.get("냄새") or "").strip(),
+            (row.get("사용용도_설명") or "").strip(),
+        ]
+        if not any(property_values):
+            stats["ulsan_profile_without_properties_rows"] += 1
+            continue
+        profile = profiles.setdefault(
+            cas_number,
+            {
+                "names_ko": [],
+                "names_en": [],
+                "physical_states": [],
+                "colors": [],
+                "odors": [],
+                "use_descriptions": [],
+                "source_urls": [],
+                "document_versions": [],
+                "source_record_count": 0,
+            },
+        )
+        append_unique(profile["names_ko"], row.get("화학물질명_한글"))
+        append_unique(profile["names_en"], row.get("화학물질명_영문"))
+        append_unique(profile["physical_states"], row.get("상온상태"))
+        append_unique(profile["colors"], row.get("색상"))
+        append_unique(profile["odors"], row.get("냄새"))
+        append_unique(profile["use_descriptions"], row.get("사용용도_설명"))
+        append_unique(profile["source_urls"], row.get("원본데이터셋_URL"))
+        append_unique(
+            profile["document_versions"],
+            row.get("자료기간") or row.get("자료연도"),
+        )
+        profile["source_record_count"] += 1
+
+    rows: list[tuple[Any, ...]] = []
+    for cas_number, profile in sorted(profiles.items()):
+        identity = identities[cas_number]
+        profile_name_ko = next(iter(profile["names_ko"]), "")
+        identity_name_ko = identity["canonical_name_ko"]
+        canonical_name_ko = (
+            identity_name_ko
+            if any("\uac00" <= character <= "\ud7a3" for character in identity_name_ko)
+            else profile_name_ko
+        ) or (identity_name_ko or profile_name_ko or cas_number)
+        canonical_name_en = identity["canonical_name_en"] or next(
+            iter(profile["names_en"]), ""
+        )
+        rows.append(
+            (
+                cas_number,
+                canonical_name_ko,
+                canonical_name_en,
+                " | ".join(profile["physical_states"]),
+                " | ".join(profile["colors"]),
+                " | ".join(profile["odors"]),
+                " | ".join(profile["use_descriptions"]),
+                "NFA_ULSAN_CHEMICAL_INFORMATION",
+                next(iter(profile["source_urls"]), ULSAN_CHEMICAL_SOURCE_URL),
+                " | ".join(profile["document_versions"]) or "2021-01-15 기준",
+                profile["source_record_count"],
+                1,
+                0,
+            )
+        )
+
+    connection.executemany(
+        """
+        INSERT INTO substance_profile(
+            cas_number, canonical_name_ko, canonical_name_en,
+            physical_state, color, odor, use_description,
+            source_id, source_url, document_version, source_record_count,
+            requires_responder_confirmation, rule_eligible
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        rows,
+    )
+    connection.executemany(
+        """
+        INSERT INTO substance_profile_fts(
+            cas_number, canonical_name_ko, canonical_name_en,
+            physical_state, color, odor, use_description
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        [row[:7] for row in rows],
+    )
+    stats["ulsan_profile_count"] = len(rows)
+    return stats
 
 
 def _insert_evidence(
@@ -1282,6 +1449,8 @@ def _table_counts(connection: sqlite3.Connection) -> dict[str, int]:
     tables = (
         "substance",
         "alias",
+        "substance_profile",
+        "substance_profile_fts",
         "evidence",
         "evidence_fts",
         "cameo_chemical",
@@ -1360,6 +1529,16 @@ def prepare_dataset(
             icis_catalog,
             aliases,
         )
+        profile_stats = _load_substance_profiles(
+            connection,
+            paths["ulsan_substance"],
+        )
+        if profile_stats["ulsan_profile_count"] < MINIMUM_ULSAN_PROFILE_COUNT:
+            raise PreprocessingError(
+                "울산소방 물성 프로필 수가 안전 최소값보다 작습니다: "
+                f"{profile_stats['ulsan_profile_count']} < "
+                f"{MINIMUM_ULSAN_PROFILE_COUNT}"
+            )
         (
             kosha_evidence_count,
             blank_kosha_details,
@@ -1397,6 +1576,10 @@ def prepare_dataset(
         table_counts = _table_counts(connection)
         if table_counts["evidence_fts"] != table_counts["evidence"]:
             raise PreprocessingError("evidence와 evidence_fts 행 수가 다릅니다.")
+        if table_counts["substance_profile_fts"] != table_counts["substance_profile"]:
+            raise PreprocessingError(
+                "substance_profile과 substance_profile_fts 행 수가 다릅니다."
+            )
         integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
         if integrity != "ok":
             raise PreprocessingError(f"SQLite 무결성 검사 실패: {integrity}")
@@ -1452,6 +1635,7 @@ def prepare_dataset(
                 "facility_material_feature_rows": feature_count,
                 **icis_stats,
                 **alias_stats,
+                **profile_stats,
                 **facility_stats,
             },
             "safety_constraints": {
@@ -1466,10 +1650,13 @@ def prepare_dataset(
                 "icis_catalog_candidates_are_current_inventory": False,
                 "icis_catalog_aliases_used_for_rule_promotion": False,
                 "icis_catalog_has_kosha_detail_only_when_explicitly_joined": True,
+                "property_profile_candidates_require_responder_confirmation": True,
+                "property_profile_candidates_are_rule_eligible": False,
                 "notes": [
                     "CAMEO 호환성은 결정적 lookup이며 학습 라벨이 아닙니다.",
                     "PUBLIC_SOURCE_VERIFIED 교차표는 공개근거 CAMEO 스크리닝에 사용하며 전문가 승인을 뜻하지 않습니다.",
                     "ICIS 물질명은 일반 물질 식별 후보이며 현장 존재나 Rule 입력을 확정하지 않습니다.",
+                    "울산소방 물성 프로필은 관찰 정보 기반 후보 탐색용이며 CAS 확정이나 위험 판정에 사용하지 않습니다.",
                     "KOSHA 상세 근거 물질과 ICIS 일반 후보 카탈로그는 substance 범위 필드로 구분합니다.",
                     "시설 후보는 과거 취급 이력으로, 현재 존재·수량·저장위치를 확정하지 않습니다.",
                     "PRTR 결측은 NULL로 보존하며 배출·이동량을 재고량이나 사고확률로 해석하지 않습니다.",

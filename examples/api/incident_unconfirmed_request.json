@@ -3,7 +3,7 @@
   "incident_id": "INC-EXAMPLE-0001",
   "input": {
     "type": "VOICE_TRANSCRIPT",
-    "text": "차아염소산나트륨 저장탱크에서 누출이 의심되고 인근 저장구역에 염산 표시가 있습니다.",
+    "text": "차아염소산나트륨 탱크에서 누출 중이며, 옆 저장고에 염산이 있습니다.",
     "occurred_at": "2026-01-15T14:20:00+09:00"
   },
   "location": {
