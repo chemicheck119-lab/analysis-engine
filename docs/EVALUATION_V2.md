@@ -182,12 +182,22 @@ required_fact_ids
 필수 지표:
 
 - nDCG@5
-- Recall@5, Precision@5, MRR
+- 전체 Recall@5, Precision@5, MRR
+- grade 2~3 핵심 근거 Recall@5
+- grade 1 보조 근거 Recall@5
+- `2^grade-1` 중요도 가중 Recall@5
+- 전체·핵심 `required_fact_ids` coverage@5
+- 핵심 근거 완전 회수 사례 비율과 95% 신뢰구간
+- 핵심 사실 완전 회수 사례 비율과 95% 신뢰구간
 - 같은 CAS지만 잘못된 section 반환률
 - 잘못된 CAS 문서 반환률
 - 답변 불가 질의의 기권 성능
 - URL·인용 coverage
 - 평균·p95 지연시간
+
+파일럿 릴리스용 locked set은 최소 400건을 답변 가능 300건과 답변 불가 100건으로
+분리합니다. 두 집단의 크기와 답변 불가 기권율을 별도 gate로 검사해, 답변 가능한 사례가
+거의 없는 평가셋이 높은 검색 점수로 통과하는 것을 막습니다.
 
 ### 4.5 충돌 엔진: 통계 모델이 아니라 규칙 완전성
 
@@ -249,6 +259,9 @@ CAMEO 충돌 엔진에는 일반적인 “정확도”보다 다음 검사가 �
 
 근거 검색 relevance는 두 사람이 독립적으로 0~3 등급을 부여하고, 불일치는 제3 검수자가
 조정합니다. Cohen’s kappa 또는 Krippendorff’s alpha로 일치도를 기록합니다.
+관련 qrel에는 실제 확인할 사실의 식별자인 `required_fact_ids`를 하나 이상 기록합니다.
+grade 2~3은 핵심 답변 근거, grade 1은 보조 맥락으로 평가하며, 하나의 Recall 숫자로 두
+실패를 섞지 않습니다.
 
 LLM은 초벌 후보·오류 군집화·라벨 누락 검사에만 사용할 수 있습니다. 최종 gold label을
 LLM 하나가 결정하면 안 됩니다. 비전문가 이중 검수라면 `DOUBLE_REVIEWED_NON_EXPERT`로

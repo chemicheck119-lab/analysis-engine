@@ -1,0 +1,105 @@
+{
+  "schema_version": "chemicheck119-retrieval-section-metric-audit-v1",
+  "metrics_version": "retriever-section-qrel-v3",
+  "created_at_utc": "2026-07-31T01:08:15Z",
+  "claim_scope": "INTERNAL_REGRESSION_ONLY",
+  "field_validated": false,
+  "source_base_commit": "a62ebcaa7f6d42abe5ff5596eb06f6a869be4ed9",
+  "dataset": "data/evaluation/retrieval_section_regression.jsonl",
+  "dataset_sha256": "a7c0c641a3e7482d4e6c10fa23b161938f72151a4282ae49a9b41c449bafbd32",
+  "database_sha256": "ed162d0fb1729f065df1e04f017122fdb65acaaba2c583bdc7be3e1ce8aaff46",
+  "retriever_sha256": "66da682381162193136f3bc1d9cc6cb960dd32bb3a248073cf0926852bf986e7",
+  "case_count": 12,
+  "answerable_case_count": 12,
+  "unanswerable_case_count": 0,
+  "qrel_summary": {
+    "relevance_grade_counts": {
+      "0": 12,
+      "1": 3,
+      "2": 2,
+      "3": 12
+    },
+    "positive_qrel_count": 17,
+    "high_relevance_qrel_count": 14,
+    "supporting_qrel_count": 3,
+    "high_relevance_min_grade": 2,
+    "required_fact_assignment_count": 17
+  },
+  "metrics": {
+    "ndcg_at_5": 0.9283527514118513,
+    "recall_at_5": 0.875,
+    "high_relevance_recall_at_5": 1.0,
+    "supporting_recall_at_5": 0.0,
+    "graded_gain_recall_at_5": 0.96875,
+    "high_relevance_complete_case_rate_at_5": 1.0,
+    "required_fact_coverage_at_5": 0.875,
+    "high_relevance_fact_coverage_at_5": 1.0,
+    "supporting_fact_coverage_at_5": 0.0,
+    "high_relevance_fact_complete_case_rate_at_5": 1.0,
+    "precision_at_5": 0.2333333333333334,
+    "mrr_at_5": 0.9444444444444443,
+    "wrong_cas_rate_at_5": 0.0,
+    "unjudged_rate_at_5": 0.7666666666666667,
+    "valid_source_url_coverage_at_5": 1.0
+  },
+  "metric_definitions": {
+    "recall_at_5": "grade 1~3을 같은 1건으로 계산한 전체 관련 근거 회수율",
+    "high_relevance_recall_at_5": "grade 2~3 핵심 답변 근거 회수율",
+    "supporting_recall_at_5": "grade 1 보조 맥락 근거 회수율",
+    "graded_gain_recall_at_5": "2^grade-1로 중요도를 반영한 회수율",
+    "required_fact_coverage_at_5": "문서에 라벨한 고유 필수 사실 회수율",
+    "high_relevance_fact_coverage_at_5": "grade 2~3 핵심 문서에 라벨한 고유 필수 사실 회수율"
+  },
+  "uncertainty": {
+    "high_relevance_complete_case_rate_at_5": {
+      "method": "WILSON_SCORE_TWO_SIDED",
+      "confidence_level": 0.95,
+      "successes": 12,
+      "total": 12,
+      "observed_rate": 1.0,
+      "lower": 0.7575059933447591,
+      "upper": 1.0
+    },
+    "high_relevance_fact_complete_case_rate_at_5": {
+      "method": "WILSON_SCORE_TWO_SIDED",
+      "confidence_level": 0.95,
+      "successes": 12,
+      "total": 12,
+      "observed_rate": 1.0,
+      "lower": 0.7575059933447591,
+      "upper": 1.0
+    }
+  },
+  "missed_evidence": {
+    "high_relevance": [],
+    "supporting": [
+      "KOSHA:MSDS000032",
+      "KOSHA:MSDS000616",
+      "KOSHA:MSDS001054"
+    ]
+  },
+  "missed_fact_assignments": {
+    "high_relevance": [],
+    "supporting": [
+      {
+        "case_id": "RET-SECTION-HCL-CLEANUP-001",
+        "fact_id": "SPILL_PPE"
+      },
+      {
+        "case_id": "RET-SECTION-NAOCL-CLEANUP-001",
+        "fact_id": "SPILL_PPE"
+      },
+      {
+        "case_id": "RET-SECTION-ACETONE-RESPIRATOR-001",
+        "fact_id": "SPILL_PPE"
+      }
+    ]
+  },
+  "limitations": [
+    "12건 모두 KOSHA section 제목에서 만든 DRAFT 내부 회귀 사례이며 독립 현장 평가가 아니다.",
+    "검수자와 답변 불가 사례가 없고 반환 문서의 76.7%가 unjudged이다. abstention 성능은 평가할 수 없다.",
+    "핵심 근거 12/12 성공은 표본이 작아 상용 정확도 100%를 뜻하지 않는다.",
+    "같은 12건에 맞춘 section 규칙 튜닝은 과적합이므로 운영 검색 경로에 반영하지 않았다.",
+    "지연시간은 실행 환경 변동이 커서 이 정적 품질 스냅샷의 릴리스 기준에 포함하지 않았다."
+  ]
+}

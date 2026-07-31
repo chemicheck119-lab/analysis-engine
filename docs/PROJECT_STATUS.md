@@ -15,7 +15,7 @@
 | 관찰 기반 물질 탐색 | 기능 smoke 완료 | 성상 프로필 749 CAS, 최소 두 영역 일치·현장 확인 gate |
 | 자동 CAS 힌트 안전성 | 부분 완료 | 합성·내부 회귀 12건 통과, 부분 문자열 위험 힌트 0건 |
 | 업체 이력 후보 | 부분 완료 | ICIS·PRTR 과거 이력 후보 168,424건, 현재 재고 확정 기능 아님 |
-| 공식 근거 검색 | 부분 완료 | 근거 5,858건, DRAFT section 회귀 12건 nDCG@5 0.9284·MRR@5 0.9444 |
+| 공식 근거 검색 | 부분 완료 | 근거 5,858건, DRAFT section 12건의 핵심 Recall@5 1.0·가중 Recall@5 0.9688 |
 | 충돌 검토 | 파일럿 | 공개 검증 CAMEO CAS 6종, 15개 조합 회귀 검사 |
 | 유사 사고사례 RAG | 미완료 | 출처와 대응 라벨이 검증된 corpus 없음 |
 | 파인튜닝 | 보류 | 준비도 검사만 존재, 기준선 대비 필요성이 입증되지 않음 |
@@ -34,7 +34,7 @@
 Python 3.11.15 환경에서 다음을 확인했습니다.
 
 ```text
-전체 테스트: 266 passed
+전체 테스트: 279 passed
 Ruff: 통과
 형식 검사: 통과
 compileall: 통과
@@ -61,6 +61,12 @@ p95 latency: 6.361ms
 ```text
 기존: nDCG@5 0.1595 / Recall@5 0.3333 / Precision@5 0.0833 / MRR@5 0.0875
 개선: nDCG@5 0.9284 / Recall@5 0.8750 / Precision@5 0.2333 / MRR@5 0.9444
+핵심 근거(grade 2~3) Recall@5: 1.0000
+보조 근거(grade 1) Recall@5: 0.0000
+중요도 가중 Recall@5: 0.9688
+필수 사실 coverage@5: 0.8750
+핵심 사실 coverage@5: 1.0000
+핵심 성공 12/12의 Wilson 95% 구간: 0.7575~1.0000
 평균 지연시간: 20.14ms → 21.73ms
 개선 경로 unjudged rate: 0.7667
 claim_scope: INTERNAL_REGRESSION_ONLY
@@ -68,7 +74,12 @@ claim_scope: INTERNAL_REGRESSION_ONLY
 
 CAS 일치 문서 전체를 evidence ID 순으로 가산하던 편향과 전역 Top-N 뒤 CAS 필터링 오류를
 제거한 결과입니다. 12건은 section 제목 기반 내부 회귀이고 반환 문서의 76.7%가 아직
-unjudged이므로 독립 현장 성능으로 해석하지 않습니다.
+unjudged이므로 독립 현장 성능으로 해석하지 않습니다. 전체 Recall 0.875에서 누락된 3개는
+모두 grade 1 보조 근거였고 grade 2~3 핵심 근거 14개는 모두 Top-5에 포함됐습니다. 하지만
+표본이 12건뿐이어서 1.0을 상용 정확도로 표현하지 않습니다.
+12건 모두 답변 가능한 질의라 답변 불가 기권 성능도 아직 측정하지 못했습니다. 배포
+정책은 이를 숨길 수 없도록 독립 locked set 400건을 답변 가능 300건 이상과 답변 불가
+100건 이상으로 나누어 검사합니다.
 
 원천 CSV 8개로 임시 release artifact를 다시 생성한 결과:
 
@@ -121,7 +132,8 @@ Top-1: 메틸 에틸 케톤 / 78-93-3
 4. 검증된 스테이징 URL과 실제 서버 배포 성공 기록이 없습니다.
 5. 릴리스 artifact는 반드시 고정된 Python 3.11 환경에서 새로 생성해야 합니다.
 6. CAMEO·ICIS 파생 artifact의 컨테이너 재배포 조건 검토가 완료되지 않았습니다.
-7. 신규 section 회귀의 Recall@5 0.875는 운영 정책 하한 0.90에 아직 미달합니다.
+7. 신규 section 회귀는 핵심 Recall 1.0이지만 전체 Recall 0.875로 운영 정책 0.90에
+   미달하고, 12건 모두 DRAFT라 어떤 지표도 운영 승인에 사용할 수 없습니다.
 8. 관찰 기반 탐색은 독립 오인·거부 평가셋이 없고, 현재는 source-derived smoke만 있습니다.
 
 현재 브랜치는 미확인·확인 완료 응답의 중첩 위험 필드, 확률형 위험도, 상태·실행·CAS 모순을
@@ -136,7 +148,8 @@ staging·production manifest는 `PILOT_REVIEWED` 평가와 데이터 재배포 �
 2. TestClient 동시성 smoke 40/40만 통과했습니다. 실제 서버·gateway·네트워크 환경의
    부하·timeout·장애 복구 시험은 없습니다.
 3. 중앙 로그 저장소, 보존 기간, 알림 기준이 정해지지 않았습니다.
-4. 최신 변경의 원격 PR·GitHub Actions 재검증이 필요합니다.
+4. 원격 CI와 기본 Docker build는 통과했지만 실제 release workflow·태그 실행 기록은
+   없습니다.
 5. 현재 독립 검수 서명은 HMAC 기반입니다. 실행 서버에서는 키를 제거했지만 장기 상용
    릴리스에는 오프라인 private key와 runtime public key를 분리하는 KMS·비대칭 서명이
    필요합니다.
@@ -158,8 +171,9 @@ staging·production manifest는 `PILOT_REVIEWED` 평가와 데이터 재배포 �
 
 ## 5. 다음 권장 순서
 
-1. 현재 PR을 검토·병합하고 원격 GitHub Actions를 재검증합니다.
-2. 독립 검수 locked set을 구축하고 section Recall@5를 운영 하한 이상으로 개선합니다.
+1. FE·BE가 물질탐색·사고분석 계약을 구현하고 배포된 BFF를 대상으로 contract smoke를
+   실행합니다.
+2. 독립 검수 locked set을 구축해 핵심·전체·가중 Recall을 같은 데이터에서 검증합니다.
 3. CAMEO·ICIS 파생 데이터의 재배포 조건을 확인해 registry 승인을 기록합니다.
 4. 독립 검수 evidence bundle과 attestation을 생성합니다.
 5. Python 3.11 bundle 이미지를 registry digest로 고정해 staging 부하·장애 시험을 수행합니다.

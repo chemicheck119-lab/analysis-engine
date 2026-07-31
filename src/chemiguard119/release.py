@@ -722,6 +722,26 @@ def _evaluate_embedded_evidence(
         metrics = entry.get("metrics")
         if not isinstance(metrics, Mapping):
             metrics = {}
+        if name == "retriever_sections":
+            answerable_count = metrics.get("answerable_case_count")
+            unanswerable_count = metrics.get("unanswerable_case_count")
+            if (
+                isinstance(answerable_count, int)
+                and not isinstance(answerable_count, bool)
+                and isinstance(unanswerable_count, int)
+                and not isinstance(unanswerable_count, bool)
+                and isinstance(case_count, int)
+                and answerable_count + unanswerable_count != case_count
+            ):
+                blockers.append(
+                    {
+                        "code": "EVALUATION_CASE_PARTITION_MISMATCH",
+                        "evaluation": name,
+                        "case_count": case_count,
+                        "answerable_case_count": answerable_count,
+                        "unanswerable_case_count": unanswerable_count,
+                    }
+                )
         evaluation_thresholds: dict[str, Any] = {}
         for metric, threshold in specification["thresholds"].items():
             actual = metrics.get(metric)

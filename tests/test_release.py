@@ -105,7 +105,18 @@ def _write_reviewed_dataset(path: Path, name: str, count: int) -> None:
             )
 
 
-def _report_payload(name: str, case_count: int, *, unsafe_failures: int) -> dict:
+def _report_payload(
+    name: str,
+    case_count: int,
+    *,
+    unsafe_failures: int,
+    retriever_high_relevance_recall: float = 0.99,
+    retriever_graded_gain_recall: float = 0.97,
+    retriever_answerable_case_count: int = 300,
+    retriever_unanswerable_case_count: int = 100,
+    retriever_high_relevance_fact_coverage: float = 0.99,
+    retriever_fact_complete_lower: float = 0.96,
+) -> dict:
     reports = {
         "resolver": {
             "metrics_version": "resolver-evaluation-v2",
@@ -123,13 +134,28 @@ def _report_payload(name: str, case_count: int, *, unsafe_failures: int) -> dict
             "ambiguous_preservation_rate": 1.0,
         },
         "retriever_sections": {
-            "metrics_version": "retriever-section-qrel-v2",
+            "metrics_version": "retriever-section-qrel-v3",
             "case_count": case_count,
+            "answerable_case_count": retriever_answerable_case_count,
+            "unanswerable_case_count": retriever_unanswerable_case_count,
             "metrics": {
+                "graded_gain_recall_at_k": retriever_graded_gain_recall,
+                "high_relevance_fact_complete_case_rate_at_k": 0.99,
+                "high_relevance_fact_coverage_at_k": (
+                    retriever_high_relevance_fact_coverage
+                ),
+                "high_relevance_recall_at_k": retriever_high_relevance_recall,
                 "mrr_at_k": 0.95,
                 "recall_at_k": 0.95,
+                "required_fact_coverage_at_k": 0.95,
+                "unanswerable_abstention_rate": 0.98,
                 "valid_source_url_coverage_at_k": 1.0,
                 "wrong_cas_rate_at_k": 0.0,
+            },
+            "uncertainty": {
+                "high_relevance_fact_complete_case_rate_at_k": {
+                    "lower": retriever_fact_complete_lower,
+                }
             },
         },
         "parser_locked": {
@@ -160,6 +186,12 @@ def _evaluation_evidence(
     git_commit: str,
     unsafe_failures: int = 0,
     safety_case_count: int | None = None,
+    retriever_high_relevance_recall: float = 0.99,
+    retriever_graded_gain_recall: float = 0.97,
+    retriever_answerable_case_count: int = 300,
+    retriever_unanswerable_case_count: int = 100,
+    retriever_high_relevance_fact_coverage: float = 0.99,
+    retriever_fact_complete_lower: float = 0.96,
 ) -> dict[str, dict[str, Path]]:
     evidence_dir = tmp_path / "release-evidence"
     evidence_dir.mkdir()
@@ -181,6 +213,14 @@ def _evaluation_evidence(
                 unsafe_failures=unsafe_failures
                 if name == "resolver_hint_safety"
                 else 0,
+                retriever_high_relevance_recall=retriever_high_relevance_recall,
+                retriever_graded_gain_recall=retriever_graded_gain_recall,
+                retriever_answerable_case_count=retriever_answerable_case_count,
+                retriever_unanswerable_case_count=retriever_unanswerable_case_count,
+                retriever_high_relevance_fact_coverage=(
+                    retriever_high_relevance_fact_coverage
+                ),
+                retriever_fact_complete_lower=retriever_fact_complete_lower,
             ),
             report_path=report_path,
             dataset_path=dataset_path,
@@ -250,6 +290,12 @@ def _qualified_manifest(
     redistribution_approved: bool = True,
     unsafe_failures: int = 0,
     safety_case_count: int | None = None,
+    retriever_high_relevance_recall: float = 0.99,
+    retriever_graded_gain_recall: float = 0.97,
+    retriever_answerable_case_count: int = 300,
+    retriever_unanswerable_case_count: int = 100,
+    retriever_high_relevance_fact_coverage: float = 0.99,
+    retriever_fact_complete_lower: float = 0.96,
     valid_signature: bool = True,
 ) -> tuple[dict, Path, Path, Path, Path]:
     db_path, resolver_path, retriever_path, config_dir = _runtime_fixture(
@@ -261,6 +307,12 @@ def _qualified_manifest(
         git_commit=git_commit,
         unsafe_failures=unsafe_failures,
         safety_case_count=safety_case_count,
+        retriever_high_relevance_recall=retriever_high_relevance_recall,
+        retriever_graded_gain_recall=retriever_graded_gain_recall,
+        retriever_answerable_case_count=retriever_answerable_case_count,
+        retriever_unanswerable_case_count=retriever_unanswerable_case_count,
+        retriever_high_relevance_fact_coverage=retriever_high_relevance_fact_coverage,
+        retriever_fact_complete_lower=retriever_fact_complete_lower,
     )
     unsigned = create_runtime_manifest(
         db_path=db_path,
@@ -610,6 +662,109 @@ def test_production_rejects_unsafe_cas_auto_confirmation_failure(
             environment="production",
             expected_manifest_sha256=created["manifest_sha256"],
         )
+
+
+def test_release_rejects_low_high_relevance_retrieval_recall(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    created, db_path, resolver_path, retriever_path, config_dir = _qualified_manifest(
+        tmp_path,
+        monkeypatch,
+        retriever_high_relevance_recall=0.97,
+    )
+    monkeypatch.setenv("CHEMIGUARD119_GIT_COMMIT", "a" * 40)
+    qualification = created["evaluation_qualification"]
+
+    assert qualification["passed"] is False
+    assert {
+        "code": "QUALITY_THRESHOLD_NOT_MET",
+        "evaluation": "retriever_sections",
+        "metric": "metrics.high_relevance_recall_at_k",
+    } in qualification["quality_gate"]["blockers"]
+
+    with pytest.raises(RuntimeIntegrityError, match="evaluation_qualification"):
+        verify_runtime_release(
+            db_path=db_path,
+            resolver_model_path=resolver_path,
+            retriever_model_path=retriever_path,
+            config_dir=config_dir,
+            environment="production",
+            expected_manifest_sha256=created["manifest_sha256"],
+        )
+
+
+@pytest.mark.parametrize(
+    ("overrides", "blocked_metric"),
+    [
+        (
+            {"retriever_graded_gain_recall": 0.94},
+            "metrics.graded_gain_recall_at_k",
+        ),
+        (
+            {"retriever_high_relevance_fact_coverage": 0.97},
+            "metrics.high_relevance_fact_coverage_at_k",
+        ),
+        (
+            {"retriever_fact_complete_lower": 0.94},
+            "uncertainty.high_relevance_fact_complete_case_rate_at_k.lower",
+        ),
+    ],
+)
+def test_release_rejects_weak_retrieval_evidence_quality(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    overrides: dict[str, float],
+    blocked_metric: str,
+) -> None:
+    created, *_ = _qualified_manifest(tmp_path, monkeypatch, **overrides)
+
+    assert created["evaluation_qualification"]["passed"] is False
+    assert {
+        "code": "QUALITY_THRESHOLD_NOT_MET",
+        "evaluation": "retriever_sections",
+        "metric": blocked_metric,
+    } in created["evaluation_qualification"]["quality_gate"]["blockers"]
+
+
+def test_release_rejects_one_answerable_plus_many_unanswerable_cases(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    created, *_ = _qualified_manifest(
+        tmp_path,
+        monkeypatch,
+        retriever_answerable_case_count=1,
+        retriever_unanswerable_case_count=399,
+    )
+
+    assert created["evaluation_qualification"]["passed"] is False
+    assert {
+        "code": "QUALITY_THRESHOLD_NOT_MET",
+        "evaluation": "retriever_sections",
+        "metric": "answerable_case_count",
+    } in created["evaluation_qualification"]["quality_gate"]["blockers"]
+
+
+def test_release_rejects_inconsistent_answerability_partition(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    created, *_ = _qualified_manifest(
+        tmp_path,
+        monkeypatch,
+        retriever_answerable_case_count=300,
+        retriever_unanswerable_case_count=101,
+    )
+
+    assert created["evaluation_qualification"]["passed"] is False
+    assert {
+        "code": "EVALUATION_CASE_PARTITION_MISMATCH",
+        "evaluation": "retriever_sections",
+        "case_count": 400,
+        "answerable_case_count": 300,
+        "unanswerable_case_count": 101,
+    } in created["evaluation_qualification"]["quality_gate"]["blockers"]
 
 
 def test_zero_failures_with_too_few_cases_fails_ci_upper_bound(
