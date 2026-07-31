@@ -1,0 +1,1108 @@
+{
+  "contract_version": "dashboard-public-pair-presentation-v1",
+  "crosswalk": "config/cameo_crosswalk.csv",
+  "crosswalk_sha256": "50411363a840c88a0b371123f8e5ab265001ec6ca1bb70840eb93a79b79f617c",
+  "does_not_confirm_on_site_presence": true,
+  "is_probability": false,
+  "offline_regression_only": true,
+  "pair_count": 15,
+  "pairs": [
+    {
+      "brief_text": "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 가장 보수적인 등급은 낮음입니다.",
+      "cas_numbers": [
+        "108-88-3",
+        "64-17-5"
+      ],
+      "compatibility_evidence_urls": [
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/4654",
+        "https://cameochemicals.noaa.gov/chemical/667",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "final_decision": "현장 지휘관 판단",
+      "gas_products": [],
+      "hazard_codes": [
+        "NR"
+      ],
+      "human_confirmation_required": true,
+      "limitations": [
+        "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
+        "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
+        "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
+        "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
+        "최종 결정은 현장 지휘관이 수행합니다."
+      ],
+      "mappings": [
+        {
+          "cameo_chemical_id": "4654",
+          "cas_number": "108-88-3",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/4654",
+          "selected_form": "TOLUENE",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        },
+        {
+          "cameo_chemical_id": "667",
+          "cas_number": "64-17-5",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/667",
+          "selected_form": "ETHANOL",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        }
+      ],
+      "pair_key": "108-88-3|64-17-5",
+      "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
+      "raw_class_id": 0,
+      "required_checks": [
+        "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
+        "저장구역·배수로·환기계통의 실제 연결 여부 확인",
+        "농도·온도·압력과 누출액의 실제 혼합 여부 확인"
+      ],
+      "risk_level": "LOW",
+      "risk_level_ko": "낮음",
+      "rule_id": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+      "rule_version": "RUNTIME_MANIFEST_PINNED",
+      "scope": "PUBLIC_SOURCE_CAMEO_SCREENING",
+      "severity": "NO_KNOWN_HAZARDOUS_REACTION",
+      "status": "SCREENING_COMPLETED"
+    },
+    {
+      "brief_text": "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 가장 보수적인 등급은 낮음입니다.",
+      "cas_numbers": [
+        "108-88-3",
+        "67-64-1"
+      ],
+      "compatibility_evidence_urls": [
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/4654",
+        "https://cameochemicals.noaa.gov/chemical/8",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "final_decision": "현장 지휘관 판단",
+      "gas_products": [],
+      "hazard_codes": [
+        "NR"
+      ],
+      "human_confirmation_required": true,
+      "limitations": [
+        "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
+        "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
+        "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
+        "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
+        "최종 결정은 현장 지휘관이 수행합니다."
+      ],
+      "mappings": [
+        {
+          "cameo_chemical_id": "4654",
+          "cas_number": "108-88-3",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/4654",
+          "selected_form": "TOLUENE",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        },
+        {
+          "cameo_chemical_id": "8",
+          "cas_number": "67-64-1",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/8",
+          "selected_form": "ACETONE",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        }
+      ],
+      "pair_key": "108-88-3|67-64-1",
+      "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
+      "raw_class_id": 0,
+      "required_checks": [
+        "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
+        "저장구역·배수로·환기계통의 실제 연결 여부 확인",
+        "농도·온도·압력과 누출액의 실제 혼합 여부 확인"
+      ],
+      "risk_level": "LOW",
+      "risk_level_ko": "낮음",
+      "rule_id": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+      "rule_version": "RUNTIME_MANIFEST_PINNED",
+      "scope": "PUBLIC_SOURCE_CAMEO_SCREENING",
+      "severity": "NO_KNOWN_HAZARDOUS_REACTION",
+      "status": "SCREENING_COMPLETED"
+    },
+    {
+      "brief_text": "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 가장 보수적인 등급은 낮음입니다.",
+      "cas_numbers": [
+        "108-88-3",
+        "7440-23-5"
+      ],
+      "compatibility_evidence_urls": [
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/4654",
+        "https://cameochemicals.noaa.gov/chemical/7794",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "final_decision": "현장 지휘관 판단",
+      "gas_products": [],
+      "hazard_codes": [
+        "NR"
+      ],
+      "human_confirmation_required": true,
+      "limitations": [
+        "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
+        "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
+        "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
+        "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
+        "최종 결정은 현장 지휘관이 수행합니다."
+      ],
+      "mappings": [
+        {
+          "cameo_chemical_id": "4654",
+          "cas_number": "108-88-3",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/4654",
+          "selected_form": "TOLUENE",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        },
+        {
+          "cameo_chemical_id": "7794",
+          "cas_number": "7440-23-5",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/7794",
+          "selected_form": "SODIUM",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        }
+      ],
+      "pair_key": "108-88-3|7440-23-5",
+      "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
+      "raw_class_id": 0,
+      "required_checks": [
+        "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
+        "저장구역·배수로·환기계통의 실제 연결 여부 확인",
+        "농도·온도·압력과 누출액의 실제 혼합 여부 확인"
+      ],
+      "risk_level": "LOW",
+      "risk_level_ko": "낮음",
+      "rule_id": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+      "rule_version": "RUNTIME_MANIFEST_PINNED",
+      "scope": "PUBLIC_SOURCE_CAMEO_SCREENING",
+      "severity": "NO_KNOWN_HAZARDOUS_REACTION",
+      "status": "SCREENING_COMPLETED"
+    },
+    {
+      "brief_text": "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 가장 보수적인 등급은 낮음입니다.",
+      "cas_numbers": [
+        "108-88-3",
+        "7647-01-0"
+      ],
+      "compatibility_evidence_urls": [
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/4654",
+        "https://cameochemicals.noaa.gov/chemical/3598",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "final_decision": "현장 지휘관 판단",
+      "gas_products": [],
+      "hazard_codes": [
+        "NR"
+      ],
+      "human_confirmation_required": true,
+      "limitations": [
+        "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
+        "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
+        "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
+        "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
+        "최종 결정은 현장 지휘관이 수행합니다."
+      ],
+      "mappings": [
+        {
+          "cameo_chemical_id": "4654",
+          "cas_number": "108-88-3",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/4654",
+          "selected_form": "TOLUENE",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        },
+        {
+          "cameo_chemical_id": "3598",
+          "cas_number": "7647-01-0",
+          "checked_at_utc": "2026-07-22T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/3598",
+          "selected_form": "HYDROCHLORIC ACID, SOLUTION",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        }
+      ],
+      "pair_key": "108-88-3|7647-01-0",
+      "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
+      "raw_class_id": 0,
+      "required_checks": [
+        "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
+        "저장구역·배수로·환기계통의 실제 연결 여부 확인",
+        "농도·온도·압력과 누출액의 실제 혼합 여부 확인"
+      ],
+      "risk_level": "LOW",
+      "risk_level_ko": "낮음",
+      "rule_id": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+      "rule_version": "RUNTIME_MANIFEST_PINNED",
+      "scope": "PUBLIC_SOURCE_CAMEO_SCREENING",
+      "severity": "NO_KNOWN_HAZARDOUS_REACTION",
+      "status": "SCREENING_COMPLETED"
+    },
+    {
+      "brief_text": "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 가장 보수적인 등급은 높음입니다.",
+      "cas_numbers": [
+        "108-88-3",
+        "7681-52-9"
+      ],
+      "compatibility_evidence_urls": [
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/4654",
+        "https://cameochemicals.noaa.gov/chemical/4503",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "final_decision": "현장 지휘관 판단",
+      "gas_products": [
+        "CO2"
+      ],
+      "hazard_codes": [
+        "E",
+        "G",
+        "NR",
+        "R1",
+        "R3",
+        "T"
+      ],
+      "human_confirmation_required": true,
+      "limitations": [
+        "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
+        "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
+        "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
+        "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
+        "최종 결정은 현장 지휘관이 수행합니다."
+      ],
+      "mappings": [
+        {
+          "cameo_chemical_id": "4654",
+          "cas_number": "108-88-3",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/4654",
+          "selected_form": "TOLUENE",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        },
+        {
+          "cameo_chemical_id": "4503",
+          "cas_number": "7681-52-9",
+          "checked_at_utc": "2026-07-22T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/4503",
+          "selected_form": "SODIUM HYPOCHLORITE",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        }
+      ],
+      "pair_key": "108-88-3|7681-52-9",
+      "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
+      "raw_class_id": 2,
+      "required_checks": [
+        "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
+        "저장구역·배수로·환기계통의 실제 연결 여부 확인",
+        "농도·온도·압력과 누출액의 실제 혼합 여부 확인"
+      ],
+      "risk_level": "HIGH",
+      "risk_level_ko": "높음",
+      "rule_id": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+      "rule_version": "RUNTIME_MANIFEST_PINNED",
+      "scope": "PUBLIC_SOURCE_CAMEO_SCREENING",
+      "severity": "HIGH_RISK",
+      "status": "SCREENING_COMPLETED"
+    },
+    {
+      "brief_text": "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 가장 보수적인 등급은 중간입니다.",
+      "cas_numbers": [
+        "64-17-5",
+        "67-64-1"
+      ],
+      "compatibility_evidence_urls": [
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/667",
+        "https://cameochemicals.noaa.gov/chemical/8",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "final_decision": "현장 지휘관 판단",
+      "gas_products": [],
+      "hazard_codes": [
+        "E",
+        "R2"
+      ],
+      "human_confirmation_required": true,
+      "limitations": [
+        "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
+        "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
+        "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
+        "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
+        "최종 결정은 현장 지휘관이 수행합니다."
+      ],
+      "mappings": [
+        {
+          "cameo_chemical_id": "667",
+          "cas_number": "64-17-5",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/667",
+          "selected_form": "ETHANOL",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        },
+        {
+          "cameo_chemical_id": "8",
+          "cas_number": "67-64-1",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/8",
+          "selected_form": "ACETONE",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        }
+      ],
+      "pair_key": "64-17-5|67-64-1",
+      "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
+      "raw_class_id": 1,
+      "required_checks": [
+        "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
+        "저장구역·배수로·환기계통의 실제 연결 여부 확인",
+        "농도·온도·압력과 누출액의 실제 혼합 여부 확인"
+      ],
+      "risk_level": "MEDIUM",
+      "risk_level_ko": "중간",
+      "rule_id": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+      "rule_version": "RUNTIME_MANIFEST_PINNED",
+      "scope": "PUBLIC_SOURCE_CAMEO_SCREENING",
+      "severity": "CAUTION",
+      "status": "SCREENING_COMPLETED"
+    },
+    {
+      "brief_text": "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 가장 보수적인 등급은 높음입니다.",
+      "cas_numbers": [
+        "64-17-5",
+        "7440-23-5"
+      ],
+      "compatibility_evidence_urls": [
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/667",
+        "https://cameochemicals.noaa.gov/chemical/7794",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "final_decision": "현장 지휘관 판단",
+      "gas_products": [
+        "H2"
+      ],
+      "hazard_codes": [
+        "C",
+        "F",
+        "G",
+        "R1",
+        "R3"
+      ],
+      "human_confirmation_required": true,
+      "limitations": [
+        "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
+        "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
+        "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
+        "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
+        "최종 결정은 현장 지휘관이 수행합니다."
+      ],
+      "mappings": [
+        {
+          "cameo_chemical_id": "667",
+          "cas_number": "64-17-5",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/667",
+          "selected_form": "ETHANOL",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        },
+        {
+          "cameo_chemical_id": "7794",
+          "cas_number": "7440-23-5",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/7794",
+          "selected_form": "SODIUM",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        }
+      ],
+      "pair_key": "64-17-5|7440-23-5",
+      "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
+      "raw_class_id": 2,
+      "required_checks": [
+        "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
+        "저장구역·배수로·환기계통의 실제 연결 여부 확인",
+        "농도·온도·압력과 누출액의 실제 혼합 여부 확인"
+      ],
+      "risk_level": "HIGH",
+      "risk_level_ko": "높음",
+      "rule_id": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+      "rule_version": "RUNTIME_MANIFEST_PINNED",
+      "scope": "PUBLIC_SOURCE_CAMEO_SCREENING",
+      "severity": "HIGH_RISK",
+      "status": "SCREENING_COMPLETED"
+    },
+    {
+      "brief_text": "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 가장 보수적인 등급은 중간입니다.",
+      "cas_numbers": [
+        "64-17-5",
+        "7647-01-0"
+      ],
+      "compatibility_evidence_urls": [
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/667",
+        "https://cameochemicals.noaa.gov/chemical/3598",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "final_decision": "현장 지휘관 판단",
+      "gas_products": [],
+      "hazard_codes": [
+        "NR",
+        "R1"
+      ],
+      "human_confirmation_required": true,
+      "limitations": [
+        "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
+        "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
+        "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
+        "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
+        "최종 결정은 현장 지휘관이 수행합니다."
+      ],
+      "mappings": [
+        {
+          "cameo_chemical_id": "667",
+          "cas_number": "64-17-5",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/667",
+          "selected_form": "ETHANOL",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        },
+        {
+          "cameo_chemical_id": "3598",
+          "cas_number": "7647-01-0",
+          "checked_at_utc": "2026-07-22T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/3598",
+          "selected_form": "HYDROCHLORIC ACID, SOLUTION",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        }
+      ],
+      "pair_key": "64-17-5|7647-01-0",
+      "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
+      "raw_class_id": 1,
+      "required_checks": [
+        "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
+        "저장구역·배수로·환기계통의 실제 연결 여부 확인",
+        "농도·온도·압력과 누출액의 실제 혼합 여부 확인"
+      ],
+      "risk_level": "MEDIUM",
+      "risk_level_ko": "중간",
+      "rule_id": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+      "rule_version": "RUNTIME_MANIFEST_PINNED",
+      "scope": "PUBLIC_SOURCE_CAMEO_SCREENING",
+      "severity": "CAUTION",
+      "status": "SCREENING_COMPLETED"
+    },
+    {
+      "brief_text": "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 가장 보수적인 등급은 높음입니다.",
+      "cas_numbers": [
+        "64-17-5",
+        "7681-52-9"
+      ],
+      "compatibility_evidence_urls": [
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/667",
+        "https://cameochemicals.noaa.gov/chemical/4503",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "final_decision": "현장 지휘관 판단",
+      "gas_products": [
+        "CO",
+        "CO2",
+        "H2",
+        "HX",
+        "X2",
+        "XO2"
+      ],
+      "hazard_codes": [
+        "C",
+        "E",
+        "F",
+        "G",
+        "NR",
+        "R1",
+        "R3",
+        "T"
+      ],
+      "human_confirmation_required": true,
+      "limitations": [
+        "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
+        "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
+        "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
+        "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
+        "최종 결정은 현장 지휘관이 수행합니다."
+      ],
+      "mappings": [
+        {
+          "cameo_chemical_id": "667",
+          "cas_number": "64-17-5",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/667",
+          "selected_form": "ETHANOL",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        },
+        {
+          "cameo_chemical_id": "4503",
+          "cas_number": "7681-52-9",
+          "checked_at_utc": "2026-07-22T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/4503",
+          "selected_form": "SODIUM HYPOCHLORITE",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        }
+      ],
+      "pair_key": "64-17-5|7681-52-9",
+      "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
+      "raw_class_id": 2,
+      "required_checks": [
+        "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
+        "저장구역·배수로·환기계통의 실제 연결 여부 확인",
+        "농도·온도·압력과 누출액의 실제 혼합 여부 확인"
+      ],
+      "risk_level": "HIGH",
+      "risk_level_ko": "높음",
+      "rule_id": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+      "rule_version": "RUNTIME_MANIFEST_PINNED",
+      "scope": "PUBLIC_SOURCE_CAMEO_SCREENING",
+      "severity": "HIGH_RISK",
+      "status": "SCREENING_COMPLETED"
+    },
+    {
+      "brief_text": "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 가장 보수적인 등급은 높음입니다.",
+      "cas_numbers": [
+        "67-64-1",
+        "7440-23-5"
+      ],
+      "compatibility_evidence_urls": [
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/8",
+        "https://cameochemicals.noaa.gov/chemical/7794",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "final_decision": "현장 지휘관 판단",
+      "gas_products": [
+        "H2",
+        "Hydrocarbons"
+      ],
+      "hazard_codes": [
+        "F",
+        "G",
+        "R1"
+      ],
+      "human_confirmation_required": true,
+      "limitations": [
+        "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
+        "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
+        "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
+        "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
+        "최종 결정은 현장 지휘관이 수행합니다."
+      ],
+      "mappings": [
+        {
+          "cameo_chemical_id": "8",
+          "cas_number": "67-64-1",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/8",
+          "selected_form": "ACETONE",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        },
+        {
+          "cameo_chemical_id": "7794",
+          "cas_number": "7440-23-5",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/7794",
+          "selected_form": "SODIUM",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        }
+      ],
+      "pair_key": "67-64-1|7440-23-5",
+      "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
+      "raw_class_id": 2,
+      "required_checks": [
+        "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
+        "저장구역·배수로·환기계통의 실제 연결 여부 확인",
+        "농도·온도·압력과 누출액의 실제 혼합 여부 확인"
+      ],
+      "risk_level": "HIGH",
+      "risk_level_ko": "높음",
+      "rule_id": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+      "rule_version": "RUNTIME_MANIFEST_PINNED",
+      "scope": "PUBLIC_SOURCE_CAMEO_SCREENING",
+      "severity": "HIGH_RISK",
+      "status": "SCREENING_COMPLETED"
+    },
+    {
+      "brief_text": "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 가장 보수적인 등급은 낮음입니다.",
+      "cas_numbers": [
+        "67-64-1",
+        "7647-01-0"
+      ],
+      "compatibility_evidence_urls": [
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/8",
+        "https://cameochemicals.noaa.gov/chemical/3598",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "final_decision": "현장 지휘관 판단",
+      "gas_products": [],
+      "hazard_codes": [
+        "NR"
+      ],
+      "human_confirmation_required": true,
+      "limitations": [
+        "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
+        "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
+        "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
+        "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
+        "최종 결정은 현장 지휘관이 수행합니다."
+      ],
+      "mappings": [
+        {
+          "cameo_chemical_id": "8",
+          "cas_number": "67-64-1",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/8",
+          "selected_form": "ACETONE",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        },
+        {
+          "cameo_chemical_id": "3598",
+          "cas_number": "7647-01-0",
+          "checked_at_utc": "2026-07-22T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/3598",
+          "selected_form": "HYDROCHLORIC ACID, SOLUTION",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        }
+      ],
+      "pair_key": "67-64-1|7647-01-0",
+      "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
+      "raw_class_id": 0,
+      "required_checks": [
+        "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
+        "저장구역·배수로·환기계통의 실제 연결 여부 확인",
+        "농도·온도·압력과 누출액의 실제 혼합 여부 확인"
+      ],
+      "risk_level": "LOW",
+      "risk_level_ko": "낮음",
+      "rule_id": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+      "rule_version": "RUNTIME_MANIFEST_PINNED",
+      "scope": "PUBLIC_SOURCE_CAMEO_SCREENING",
+      "severity": "NO_KNOWN_HAZARDOUS_REACTION",
+      "status": "SCREENING_COMPLETED"
+    },
+    {
+      "brief_text": "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 가장 보수적인 등급은 높음입니다.",
+      "cas_numbers": [
+        "67-64-1",
+        "7681-52-9"
+      ],
+      "compatibility_evidence_urls": [
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/8",
+        "https://cameochemicals.noaa.gov/chemical/4503",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "final_decision": "현장 지휘관 판단",
+      "gas_products": [
+        "Halocarbons"
+      ],
+      "hazard_codes": [
+        "E",
+        "F",
+        "G",
+        "NR",
+        "R1",
+        "R3",
+        "T"
+      ],
+      "human_confirmation_required": true,
+      "limitations": [
+        "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
+        "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
+        "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
+        "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
+        "최종 결정은 현장 지휘관이 수행합니다."
+      ],
+      "mappings": [
+        {
+          "cameo_chemical_id": "8",
+          "cas_number": "67-64-1",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/8",
+          "selected_form": "ACETONE",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        },
+        {
+          "cameo_chemical_id": "4503",
+          "cas_number": "7681-52-9",
+          "checked_at_utc": "2026-07-22T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/4503",
+          "selected_form": "SODIUM HYPOCHLORITE",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        }
+      ],
+      "pair_key": "67-64-1|7681-52-9",
+      "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
+      "raw_class_id": 2,
+      "required_checks": [
+        "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
+        "저장구역·배수로·환기계통의 실제 연결 여부 확인",
+        "농도·온도·압력과 누출액의 실제 혼합 여부 확인"
+      ],
+      "risk_level": "HIGH",
+      "risk_level_ko": "높음",
+      "rule_id": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+      "rule_version": "RUNTIME_MANIFEST_PINNED",
+      "scope": "PUBLIC_SOURCE_CAMEO_SCREENING",
+      "severity": "HIGH_RISK",
+      "status": "SCREENING_COMPLETED"
+    },
+    {
+      "brief_text": "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 가장 보수적인 등급은 높음입니다.",
+      "cas_numbers": [
+        "7440-23-5",
+        "7647-01-0"
+      ],
+      "compatibility_evidence_urls": [
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/7794",
+        "https://cameochemicals.noaa.gov/chemical/3598",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "final_decision": "현장 지휘관 판단",
+      "gas_products": [
+        "H2"
+      ],
+      "hazard_codes": [
+        "C",
+        "F",
+        "G",
+        "R1",
+        "R3"
+      ],
+      "human_confirmation_required": true,
+      "limitations": [
+        "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
+        "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
+        "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
+        "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
+        "최종 결정은 현장 지휘관이 수행합니다."
+      ],
+      "mappings": [
+        {
+          "cameo_chemical_id": "7794",
+          "cas_number": "7440-23-5",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/7794",
+          "selected_form": "SODIUM",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        },
+        {
+          "cameo_chemical_id": "3598",
+          "cas_number": "7647-01-0",
+          "checked_at_utc": "2026-07-22T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/3598",
+          "selected_form": "HYDROCHLORIC ACID, SOLUTION",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        }
+      ],
+      "pair_key": "7440-23-5|7647-01-0",
+      "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
+      "raw_class_id": 2,
+      "required_checks": [
+        "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
+        "저장구역·배수로·환기계통의 실제 연결 여부 확인",
+        "농도·온도·압력과 누출액의 실제 혼합 여부 확인"
+      ],
+      "risk_level": "HIGH",
+      "risk_level_ko": "높음",
+      "rule_id": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+      "rule_version": "RUNTIME_MANIFEST_PINNED",
+      "scope": "PUBLIC_SOURCE_CAMEO_SCREENING",
+      "severity": "HIGH_RISK",
+      "status": "SCREENING_COMPLETED"
+    },
+    {
+      "brief_text": "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 가장 보수적인 등급은 높음입니다.",
+      "cas_numbers": [
+        "7440-23-5",
+        "7681-52-9"
+      ],
+      "compatibility_evidence_urls": [
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/7794",
+        "https://cameochemicals.noaa.gov/chemical/4503",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "final_decision": "현장 지휘관 판단",
+      "gas_products": [
+        "H2"
+      ],
+      "hazard_codes": [
+        "C",
+        "E",
+        "F",
+        "G",
+        "R1",
+        "R3",
+        "T"
+      ],
+      "human_confirmation_required": true,
+      "limitations": [
+        "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
+        "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
+        "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
+        "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
+        "최종 결정은 현장 지휘관이 수행합니다."
+      ],
+      "mappings": [
+        {
+          "cameo_chemical_id": "7794",
+          "cas_number": "7440-23-5",
+          "checked_at_utc": "2026-07-28T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/7794",
+          "selected_form": "SODIUM",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        },
+        {
+          "cameo_chemical_id": "4503",
+          "cas_number": "7681-52-9",
+          "checked_at_utc": "2026-07-22T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/4503",
+          "selected_form": "SODIUM HYPOCHLORITE",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        }
+      ],
+      "pair_key": "7440-23-5|7681-52-9",
+      "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
+      "raw_class_id": 2,
+      "required_checks": [
+        "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
+        "저장구역·배수로·환기계통의 실제 연결 여부 확인",
+        "농도·온도·압력과 누출액의 실제 혼합 여부 확인"
+      ],
+      "risk_level": "HIGH",
+      "risk_level_ko": "높음",
+      "rule_id": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+      "rule_version": "RUNTIME_MANIFEST_PINNED",
+      "scope": "PUBLIC_SOURCE_CAMEO_SCREENING",
+      "severity": "HIGH_RISK",
+      "status": "SCREENING_COMPLETED"
+    },
+    {
+      "brief_text": "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 가장 보수적인 등급은 높음입니다.",
+      "cas_numbers": [
+        "7647-01-0",
+        "7681-52-9"
+      ],
+      "compatibility_evidence_urls": [
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "evidence_urls": [
+        "https://cameochemicals.noaa.gov/chemical/3598",
+        "https://cameochemicals.noaa.gov/chemical/4503",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "expert_reviewed": false,
+      "final_decision": "현장 지휘관 판단",
+      "gas_products": [
+        "Acid Fumes",
+        "BR2",
+        "Cl2",
+        "ClO2",
+        "HX",
+        "NOx",
+        "O2",
+        "X2",
+        "X2O"
+      ],
+      "hazard_codes": [
+        "C",
+        "E",
+        "F",
+        "G",
+        "NR",
+        "R1",
+        "R3",
+        "T"
+      ],
+      "human_confirmation_required": true,
+      "limitations": [
+        "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
+        "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
+        "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
+        "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
+        "최종 결정은 현장 지휘관이 수행합니다."
+      ],
+      "mappings": [
+        {
+          "cameo_chemical_id": "3598",
+          "cas_number": "7647-01-0",
+          "checked_at_utc": "2026-07-22T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/3598",
+          "selected_form": "HYDROCHLORIC ACID, SOLUTION",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        },
+        {
+          "cameo_chemical_id": "4503",
+          "cas_number": "7681-52-9",
+          "checked_at_utc": "2026-07-22T00:00:00+00:00",
+          "evidence_url": "https://cameochemicals.noaa.gov/chemical/4503",
+          "selected_form": "SODIUM HYPOCHLORITE",
+          "source_product": "NOAA/EPA CAMEO Chemicals",
+          "source_version": "3.1.0 rev 1",
+          "verification_method": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "verification_status": "PUBLIC_SOURCE_VERIFIED"
+        }
+      ],
+      "pair_key": "7647-01-0|7681-52-9",
+      "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
+      "raw_class_id": 2,
+      "required_checks": [
+        "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
+        "저장구역·배수로·환기계통의 실제 연결 여부 확인",
+        "농도·온도·압력과 누출액의 실제 혼합 여부 확인"
+      ],
+      "risk_level": "HIGH",
+      "risk_level_ko": "높음",
+      "rule_id": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+      "rule_version": "RUNTIME_MANIFEST_PINNED",
+      "scope": "PUBLIC_SOURCE_CAMEO_SCREENING",
+      "severity": "HIGH_RISK",
+      "status": "SCREENING_COMPLETED"
+    }
+  ],
+  "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
+  "source_metrics_version": "verified-pair-regression-v1",
+  "source_snapshot": "data/evaluation/verified_pair_snapshot_2024.json",
+  "source_snapshot_sha256": "9989ab77d4f82ad78c7382a313431cb588b008498591c1b3fd2ab3816d4aee86"
+}

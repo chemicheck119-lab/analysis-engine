@@ -7,6 +7,12 @@
 
 ### Added
 
+- FE가 BE만 호출하도록 고정한 `chemicheck119-dashboard-bff-v1` OpenAPI, TypeScript 타입,
+  fetch 예제와 확인 전·확인 후·저장 성공·실패 fixture
+- FastAPI 코드에서 결정적으로 생성하고 drift를 검사하는 모델 API OpenAPI snapshot
+- 공개 검증 15개 물질쌍마다 CAS–CAMEO ID·물리적 형태·위험등급·hazard/gas·근거·현장
+  확인 문구를 고정한 `dashboard-public-pair-presentation-v1` 계약
+- 실제 FE `App.tsx`의 mock·legacy DTO·저장 전 초기화 차이를 정리한 FE·BE 인수인계서
 - 물질명·CAS 또는 두 가지 이상 성상 관찰에서 확인 전 후보와 출처를 반환하는
   `POST /api/v1/substances/discover`
 - 울산소방 공개 물성 749 CAS를 위한 `substance_profile`·FTS5 인덱스와 최소 건수 gate
@@ -33,6 +39,16 @@
 
 ### Fixed
 
+- 확인 전 `hasIncompatible=false`가 `낮음/없음`으로 보이거나 과거 시설 이력이 현재 보유로
+  보일 수 있는 대시보드 계약 공백
+- 현장 물질 확인과 전체 대응기록 저장이 한 동작으로 섞이고 저장 전 화면이 초기화될 수 있는
+  FE 연동 순서
+- BFF 변환 중 CAS·위험등급·CAMEO class·규칙 버전·공개근거 provenance가 손상돼도 완료
+  결과로 표시될 수 있는 계약 공백
+- 유효한 CAMEO ID나 hazard/gas 값이라도 해당 물질쌍의 검증 snapshot과 다르면 대시보드
+  완료 결과를 통과할 수 있던 계약 공백
+- 생성된 모델·BFF·15쌍 계약의 drift를 CI가 놓치고 릴리스 artifact에서 15쌍 표시 계약이
+  누락될 수 있던 배포 공백
 - 일반어 한 개만 맞는 성상 질의가 임의 물질 후보를 반환하거나, 물질명 열이 냄새·색상
   순위를 왜곡할 수 있던 문제
 - 물성 프로필 또는 FTS 인덱스가 없거나 행 수가 다를 때도 readiness가 통과하던 문제
@@ -49,6 +65,8 @@
 
 ### Security
 
+- 브라우저에는 모델 API Key를 전달하지 않고 HttpOnly 서비스 세션으로 BE/BFF만 호출하는
+  배포 경계와 계약 테스트
 - 임시 디렉터리 처리 취약점이 수정된 개발 테스트 의존성 `pytest 9.0.3`으로 갱신
 - Uvicorn 원 URL access log와 raw exception traceback을 비활성화하고 예외 타입·request ID만
   구조화 로그로 기록

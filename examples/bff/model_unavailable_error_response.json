@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "chemicheck119-dashboard-bff-v1",
+  "requestId": "REQ-BFF-EXAMPLE-0006",
+  "error": {
+    "code": "MODEL_SERVICE_UNAVAILABLE",
+    "message": "모델 서비스가 준비되지 않았습니다. 저장된 현장 정보는 유지됩니다.",
+    "retryable": true
+  },
+  "resetAllowed": false
+}

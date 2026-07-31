@@ -1,0 +1,17 @@
+{
+  "incidentId": "INC-EXAMPLE-0001",
+  "text": "차아염소산나트륨 저장탱크에서 누출이 의심되며 옆 저장고에는 염산이 있습니다.",
+  "inputType": "DISPATCH_TEXT",
+  "occurredAt": "2026-07-31T14:20:00+09:00",
+  "location": {
+    "facilityName": "예시 사업장",
+    "address": "경기 화성시 팔탄면",
+    "province": "경기도",
+    "latitude": 37.2181,
+    "longitude": 126.9417
+  },
+  "plannedActions": [
+    "누출구역 통제 검토"
+  ],
+  "evidenceTopK": 5
+}

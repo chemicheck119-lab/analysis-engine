@@ -28,6 +28,26 @@ FE가 모델 API를 직접 부르면 안 됩니다. 모델 API 키가 브라우�
 [`contracts/model-api-integration-v1.json`](../contracts/model-api-integration-v1.json)에
 고정합니다.
 
+FE가 직접 소비할 BE/BFF 계약은 별도로 고정했습니다.
+
+- OpenAPI: [`dashboard-bff-v1.openapi.json`](../contracts/dashboard-bff-v1.openapi.json)
+- TypeScript 타입: [`dashboard-bff-v1.types.ts`](../contracts/dashboard-bff-v1.types.ts)
+- fetch 예제: [`dashboard-bff-client.ts`](../examples/integration/dashboard-bff-client.ts)
+- 실제 FE 코드 차이와 적용 순서: [`FE_BE_HANDOFF.md`](FE_BE_HANDOFF.md)
+
+권장 FE용 경로는 다음 네 개입니다.
+
+```text
+POST /api/c2guard/v1/substances/discover
+POST /api/c2guard/v1/incidents/analyze
+POST /api/c2guard/v1/incidents/{incidentId}/confirmations
+POST /api/c2guard/v1/incidents/{incidentId}/record
+```
+
+이 경로의 구현 소유자는 `BE_Repository`입니다. `llm` FastAPI에 같은 경로를 추가하거나
+CORS를 열지 않습니다. 브라우저는 같은 origin의 BFF를 우선 사용하고, 모델 API Key는 BE
+배포 Secret에만 둡니다.
+
 ## 3. 실제 호출 순서
 
 ### 3.0 물질명을 모를 때
@@ -159,7 +179,7 @@ BE는 HTTP 성공 여부와 모델 워크플로 상태를 분리합니다.
 | `AWAITING_SUBSTANCE_CONFIRMATION` | 사고·시설물질 후보 표시, 두 확인 입력 요청, 위험 카드 잠금 |
 | `AWAITING_INCIDENT_CONFIRMATION` | 사고물질 확인 입력 요청, 위험 카드 잠금 |
 | `AWAITING_FACILITY_CONFIRMATION` | 시설물질 확인 입력 요청, 위험 카드 잠금 |
-| `COMPLETED` 또는 스크리닝 완료 상태 | 근거·서수 위험등급·우선 확인 표시 |
+| `SCREENING_COMPLETED` | 공개근거·서수 위험등급·우선 확인 표시 |
 | `UNCLASSIFIED` | 근거 부족, 외부 MSDS 확인 안내 |
 | `CAS_EVIDENCE_NOT_LOADED` | 다른 물질 근거로 대체하지 않고 상세 근거 미적재 표시 |
 | HTTP `401` | 사용자 오류가 아니라 서버 인증 구성 장애 |
@@ -168,6 +188,17 @@ BE는 HTTP 성공 여부와 모델 워크플로 상태를 분리합니다.
 
 FE는 `schema_version`, `state`, `confirmation_gate`, `conflict_review`,
 `required_next_steps`, `safety_notice`가 없는 성공 응답을 정상 결과로 표시하지 않습니다.
+
+현재 대시보드 BFF v1은 실제 배포 정책인
+`PUBLIC_SOURCE_PILOT_V1 / SCREENING_COMPLETED` 표시 계약만 고정합니다. 모델 API의 향후
+전문가 승인 `APPROVED_ONLY / COMPLETED` 결과를 FE에 노출할 때는 BFF 계약 버전을 올리고
+별도 검증 타입을 추가합니다.
+
+완료 결과는 느슨한 `HIGH/MEDIUM/LOW` 허용목록만 검사하지 않습니다.
+[`dashboard_public_pair_contract.json`](../config/dashboard_public_pair_contract.json)에
+공개 검증 15개 물질쌍별 CAS–CAMEO ID·선택 형태·등급·hazard/gas·근거 URL·필수 확인·한계를
+고정했습니다. BE는 모델 응답을 1:1 투영해야 하며 이 값을 다시 생성하거나 축약하지 않습니다.
+계약에 없는 물질쌍이나 한 필드라도 다른 결과는 완료 카드가 아니라 계약 오류로 처리합니다.
 
 ### 7.1 대시보드 표시 규칙
 

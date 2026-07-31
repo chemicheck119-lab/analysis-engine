@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "chemicheck119-dashboard-bff-v1",
+  "requestId": "REQ-BFF-EXAMPLE-0004",
+  "incidentId": "INC-EXAMPLE-0001",
+  "recordId": "REC-EXAMPLE-0001",
+  "savedAt": "2026-07-31T14:40:00+09:00",
+  "resetAllowed": true
+}

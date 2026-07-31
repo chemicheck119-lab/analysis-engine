@@ -37,5 +37,8 @@ jobs:
           python -m ruff check src tests scripts
           python -m ruff format --check src tests scripts
 
+      - name: 모델·BFF·물질쌍 계약 drift 검사
+        run: python scripts/contracts/export_contracts.py --check
+
       - name: 운영 이미지 빌드 검증
         run: docker build --tag chemicheck119-model-api:${{ github.sha }} .

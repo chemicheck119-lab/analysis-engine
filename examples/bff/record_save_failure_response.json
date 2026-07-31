@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "chemicheck119-dashboard-bff-v1",
+  "requestId": "REQ-BFF-EXAMPLE-0005",
+  "error": {
+    "code": "RECORD_SAVE_FAILED",
+    "message": "대응 기록을 저장하지 못했습니다. 현재 화면을 유지하고 다시 시도하세요.",
+    "retryable": true
+  },
+  "resetAllowed": false
+}

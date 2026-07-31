@@ -16,15 +16,16 @@
 | 자동 CAS 힌트 안전성 | 부분 완료 | 합성·내부 회귀 12건 통과, 부분 문자열 위험 힌트 0건 |
 | 업체 이력 후보 | 부분 완료 | ICIS·PRTR 과거 이력 후보 168,424건, 현재 재고 확정 기능 아님 |
 | 공식 근거 검색 | 부분 완료 | 근거 5,858건, DRAFT section 12건의 핵심 Recall@5 1.0·가중 Recall@5 0.9688 |
-| 충돌 검토 | 파일럿 | 공개 검증 CAMEO CAS 6종, 15개 조합 회귀 검사 |
+| 충돌 검토 | 파일럿 | 공개 검증 CAMEO CAS 6종, 15개 조합 회귀 검사·pair별 표시 계약 |
 | 유사 사고사례 RAG | 미완료 | 출처와 대응 라벨이 검증된 corpus 없음 |
 | 파인튜닝 | 보류 | 준비도 검사만 존재, 기준선 대비 필요성이 입증되지 않음 |
 | FastAPI | 구현 | 통합 분석과 보조 API, 인증·오류 계약·확인 게이트 구현 |
-| 대시보드 표시 계약 | 구현 | 확인 전 위험 결과 금지, v1 단일 물질쌍과 검색 기능 범위 고정 |
+| 대시보드 표시 계약 | 구현 | BFF OpenAPI·TypeScript 타입·fixture, 확인 전 위험 결과 금지, 15쌍별 정확한 값 고정 |
 | 운영 로그 | 구현 | 안전 JSON 로그, Uvicorn 원 URL access log와 traceback 비활성화 |
 | Docker | 부분 완료 | 일반·bundle Dockerfile과 CI 구성 존재, 로컬 Docker CLI 없음 |
 | 실제 배포 | 차단 | reviewed 평가·재배포 승인·검증된 공개 스테이징 URL 없음 |
-| FE·BE 연동 자료 | 완료 | JSON 계약, curl·Python·JavaScript와 smoke 절차 존재 |
+| FE·BE 연동 자료 | 완료 | 모델·BFF OpenAPI, TypeScript 타입, 성공·실패 fixture와 체크리스트 |
+| FE·BE 실제 연동 | 미완료 | 현재 FE는 물질검색 mock·legacy DTO, BE는 BFF 구현 필요 |
 
 내부 평가 데이터 규모가 작으므로 위 수치는 회귀 방지용입니다. 독립된 현장 보류셋의 정확도나
 전국 단위 성능을 의미하지 않습니다.
@@ -34,7 +35,7 @@
 Python 3.11.15 환경에서 다음을 확인했습니다.
 
 ```text
-전체 테스트: 279 passed
+전체 테스트: 313 passed
 Ruff: 통과
 형식 검사: 통과
 compileall: 통과
@@ -135,6 +136,7 @@ Top-1: 메틸 에틸 케톤 / 78-93-3
 7. 신규 section 회귀는 핵심 Recall 1.0이지만 전체 Recall 0.875로 운영 정책 0.90에
    미달하고, 12건 모두 DRAFT라 어떤 지표도 운영 승인에 사용할 수 없습니다.
 8. 관찰 기반 탐색은 독립 오인·거부 평가셋이 없고, 현재는 source-derived smoke만 있습니다.
+9. BFF 계약은 검증됐지만 FE·BE 저장소의 실제 구현과 staging 통합 시험은 아직 없습니다.
 
 현재 브랜치는 미확인·확인 완료 응답의 중첩 위험 필드, 확률형 위험도, 상태·실행·CAS 모순을
 차단합니다. Uvicorn 원 URL access log와 raw traceback도 비활성화했습니다.

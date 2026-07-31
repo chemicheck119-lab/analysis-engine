@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "chemicheck119-dashboard-bff-v1",
+  "requestId": "REQ-BFF-EXAMPLE-0003",
+  "incidentId": "INC-EXAMPLE-0001",
+  "confirmationId": "CNF-EXAMPLE-0001",
+  "role": "INCIDENT",
+  "casNumber": "7681-52-9",
+  "createdAt": "2026-07-31T14:25:02+09:00",
+  "reanalyzeRequired": true
+}

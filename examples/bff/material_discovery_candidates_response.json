@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "chemicheck119-dashboard-bff-v1",
+  "sourceModelSchemaVersion": "chemiguard119-api-v1",
+  "requestId": "REQ-BFF-EXAMPLE-0001",
+  "query": "무색 투명하고 박하 냄새가 나는 휘발성 액체",
+  "status": "CANDIDATES_FOUND",
+  "searchMode": "PROPERTY_PROFILE_RETRIEVAL",
+  "candidates": [
+    {
+      "rank": 1,
+      "casNumber": "78-93-3",
+      "displayName": "메틸 에틸 케톤",
+      "matchBasis": "PUBLIC_PROPERTY_PROFILE",
+      "matchedExpression": null,
+      "matchedProperties": [
+        {
+          "field": "physical_state",
+          "label": "상온 상태",
+          "value": "액체(휘발성)"
+        },
+        {
+          "field": "color",
+          "label": "색상",
+          "value": "무색 투명"
+        },
+        {
+          "field": "odor",
+          "label": "냄새",
+          "value": "박하 및 달콤한 냄새| 아세톤 냄새"
+        }
+      ],
+      "propertySource": {
+        "label": "소방청 울산 화학물질 정보 기반 관찰 후보",
+        "sourceId": "NFA_ULSAN_CHEMICAL_INFORMATION",
+        "sourceUrl": "https://www.data.go.kr/data/15081005/fileData.do",
+        "documentVersion": "2021-01-15 기준"
+      },
+      "evidenceStatus": "CAS_EVIDENCE_NOT_LOADED",
+      "evidenceWarning": "CAS 78-93-3의 상세 근거가 시스템에 적재되어 있지 않습니다.",
+      "evidenceNotice": "상세 근거 미적재 — 다른 물질의 근거로 대체하지 않습니다. 외부 공식 MSDS 확인이 필요합니다.",
+      "casLinkWarning": null,
+      "evidenceCards": [],
+      "requiresResponderConfirmation": true,
+      "ruleEligible": false,
+      "riskDeterminationAllowed": false
+    }
+  ],
+  "requiresResponderConfirmation": true,
+  "candidateScoreIsProbability": false,
+  "riskDisplayAllowed": false,
+  "noReliableCandidateMeansAbsent": false,
+  "noReliableCandidateMeansSafe": false,
+  "notice": "색상·냄새·상태는 여러 물질이 공유하므로 후보를 하나로 확정하지 않습니다. 용기 라벨·현장 MSDS 등으로 CAS와 현장 존재를 확인해야 합니다.",
+  "safetyNotice": "이 결과는 케미체크119의 의사결정 보조 정보이며 현장 명령이 아닙니다. 물질과 시설 상태를 대원이 확인하고 최종 결정은 현장 지휘관이 수행합니다."
+}

@@ -101,6 +101,7 @@ config에는 최소 다음 파일이 필요합니다.
 config/
 ├── cameo_crosswalk.csv
 ├── conflict_policy.json
+├── dashboard_public_pair_contract.json
 ├── data_source_registry.json
 ├── pair_rules.csv
 ├── release_attestation.schema.json

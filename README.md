@@ -52,9 +52,10 @@ KOSHA·CAMEO 근거 검색
 | KOSHA 근거 확장 | 수집기 구현 | 공식 OpenAPI staging 수집·검토 필요, 현재 artifact는 9종 |
 | 유사 사고 사례 RAG | 미구현 | 검증된 사고–대응 사례 corpus와 출처·라벨 부족 |
 | 시설 물질 후보 | 구현 | ICIS·PRTR 공개 **과거 취급 이력** 검색 |
-| 물질 충돌 검토 | 공개 근거 파일럿 | 현재 공개 검증 crosswalk CAS 6개, `expert_reviewed=false` |
+| 물질 충돌 검토 | 공개 근거 파일럿 | 공개 검증 crosswalk CAS 6개·물질쌍 15개, pair별 표시 계약, `expert_reviewed=false` |
 | 생성형 파인튜닝 | 준비도 점검만 | 데이터 gate만 구현, 실제 학습·운영 적용 안 함 |
 | FastAPI·CLI | 구현 | API Key, health check, 구조화된 오류 응답 |
+| 대시보드 BFF 계약 | 계약·fixture 구현 | FE용 OpenAPI·TypeScript 타입·성공/실패 예제 제공, 실제 BE 구현은 미완료 |
 | 운영 요청 추적 | 구현 | 본문·Secret을 제외한 요청 ID·상태·지연시간 JSON 로그 |
 | 배포 무결성 검사 | 구현 | manifest, SHA-256, Git commit, 평가 report·서명·재배포 gate |
 | 배관 피해 예측 | 사용하지 않음 | 현재 서비스 문제와 직접 관련이 없어 제외 |
@@ -322,6 +323,8 @@ CAS·물질 형태를 직접 대조해 provenance로 기록한 매핑만 사용�
 상세한 전처리와 모델 설명은 [데이터와 모델](docs/DATA_AND_MODEL.md)을 참고하세요.
 대시보드 버튼·저장·파서 역할은
 [대시보드 적용 흐름](docs/DASHBOARD_FLOW.md)에 정리했습니다.
+현재 FE 코드와 연결할 정확한 BFF 경로·타입·적용 체크리스트는
+[FE·BE 연동 인수인계서](docs/FE_BE_HANDOFF.md)를 확인하세요.
 
 ## 12. 프로젝트 구조
 
@@ -332,6 +335,9 @@ CAS·물질 형태를 직접 대조해 provenance로 기록한 매핑만 사용�
 ├── config/              # 물질 별칭과 충돌 정책 설정
 ├── data/evaluation/     # 작은 내부 평가 입력
 ├── examples/api/        # API 요청 예시
+├── examples/bff/        # FE용 BE/BFF 성공·실패 계약 예시
+├── contracts/           # 모델 API·대시보드 BFF OpenAPI와 TypeScript 타입
+├── config/              # CAMEO crosswalk·규칙 정책·15쌍 표시 계약
 ├── docs/                # 설계·연동·배포 문서
 ├── scripts/             # 데이터 준비와 선택 실험 도구
 ├── Dockerfile           # 외부 artifact mount 방식
@@ -379,6 +385,7 @@ python -m pip check
 - [아키텍처](docs/ARCHITECTURE.md): 구성요소와 전체 처리 흐름
 - [API](docs/API.md): 백엔드·프론트 연동 계약
 - [FE·BE·AI 연동](docs/BACKEND_INTEGRATION.md): 저장소별 책임, 호출·병합 순서
+- [FE·BE 인수인계](docs/FE_BE_HANDOFF.md): 실제 FE 코드 차이, BFF DTO, 적용 체크리스트
 - [데이터와 모델](docs/DATA_AND_MODEL.md): 출처, 전처리, 모델 역할과 평가
 - [모델 평가](docs/EVALUATION.md): 지표 정의, 기준선, 실패 원인 분리
 - [평가 V2](docs/EVALUATION_V2.md): 21·10·6의 출처, 상용 타당성, 공모전 AI 고도화 기준

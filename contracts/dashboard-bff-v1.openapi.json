@@ -1,0 +1,2654 @@
+{
+  "components": {
+    "schemas": {
+      "DashboardAwaitingAnalysisResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "analysisId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Analysisid",
+            "type": "string"
+          },
+          "confirmationGate": {
+            "$ref": "#/components/schemas/DashboardConfirmationGate"
+          },
+          "conflictReview": {
+            "$ref": "#/components/schemas/DashboardPendingConflictReview"
+          },
+          "evidenceCards": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardEvidenceCard"
+            },
+            "title": "Evidencecards",
+            "type": "array"
+          },
+          "facilityHistory": {
+            "$ref": "#/components/schemas/DashboardFacilityHistory"
+          },
+          "incidentId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Incidentid",
+            "type": "string"
+          },
+          "parser": {
+            "$ref": "#/components/schemas/DashboardParserSummary"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/DashboardProvenance"
+          },
+          "requestId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Requestid",
+            "type": "string"
+          },
+          "requiredNextSteps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Requirednextsteps",
+            "type": "array"
+          },
+          "riskDisplayAllowed": {
+            "const": false,
+            "default": false,
+            "title": "Riskdisplayallowed",
+            "type": "boolean"
+          },
+          "safetyNotice": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Safetynotice",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "const": "chemicheck119-dashboard-bff-v1",
+            "default": "chemicheck119-dashboard-bff-v1",
+            "title": "Schemaversion",
+            "type": "string"
+          },
+          "sourceModelSchemaVersion": {
+            "const": "chemiguard119-api-v1",
+            "default": "chemiguard119-api-v1",
+            "title": "Sourcemodelschemaversion",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "AWAITING_SUBSTANCE_CONFIRMATION",
+              "AWAITING_INCIDENT_CONFIRMATION",
+              "AWAITING_FACILITY_CONFIRMATION"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "substanceCandidates": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardSubstanceCandidateGroup"
+            },
+            "title": "Substancecandidates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "analysisId",
+          "requestId",
+          "incidentId",
+          "parser",
+          "facilityHistory",
+          "confirmationGate",
+          "requiredNextSteps",
+          "provenance",
+          "safetyNotice",
+          "state",
+          "conflictReview"
+        ],
+        "title": "DashboardAwaitingAnalysisResponse",
+        "type": "object"
+      },
+      "DashboardCompletedAnalysisResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "analysisId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Analysisid",
+            "type": "string"
+          },
+          "confirmationGate": {
+            "$ref": "#/components/schemas/DashboardConfirmationGate"
+          },
+          "conflictReview": {
+            "$ref": "#/components/schemas/DashboardCompletedConflictReview"
+          },
+          "evidenceCards": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardEvidenceCard"
+            },
+            "title": "Evidencecards",
+            "type": "array"
+          },
+          "facilityHistory": {
+            "$ref": "#/components/schemas/DashboardFacilityHistory"
+          },
+          "incidentId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Incidentid",
+            "type": "string"
+          },
+          "parser": {
+            "$ref": "#/components/schemas/DashboardParserSummary"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/DashboardProvenance"
+          },
+          "requestId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Requestid",
+            "type": "string"
+          },
+          "requiredNextSteps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Requirednextsteps",
+            "type": "array"
+          },
+          "riskDisplayAllowed": {
+            "const": true,
+            "default": true,
+            "title": "Riskdisplayallowed",
+            "type": "boolean"
+          },
+          "safetyNotice": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Safetynotice",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "const": "chemicheck119-dashboard-bff-v1",
+            "default": "chemicheck119-dashboard-bff-v1",
+            "title": "Schemaversion",
+            "type": "string"
+          },
+          "sourceModelSchemaVersion": {
+            "const": "chemiguard119-api-v1",
+            "default": "chemiguard119-api-v1",
+            "title": "Sourcemodelschemaversion",
+            "type": "string"
+          },
+          "state": {
+            "const": "SCREENING_COMPLETED",
+            "title": "State",
+            "type": "string"
+          },
+          "substanceCandidates": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardSubstanceCandidateGroup"
+            },
+            "title": "Substancecandidates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "analysisId",
+          "requestId",
+          "incidentId",
+          "parser",
+          "facilityHistory",
+          "confirmationGate",
+          "requiredNextSteps",
+          "provenance",
+          "safetyNotice",
+          "state",
+          "conflictReview"
+        ],
+        "title": "DashboardCompletedAnalysisResponse",
+        "type": "object"
+      },
+      "DashboardCompletedConflictResult": {
+        "additionalProperties": false,
+        "properties": {
+          "briefText": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Brieftext",
+            "type": "string"
+          },
+          "evidenceProvenance": {
+            "$ref": "#/components/schemas/DashboardEvidenceProvenance"
+          },
+          "evidenceUrls": {
+            "items": {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Evidenceurls",
+            "type": "array"
+          },
+          "expertReviewed": {
+            "const": false,
+            "title": "Expertreviewed",
+            "type": "boolean"
+          },
+          "facilityCas": {
+            "maxLength": 12,
+            "minLength": 5,
+            "title": "Facilitycas",
+            "type": "string"
+          },
+          "finalDecision": {
+            "const": "현장 지휘관 판단",
+            "title": "Finaldecision",
+            "type": "string"
+          },
+          "gasProducts": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "Acid Fumes",
+                    "BR2",
+                    "CO",
+                    "CO2",
+                    "Cl2",
+                    "ClO2",
+                    "H2",
+                    "HX",
+                    "Halocarbons",
+                    "Hydrocarbons",
+                    "NOx",
+                    "O2",
+                    "X2",
+                    "X2O",
+                    "XO2"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gasproducts"
+          },
+          "hazardCodes": {
+            "items": {
+              "enum": [
+                "C",
+                "E",
+                "F",
+                "G",
+                "NR",
+                "R1",
+                "R2",
+                "R3",
+                "T"
+              ],
+              "type": "string"
+            },
+            "title": "Hazardcodes",
+            "type": "array"
+          },
+          "humanConfirmationRequired": {
+            "const": true,
+            "title": "Humanconfirmationrequired",
+            "type": "boolean"
+          },
+          "incidentCas": {
+            "maxLength": 12,
+            "minLength": 5,
+            "title": "Incidentcas",
+            "type": "string"
+          },
+          "kind": {
+            "const": "ORDINAL_SCREENING_RESULT",
+            "default": "ORDINAL_SCREENING_RESULT",
+            "title": "Kind",
+            "type": "string"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "mappingProvenance": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardMappingProvenance"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Mappingprovenance",
+            "type": "array"
+          },
+          "policyMode": {
+            "const": "PUBLIC_SOURCE_PILOT_V1",
+            "title": "Policymode",
+            "type": "string"
+          },
+          "requiredChecks": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Requiredchecks",
+            "type": "array"
+          },
+          "riskLevel": {
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH"
+            ],
+            "title": "Risklevel",
+            "type": "string"
+          },
+          "riskLevelKo": {
+            "enum": [
+              "낮음",
+              "중간",
+              "높음"
+            ],
+            "title": "Risklevelko",
+            "type": "string"
+          },
+          "riskScale": {
+            "$ref": "#/components/schemas/DashboardOrdinalRiskScale"
+          },
+          "ruleId": {
+            "const": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+            "title": "Ruleid",
+            "type": "string"
+          },
+          "ruleVersion": {
+            "const": "RUNTIME_MANIFEST_PINNED",
+            "title": "Ruleversion",
+            "type": "string"
+          },
+          "scope": {
+            "const": "PUBLIC_SOURCE_CAMEO_SCREENING",
+            "title": "Scope",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "NO_KNOWN_HAZARDOUS_REACTION",
+              "CAUTION",
+              "HIGH_RISK"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "status": {
+            "const": "SCREENING_COMPLETED",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "scope",
+          "policyMode",
+          "incidentCas",
+          "facilityCas",
+          "ruleId",
+          "ruleVersion",
+          "severity",
+          "riskLevel",
+          "riskLevelKo",
+          "riskScale",
+          "hazardCodes",
+          "briefText",
+          "requiredChecks",
+          "evidenceUrls",
+          "limitations",
+          "finalDecision",
+          "expertReviewed",
+          "humanConfirmationRequired",
+          "mappingProvenance",
+          "evidenceProvenance"
+        ],
+        "title": "DashboardCompletedConflictResult",
+        "type": "object"
+      },
+      "DashboardCompletedConflictReview": {
+        "additionalProperties": false,
+        "properties": {
+          "executed": {
+            "const": true,
+            "title": "Executed",
+            "type": "boolean"
+          },
+          "result": {
+            "$ref": "#/components/schemas/DashboardCompletedConflictResult"
+          },
+          "riskDisplayAllowed": {
+            "const": true,
+            "default": true,
+            "title": "Riskdisplayallowed",
+            "type": "boolean"
+          },
+          "status": {
+            "const": "SCREENING_COMPLETED",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "executed",
+          "status",
+          "result"
+        ],
+        "title": "DashboardCompletedConflictReview",
+        "type": "object"
+      },
+      "DashboardConfirmationGate": {
+        "additionalProperties": false,
+        "properties": {
+          "allRequiredConfirmed": {
+            "title": "Allrequiredconfirmed",
+            "type": "boolean"
+          },
+          "facilityConfirmed": {
+            "title": "Facilityconfirmed",
+            "type": "boolean"
+          },
+          "incidentConfirmed": {
+            "title": "Incidentconfirmed",
+            "type": "boolean"
+          },
+          "policy": {
+            "const": "TWO_AUTHENTICATED_ON_SITE_CONFIRMATIONS_REQUIRED",
+            "title": "Policy",
+            "type": "string"
+          },
+          "ruleExecutionAllowed": {
+            "title": "Ruleexecutionallowed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "policy",
+          "incidentConfirmed",
+          "facilityConfirmed",
+          "allRequiredConfirmed",
+          "ruleExecutionAllowed"
+        ],
+        "title": "DashboardConfirmationGate",
+        "type": "object"
+      },
+      "DashboardConfirmationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "casNumber": {
+            "maxLength": 12,
+            "minLength": 5,
+            "title": "Casnumber",
+            "type": "string"
+          },
+          "confirmationBasis": {
+            "enum": [
+              "CONTAINER_LABEL",
+              "SITE_MSDS",
+              "SHIPPING_DOCUMENT",
+              "INSTRUMENT_READING",
+              "RESPONDER_OBSERVATION",
+              "OTHER_VERIFIED_SOURCE"
+            ],
+            "title": "Confirmationbasis",
+            "type": "string"
+          },
+          "displayName": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Displayname"
+          },
+          "observedAt": {
+            "format": "date-time",
+            "title": "Observedat",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "INCIDENT",
+              "FACILITY"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "casNumber",
+          "confirmationBasis",
+          "observedAt"
+        ],
+        "title": "DashboardConfirmationRequest",
+        "type": "object"
+      },
+      "DashboardConfirmationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "casNumber": {
+            "maxLength": 12,
+            "minLength": 5,
+            "title": "Casnumber",
+            "type": "string"
+          },
+          "confirmationId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Confirmationid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "incidentId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Incidentid",
+            "type": "string"
+          },
+          "reanalyzeRequired": {
+            "const": true,
+            "default": true,
+            "title": "Reanalyzerequired",
+            "type": "boolean"
+          },
+          "requestId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Requestid",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "INCIDENT",
+              "FACILITY"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "const": "chemicheck119-dashboard-bff-v1",
+            "default": "chemicheck119-dashboard-bff-v1",
+            "title": "Schemaversion",
+            "type": "string"
+          }
+        },
+        "required": [
+          "requestId",
+          "incidentId",
+          "confirmationId",
+          "role",
+          "casNumber",
+          "createdAt"
+        ],
+        "title": "DashboardConfirmationResponse",
+        "type": "object"
+      },
+      "DashboardConversationMessage": {
+        "additionalProperties": false,
+        "properties": {
+          "analysisId": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysisid"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "messageId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Messageid",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "USER",
+              "ASSISTANT",
+              "SYSTEM"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "sequence": {
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "text": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "messageId",
+          "sequence",
+          "role",
+          "text",
+          "createdAt"
+        ],
+        "title": "DashboardConversationMessage",
+        "type": "object"
+      },
+      "DashboardErrorDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "retryable"
+        ],
+        "title": "DashboardErrorDetail",
+        "type": "object"
+      },
+      "DashboardErrorResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/DashboardErrorDetail"
+          },
+          "requestId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Requestid",
+            "type": "string"
+          },
+          "resetAllowed": {
+            "const": false,
+            "default": false,
+            "title": "Resetallowed",
+            "type": "boolean"
+          },
+          "schemaVersion": {
+            "const": "chemicheck119-dashboard-bff-v1",
+            "default": "chemicheck119-dashboard-bff-v1",
+            "title": "Schemaversion",
+            "type": "string"
+          }
+        },
+        "required": [
+          "requestId",
+          "error"
+        ],
+        "title": "DashboardErrorResponse",
+        "type": "object"
+      },
+      "DashboardEvidenceCard": {
+        "additionalProperties": false,
+        "properties": {
+          "bodyLabel": {
+            "const": "공식 문서 발췌",
+            "default": "공식 문서 발췌",
+            "title": "Bodylabel",
+            "type": "string"
+          },
+          "bodyPreview": {
+            "maxLength": 2000,
+            "title": "Bodypreview",
+            "type": "string"
+          },
+          "casLinkStatus": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caslinkstatus"
+          },
+          "casNumber": {
+            "maxLength": 12,
+            "minLength": 5,
+            "title": "Casnumber",
+            "type": "string"
+          },
+          "documentVersion": {
+            "maxLength": 500,
+            "title": "Documentversion",
+            "type": "string"
+          },
+          "evidenceId": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Evidenceid",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "KOSHA",
+              "CAMEO"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "sourceUrl": {
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "title": "Sourceurl",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evidenceId",
+          "casNumber",
+          "source",
+          "title",
+          "bodyPreview",
+          "sourceUrl",
+          "documentVersion"
+        ],
+        "title": "DashboardEvidenceCard",
+        "type": "object"
+      },
+      "DashboardEvidenceProvenance": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "const": "PUBLIC_OFFICIAL_SOURCE",
+            "title": "Basis",
+            "type": "string"
+          },
+          "compatibilityEvidenceUrls": {
+            "items": {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Compatibilityevidenceurls",
+            "type": "array"
+          },
+          "mappingEvidenceUrls": {
+            "items": {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 2,
+            "title": "Mappingevidenceurls",
+            "type": "array"
+          },
+          "sourceProduct": {
+            "const": "NOAA/EPA CAMEO Chemicals",
+            "title": "Sourceproduct",
+            "type": "string"
+          },
+          "sourceVersions": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Sourceversions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "basis",
+          "sourceProduct",
+          "sourceVersions",
+          "mappingEvidenceUrls",
+          "compatibilityEvidenceUrls"
+        ],
+        "title": "DashboardEvidenceProvenance",
+        "type": "object"
+      },
+      "DashboardFacilityCandidate": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "casNumber": {
+            "maxLength": 12,
+            "minLength": 5,
+            "title": "Casnumber",
+            "type": "string"
+          },
+          "chemicalNames": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chemicalnames"
+          },
+          "currentInventoryConfirmed": {
+            "const": false,
+            "default": false,
+            "title": "Currentinventoryconfirmed",
+            "type": "boolean"
+          },
+          "evidenceClass": {
+            "const": "REPORTED_HANDLING_HISTORY",
+            "title": "Evidenceclass",
+            "type": "string"
+          },
+          "facilityName": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Facilityname",
+            "type": "string"
+          },
+          "latestSurveyYear": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latestsurveyyear"
+          },
+          "province": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Province"
+          },
+          "requiresOnSiteConfirmation": {
+            "const": true,
+            "default": true,
+            "title": "Requiresonsiteconfirmation",
+            "type": "boolean"
+          },
+          "ruleEligible": {
+            "const": false,
+            "default": false,
+            "title": "Ruleeligible",
+            "type": "boolean"
+          },
+          "sourceUrl": {
+            "anyOf": [
+              {
+                "format": "uri",
+                "maxLength": 2083,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceurl"
+          }
+        },
+        "required": [
+          "facilityName",
+          "casNumber",
+          "evidenceClass"
+        ],
+        "title": "DashboardFacilityCandidate",
+        "type": "object"
+      },
+      "DashboardFacilityHistory": {
+        "additionalProperties": false,
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardFacilityCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "label": {
+            "const": "과거 공개 이력 기반 시설물질 후보",
+            "default": "과거 공개 이력 기반 시설물질 후보",
+            "title": "Label",
+            "type": "string"
+          },
+          "semantics": {
+            "const": "HISTORICAL_CANDIDATE_NOT_CURRENT_INVENTORY",
+            "default": "HISTORICAL_CANDIDATE_NOT_CURRENT_INVENTORY",
+            "title": "Semantics",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "CANDIDATES_FOUND",
+              "NO_HISTORY_MATCH",
+              "NOT_QUERIED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "warning": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Warning",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "warning"
+        ],
+        "title": "DashboardFacilityHistory",
+        "type": "object"
+      },
+      "DashboardIncidentAnalyzeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "evidenceTopK": {
+            "default": 5,
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Evidencetopk",
+            "type": "integer"
+          },
+          "incidentId": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incidentid"
+          },
+          "inputType": {
+            "default": "MANUAL_TEXT",
+            "enum": [
+              "MANUAL_TEXT",
+              "DISPATCH_TEXT",
+              "VOICE_TRANSCRIPT",
+              "STRUCTURED_FORM"
+            ],
+            "title": "Inputtype",
+            "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardIncidentLocation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "occurredAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurredat"
+          },
+          "plannedActions": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Plannedactions",
+            "type": "array"
+          },
+          "text": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "DashboardIncidentAnalyzeRequest",
+        "type": "object"
+      },
+      "DashboardIncidentLocation": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "facilityName": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Facilityname"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "maximum": 90.0,
+                "minimum": -90.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "maximum": 180.0,
+                "minimum": -180.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "province": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Province"
+          }
+        },
+        "title": "DashboardIncidentLocation",
+        "type": "object"
+      },
+      "DashboardInconclusiveAnalysisResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "analysisId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Analysisid",
+            "type": "string"
+          },
+          "confirmationGate": {
+            "$ref": "#/components/schemas/DashboardConfirmationGate"
+          },
+          "conflictReview": {
+            "$ref": "#/components/schemas/DashboardInconclusiveConflictReview"
+          },
+          "evidenceCards": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardEvidenceCard"
+            },
+            "title": "Evidencecards",
+            "type": "array"
+          },
+          "facilityHistory": {
+            "$ref": "#/components/schemas/DashboardFacilityHistory"
+          },
+          "incidentId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Incidentid",
+            "type": "string"
+          },
+          "parser": {
+            "$ref": "#/components/schemas/DashboardParserSummary"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/DashboardProvenance"
+          },
+          "requestId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Requestid",
+            "type": "string"
+          },
+          "requiredNextSteps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Requirednextsteps",
+            "type": "array"
+          },
+          "riskDisplayAllowed": {
+            "const": false,
+            "default": false,
+            "title": "Riskdisplayallowed",
+            "type": "boolean"
+          },
+          "safetyNotice": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Safetynotice",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "const": "chemicheck119-dashboard-bff-v1",
+            "default": "chemicheck119-dashboard-bff-v1",
+            "title": "Schemaversion",
+            "type": "string"
+          },
+          "sourceModelSchemaVersion": {
+            "const": "chemiguard119-api-v1",
+            "default": "chemiguard119-api-v1",
+            "title": "Sourcemodelschemaversion",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "VERIFY_REQUIRED",
+              "UNCLASSIFIED",
+              "CAMEO_GROUP_SCREENING_ONLY"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "substanceCandidates": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardSubstanceCandidateGroup"
+            },
+            "title": "Substancecandidates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "analysisId",
+          "requestId",
+          "incidentId",
+          "parser",
+          "facilityHistory",
+          "confirmationGate",
+          "requiredNextSteps",
+          "provenance",
+          "safetyNotice",
+          "state",
+          "conflictReview"
+        ],
+        "title": "DashboardInconclusiveAnalysisResponse",
+        "type": "object"
+      },
+      "DashboardInconclusiveConflictResult": {
+        "additionalProperties": false,
+        "properties": {
+          "humanConfirmationRequired": {
+            "const": true,
+            "default": true,
+            "title": "Humanconfirmationrequired",
+            "type": "boolean"
+          },
+          "kind": {
+            "const": "INCONCLUSIVE_RESULT",
+            "default": "INCONCLUSIVE_RESULT",
+            "title": "Kind",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "VERIFY_REQUIRED",
+              "UNCLASSIFIED",
+              "CAMEO_GROUP_SCREENING_ONLY"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "reason"
+        ],
+        "title": "DashboardInconclusiveConflictResult",
+        "type": "object"
+      },
+      "DashboardInconclusiveConflictReview": {
+        "additionalProperties": false,
+        "properties": {
+          "executed": {
+            "const": true,
+            "title": "Executed",
+            "type": "boolean"
+          },
+          "result": {
+            "$ref": "#/components/schemas/DashboardInconclusiveConflictResult"
+          },
+          "riskDisplayAllowed": {
+            "const": false,
+            "default": false,
+            "title": "Riskdisplayallowed",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "VERIFY_REQUIRED",
+              "UNCLASSIFIED",
+              "CAMEO_GROUP_SCREENING_ONLY"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "executed",
+          "status",
+          "result"
+        ],
+        "title": "DashboardInconclusiveConflictReview",
+        "type": "object"
+      },
+      "DashboardMappingProvenance": {
+        "additionalProperties": false,
+        "properties": {
+          "cameoChemicalId": {
+            "pattern": "^[0-9]+$",
+            "title": "Cameochemicalid",
+            "type": "string"
+          },
+          "casNumber": {
+            "maxLength": 12,
+            "minLength": 5,
+            "title": "Casnumber",
+            "type": "string"
+          },
+          "checkedAtUtc": {
+            "format": "date-time",
+            "title": "Checkedatutc",
+            "type": "string"
+          },
+          "evidenceUrl": {
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "title": "Evidenceurl",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "INCIDENT",
+              "FACILITY"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "selectedForm": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Selectedform",
+            "type": "string"
+          },
+          "sourceProduct": {
+            "const": "NOAA/EPA CAMEO Chemicals",
+            "title": "Sourceproduct",
+            "type": "string"
+          },
+          "sourceVersion": {
+            "const": "3.1.0 rev 1",
+            "title": "Sourceversion",
+            "type": "string"
+          },
+          "verificationMethod": {
+            "const": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+            "title": "Verificationmethod",
+            "type": "string"
+          },
+          "verificationStatus": {
+            "const": "PUBLIC_SOURCE_VERIFIED",
+            "title": "Verificationstatus",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "casNumber",
+          "cameoChemicalId",
+          "selectedForm",
+          "verificationStatus",
+          "verificationMethod",
+          "evidenceUrl",
+          "sourceProduct",
+          "sourceVersion",
+          "checkedAtUtc"
+        ],
+        "title": "DashboardMappingProvenance",
+        "type": "object"
+      },
+      "DashboardMatchedProperty": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "enum": [
+              "physical_state",
+              "color",
+              "odor",
+              "use_description"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "label",
+          "value"
+        ],
+        "title": "DashboardMatchedProperty",
+        "type": "object"
+      },
+      "DashboardMaterialCandidate": {
+        "additionalProperties": false,
+        "properties": {
+          "casLinkWarning": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caslinkwarning"
+          },
+          "casNumber": {
+            "maxLength": 12,
+            "minLength": 5,
+            "title": "Casnumber",
+            "type": "string"
+          },
+          "displayName": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Displayname",
+            "type": "string"
+          },
+          "evidenceCards": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardEvidenceCard"
+            },
+            "maxItems": 5,
+            "title": "Evidencecards",
+            "type": "array"
+          },
+          "evidenceNotice": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidencenotice"
+          },
+          "evidenceStatus": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Evidencestatus",
+            "type": "string"
+          },
+          "evidenceWarning": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidencewarning"
+          },
+          "matchBasis": {
+            "enum": [
+              "IDENTITY_EXPRESSION",
+              "PUBLIC_PROPERTY_PROFILE",
+              "IDENTITY_AND_PUBLIC_PROPERTY_PROFILE"
+            ],
+            "title": "Matchbasis",
+            "type": "string"
+          },
+          "matchedExpression": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matchedexpression"
+          },
+          "matchedProperties": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardMatchedProperty"
+            },
+            "maxItems": 4,
+            "title": "Matchedproperties",
+            "type": "array"
+          },
+          "propertySource": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardPropertySource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rank": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Rank",
+            "type": "integer"
+          },
+          "requiresResponderConfirmation": {
+            "const": true,
+            "default": true,
+            "title": "Requiresresponderconfirmation",
+            "type": "boolean"
+          },
+          "riskDeterminationAllowed": {
+            "const": false,
+            "default": false,
+            "title": "Riskdeterminationallowed",
+            "type": "boolean"
+          },
+          "ruleEligible": {
+            "const": false,
+            "default": false,
+            "title": "Ruleeligible",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rank",
+          "casNumber",
+          "displayName",
+          "matchBasis",
+          "evidenceStatus"
+        ],
+        "title": "DashboardMaterialCandidate",
+        "type": "object"
+      },
+      "DashboardMaterialDiscoveryRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "evidenceTopK": {
+            "default": 3,
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Evidencetopk",
+            "type": "integer"
+          },
+          "query": {
+            "maxLength": 500,
+            "minLength": 2,
+            "title": "Query",
+            "type": "string"
+          },
+          "topK": {
+            "default": 5,
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Topk",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "DashboardMaterialDiscoveryRequest",
+        "type": "object"
+      },
+      "DashboardMaterialDiscoveryResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "candidateScoreIsProbability": {
+            "const": false,
+            "default": false,
+            "title": "Candidatescoreisprobability",
+            "type": "boolean"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardMaterialCandidate"
+            },
+            "maxItems": 5,
+            "title": "Candidates",
+            "type": "array"
+          },
+          "noReliableCandidateMeansAbsent": {
+            "const": false,
+            "default": false,
+            "title": "Noreliablecandidatemeansabsent",
+            "type": "boolean"
+          },
+          "noReliableCandidateMeansSafe": {
+            "const": false,
+            "default": false,
+            "title": "Noreliablecandidatemeanssafe",
+            "type": "boolean"
+          },
+          "notice": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Notice",
+            "type": "string"
+          },
+          "query": {
+            "maxLength": 500,
+            "minLength": 2,
+            "title": "Query",
+            "type": "string"
+          },
+          "requestId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Requestid",
+            "type": "string"
+          },
+          "requiresResponderConfirmation": {
+            "const": true,
+            "default": true,
+            "title": "Requiresresponderconfirmation",
+            "type": "boolean"
+          },
+          "riskDisplayAllowed": {
+            "const": false,
+            "default": false,
+            "title": "Riskdisplayallowed",
+            "type": "boolean"
+          },
+          "safetyNotice": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Safetynotice",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "const": "chemicheck119-dashboard-bff-v1",
+            "default": "chemicheck119-dashboard-bff-v1",
+            "title": "Schemaversion",
+            "type": "string"
+          },
+          "searchMode": {
+            "enum": [
+              "IDENTITY_AND_PROPERTY_RETRIEVAL",
+              "IDENTITY_RETRIEVAL",
+              "PROPERTY_PROFILE_RETRIEVAL",
+              "ABSTAINED"
+            ],
+            "title": "Searchmode",
+            "type": "string"
+          },
+          "sourceModelSchemaVersion": {
+            "const": "chemiguard119-api-v1",
+            "default": "chemiguard119-api-v1",
+            "title": "Sourcemodelschemaversion",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "CANDIDATES_FOUND",
+              "NO_RELIABLE_CANDIDATE",
+              "PROFILE_INDEX_NOT_AVAILABLE"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "requestId",
+          "query",
+          "status",
+          "searchMode",
+          "notice",
+          "safetyNotice"
+        ],
+        "title": "DashboardMaterialDiscoveryResponse",
+        "type": "object"
+      },
+      "DashboardOrdinalRiskScale": {
+        "additionalProperties": false,
+        "properties": {
+          "isProbability": {
+            "const": false,
+            "title": "Isprobability",
+            "type": "boolean"
+          },
+          "lowMeansSafe": {
+            "const": false,
+            "default": false,
+            "title": "Lowmeanssafe",
+            "type": "boolean"
+          },
+          "probabilityPercent": {
+            "title": "Probabilitypercent",
+            "type": "null"
+          },
+          "rawClassId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawclassid"
+          },
+          "type": {
+            "const": "ORDINAL_CAMEO_COMPATIBILITY_CLASS",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "isProbability",
+          "probabilityPercent"
+        ],
+        "title": "DashboardOrdinalRiskScale",
+        "type": "object"
+      },
+      "DashboardParserSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "backend": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Backend",
+            "type": "string"
+          },
+          "incidentTypes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Incidenttypes",
+            "type": "array"
+          },
+          "substanceMentions": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardSubstanceMention"
+            },
+            "title": "Substancementions",
+            "type": "array"
+          },
+          "warning": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Warning",
+            "type": "string"
+          }
+        },
+        "required": [
+          "backend",
+          "warning"
+        ],
+        "title": "DashboardParserSummary",
+        "type": "object"
+      },
+      "DashboardPendingConflictReview": {
+        "additionalProperties": false,
+        "properties": {
+          "executed": {
+            "const": false,
+            "title": "Executed",
+            "type": "boolean"
+          },
+          "missingConfirmations": {
+            "items": {
+              "enum": [
+                "incident_cas",
+                "facility_cas"
+              ],
+              "type": "string"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Missingconfirmations",
+            "type": "array"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "riskDisplayAllowed": {
+            "const": false,
+            "default": false,
+            "title": "Riskdisplayallowed",
+            "type": "boolean"
+          },
+          "status": {
+            "const": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "executed",
+          "status",
+          "missingConfirmations",
+          "reason"
+        ],
+        "title": "DashboardPendingConflictReview",
+        "type": "object"
+      },
+      "DashboardPropertySource": {
+        "additionalProperties": false,
+        "properties": {
+          "documentVersion": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Documentversion",
+            "type": "string"
+          },
+          "label": {
+            "const": "소방청 울산 화학물질 정보 기반 관찰 후보",
+            "title": "Label",
+            "type": "string"
+          },
+          "sourceId": {
+            "const": "NFA_ULSAN_CHEMICAL_INFORMATION",
+            "title": "Sourceid",
+            "type": "string"
+          },
+          "sourceUrl": {
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "title": "Sourceurl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "sourceId",
+          "sourceUrl",
+          "documentVersion"
+        ],
+        "title": "DashboardPropertySource",
+        "type": "object"
+      },
+      "DashboardProvenance": {
+        "additionalProperties": false,
+        "properties": {
+          "dataVersion": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Dataversion",
+            "type": "string"
+          },
+          "expertReviewed": {
+            "const": false,
+            "title": "Expertreviewed",
+            "type": "boolean"
+          },
+          "finalDecisionAuthority": {
+            "const": "현장 지휘관",
+            "title": "Finaldecisionauthority",
+            "type": "string"
+          },
+          "modelVersion": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Modelversion",
+            "type": "string"
+          },
+          "rulePolicy": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Rulepolicy",
+            "type": "string"
+          }
+        },
+        "required": [
+          "modelVersion",
+          "dataVersion",
+          "rulePolicy",
+          "expertReviewed",
+          "finalDecisionAuthority"
+        ],
+        "title": "DashboardProvenance",
+        "type": "object"
+      },
+      "DashboardRecordSaveRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "analysisIds": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Analysisids",
+            "type": "array"
+          },
+          "confirmationIds": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Confirmationids",
+            "type": "array"
+          },
+          "conversationStartedAt": {
+            "format": "date-time",
+            "title": "Conversationstartedat",
+            "type": "string"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardConversationMessage"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Messages",
+            "type": "array"
+          }
+        },
+        "required": [
+          "conversationStartedAt",
+          "messages",
+          "analysisIds",
+          "confirmationIds"
+        ],
+        "title": "DashboardRecordSaveRequest",
+        "type": "object"
+      },
+      "DashboardRecordSaveResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "incidentId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Incidentid",
+            "type": "string"
+          },
+          "recordId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Recordid",
+            "type": "string"
+          },
+          "requestId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Requestid",
+            "type": "string"
+          },
+          "resetAllowed": {
+            "const": true,
+            "default": true,
+            "title": "Resetallowed",
+            "type": "boolean"
+          },
+          "savedAt": {
+            "format": "date-time",
+            "title": "Savedat",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "const": "chemicheck119-dashboard-bff-v1",
+            "default": "chemicheck119-dashboard-bff-v1",
+            "title": "Schemaversion",
+            "type": "string"
+          }
+        },
+        "required": [
+          "requestId",
+          "incidentId",
+          "recordId",
+          "savedAt"
+        ],
+        "title": "DashboardRecordSaveResponse",
+        "type": "object"
+      },
+      "DashboardResolverCandidate": {
+        "additionalProperties": false,
+        "properties": {
+          "casNumber": {
+            "maxLength": 12,
+            "minLength": 5,
+            "title": "Casnumber",
+            "type": "string"
+          },
+          "currentInventoryConfirmed": {
+            "const": false,
+            "default": false,
+            "title": "Currentinventoryconfirmed",
+            "type": "boolean"
+          },
+          "rankingScore": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rankingscore"
+          },
+          "rankingScoreIsProbability": {
+            "const": false,
+            "default": false,
+            "title": "Rankingscoreisprobability",
+            "type": "boolean"
+          },
+          "ruleEligible": {
+            "const": false,
+            "default": false,
+            "title": "Ruleeligible",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "casNumber"
+        ],
+        "title": "DashboardResolverCandidate",
+        "type": "object"
+      },
+      "DashboardSubstanceCandidateGroup": {
+        "additionalProperties": false,
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardResolverCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "requiresResponderConfirmation": {
+            "const": true,
+            "default": true,
+            "title": "Requiresresponderconfirmation",
+            "type": "boolean"
+          },
+          "resolverStatus": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Resolverstatus",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "INCIDENT",
+              "FACILITY",
+              "UNKNOWN"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "surfaceText": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Surfacetext",
+            "type": "string"
+          }
+        },
+        "required": [
+          "surfaceText",
+          "role",
+          "resolverStatus"
+        ],
+        "title": "DashboardSubstanceCandidateGroup",
+        "type": "object"
+      },
+      "DashboardSubstanceMention": {
+        "additionalProperties": false,
+        "properties": {
+          "assertion": {
+            "enum": [
+              "AFFIRMED",
+              "NEGATED",
+              "SUSPECTED",
+              "UNKNOWN"
+            ],
+            "title": "Assertion",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "INCIDENT",
+              "FACILITY",
+              "UNKNOWN"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "surfaceText": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Surfacetext",
+            "type": "string"
+          }
+        },
+        "required": [
+          "surfaceText",
+          "role",
+          "assertion"
+        ],
+        "title": "DashboardSubstanceMention",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "ServiceSession": {
+        "description": "BE가 발급·검증하는 HttpOnly·Secure·SameSite 세션의 계약 예시입니다. 모델 API X-API-Key를 브라우저에 전달하지 않습니다.",
+        "in": "cookie",
+        "name": "CHEMICHECK119_SESSION",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "description": "FE_Repository가 BE_Repository를 통해 모델 API를 안전하게 사용하는 계약입니다. 이 명세의 라우트는 llm FastAPI가 제공하지 않습니다.",
+    "title": "케미체크119 대시보드 BFF 계약",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/c2guard/v1/incidents/analyze": {
+      "post": {
+        "operationId": "analyze_incident_api_c2guard_v1_incidents_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardIncidentAnalyzeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/DashboardAwaitingAnalysisResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DashboardCompletedAnalysisResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DashboardInconclusiveAnalysisResponse"
+                    }
+                  ],
+                  "title": "Response Analyze Incident Api C2Guard V1 Incidents Analyze Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "ServiceSession": []
+          }
+        ],
+        "summary": "사고 분석과 확인 gate 상태 조회",
+        "tags": [
+          "dashboard-bff"
+        ],
+        "x-implementation-owner": "BE_Repository",
+        "x-model-api-direct-browser-call-allowed": false
+      }
+    },
+    "/api/c2guard/v1/incidents/{incidentId}/confirmations": {
+      "post": {
+        "operationId": "create_confirmation_api_c2guard_v1_incidents__incidentId__confirmations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incidentId",
+            "required": true,
+            "schema": {
+              "title": "Incidentid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardConfirmationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardConfirmationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "ServiceSession": []
+          }
+        ],
+        "summary": "인증 사용자 기준 현장 물질 확인 레코드 생성",
+        "tags": [
+          "dashboard-bff"
+        ],
+        "x-implementation-owner": "BE_Repository",
+        "x-model-api-direct-browser-call-allowed": false
+      }
+    },
+    "/api/c2guard/v1/incidents/{incidentId}/record": {
+      "post": {
+        "operationId": "save_record_api_c2guard_v1_incidents__incidentId__record_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incidentId",
+            "required": true,
+            "schema": {
+              "title": "Incidentid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardRecordSaveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardRecordSaveResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "ServiceSession": []
+          }
+        ],
+        "summary": "전체 대화·분석·확인 기록 저장",
+        "tags": [
+          "dashboard-bff"
+        ],
+        "x-backend-required-checks": [
+          "analysisIds가 모두 존재하며 path incidentId에 속하는지 확인",
+          "confirmationIds가 모두 존재하며 path incidentId에 속하는지 확인",
+          "권위 있는 모델 snapshot·confirmation·provenance를 BE 저장소에서 결합",
+          "알 수 없거나 다른 사고의 ID는 409로 거부"
+        ],
+        "x-implementation-owner": "BE_Repository",
+        "x-model-api-direct-browser-call-allowed": false
+      }
+    },
+    "/api/c2guard/v1/substances/discover": {
+      "post": {
+        "operationId": "discover_substances_api_c2guard_v1_substances_discover_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardMaterialDiscoveryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardMaterialDiscoveryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "ServiceSession": []
+          }
+        ],
+        "summary": "물질명·CAS·성상 관찰에서 확인 전 후보 탐색",
+        "tags": [
+          "dashboard-bff"
+        ],
+        "x-implementation-owner": "BE_Repository",
+        "x-model-api-direct-browser-call-allowed": false
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "x-completed-result-pair-contract": {
+    "matching": "EXACT_PAIR_PRESENTATION_FIELDS",
+    "path": "config/dashboard_public_pair_contract.json",
+    "unsupportedPairBehavior": "REJECT_COMPLETED_RESULT",
+    "version": "dashboard-public-pair-presentation-v1"
+  },
+  "x-contract-version": "chemicheck119-dashboard-bff-v1",
+  "x-implementation-status": "CONTRACT_ONLY_NOT_IMPLEMENTED_IN_LLM",
+  "x-model-api-schema-version": "chemiguard119-api-v1"
+}

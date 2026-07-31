@@ -1,0 +1,1814 @@
+{
+  "components": {
+    "schemas": {
+      "AnalysisResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_id": {
+            "title": "Analysis Id",
+            "type": "string"
+          },
+          "confirmation_gate": {
+            "$ref": "#/components/schemas/ConfirmationGateState"
+          },
+          "conflict_review": {
+            "discriminator": {
+              "mapping": {
+                "False": "#/components/schemas/UnconfirmedConflictReview",
+                "True": "#/components/schemas/ExecutedConflictReview"
+              },
+              "propertyName": "executed"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UnconfirmedConflictReview"
+              },
+              {
+                "$ref": "#/components/schemas/ExecutedConflictReview"
+              }
+            ],
+            "title": "Conflict Review"
+          },
+          "evidence": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "incident_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incident Id"
+          },
+          "input_fingerprint": {
+            "title": "Input Fingerprint",
+            "type": "string"
+          },
+          "model_outputs": {
+            "additionalProperties": true,
+            "title": "Model Outputs",
+            "type": "object"
+          },
+          "provenance": {
+            "additionalProperties": true,
+            "title": "Provenance",
+            "type": "object"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "required_next_steps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Required Next Steps",
+            "type": "array"
+          },
+          "safety_notice": {
+            "title": "Safety Notice",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "chemiguard119-api-v1",
+            "default": "chemiguard119-api-v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "AWAITING_SUBSTANCE_CONFIRMATION",
+              "AWAITING_INCIDENT_CONFIRMATION",
+              "AWAITING_FACILITY_CONFIRMATION",
+              "COMPLETED",
+              "SCREENING_COMPLETED",
+              "VERIFY_REQUIRED",
+              "UNCLASSIFIED",
+              "CAMEO_GROUP_SCREENING_ONLY"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analysis_id",
+          "request_id",
+          "state",
+          "input_fingerprint",
+          "model_outputs",
+          "evidence",
+          "conflict_review",
+          "confirmation_gate",
+          "required_next_steps",
+          "provenance",
+          "safety_notice"
+        ],
+        "title": "AnalysisResponse",
+        "type": "object"
+      },
+      "ConfirmationBasis": {
+        "enum": [
+          "CONTAINER_LABEL",
+          "SITE_MSDS",
+          "SHIPPING_DOCUMENT",
+          "INSTRUMENT_READING",
+          "RESPONDER_OBSERVATION",
+          "OTHER_VERIFIED_SOURCE"
+        ],
+        "title": "ConfirmationBasis",
+        "type": "string"
+      },
+      "ConfirmationGateState": {
+        "additionalProperties": false,
+        "properties": {
+          "all_required_confirmed": {
+            "title": "All Required Confirmed",
+            "type": "boolean"
+          },
+          "facility_confirmed": {
+            "title": "Facility Confirmed",
+            "type": "boolean"
+          },
+          "incident_confirmed": {
+            "title": "Incident Confirmed",
+            "type": "boolean"
+          },
+          "policy": {
+            "const": "TWO_AUTHENTICATED_ON_SITE_CONFIRMATIONS_REQUIRED",
+            "default": "TWO_AUTHENTICATED_ON_SITE_CONFIRMATIONS_REQUIRED",
+            "title": "Policy",
+            "type": "string"
+          },
+          "rule_execution_allowed": {
+            "title": "Rule Execution Allowed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "incident_confirmed",
+          "facility_confirmed",
+          "all_required_confirmed",
+          "rule_execution_allowed"
+        ],
+        "title": "ConfirmationGateState",
+        "type": "object"
+      },
+      "ConfirmedSubstanceInput": {
+        "additionalProperties": false,
+        "description": "백엔드가 인증된 대원 확인 레코드에서 전달하는 물질.\n\n``confirmation_id``는 사용자 자유입력 ID가 아니라 인증된 백엔드가 보관한\n현장 확인 레코드 식별자여야 한다. 모델 API는 이 레코드 참조와 확인 시각을\n필수로 받으며, 인증되지 않은 후보 입력과 타입 수준에서 분리한다.",
+        "properties": {
+          "cas_number": {
+            "maxLength": 12,
+            "minLength": 5,
+            "title": "Cas Number",
+            "type": "string"
+          },
+          "confirmation_basis": {
+            "$ref": "#/components/schemas/ConfirmationBasis"
+          },
+          "confirmation_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Confirmation Id",
+            "type": "string"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          },
+          "presence_status": {
+            "const": "CONFIRMED_PRESENT",
+            "title": "Presence Status",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "INCIDENT",
+              "FACILITY"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirmation_id",
+          "cas_number",
+          "role",
+          "presence_status",
+          "confirmation_basis",
+          "observed_at"
+        ],
+        "title": "ConfirmedSubstanceInput",
+        "type": "object"
+      },
+      "ConflictReviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "facility": {
+            "$ref": "#/components/schemas/ConfirmedSubstanceInput"
+          },
+          "incident": {
+            "$ref": "#/components/schemas/ConfirmedSubstanceInput"
+          },
+          "planned_actions": {
+            "items": {
+              "$ref": "#/components/schemas/PlannedActionInput"
+            },
+            "maxItems": 20,
+            "title": "Planned Actions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "incident",
+          "facility"
+        ],
+        "title": "ConflictReviewRequest",
+        "type": "object"
+      },
+      "ErrorDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "retryable"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorDetail"
+          },
+          "occurred_at_utc": {
+            "format": "date-time",
+            "title": "Occurred At Utc",
+            "type": "string"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "chemiguard119-api-v1",
+            "default": "chemiguard119-api-v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "service_name": {
+            "const": "케미체크119",
+            "default": "케미체크119",
+            "title": "Service Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "request_id",
+          "occurred_at_utc"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "EvidenceSearchRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "cas_hint": {
+            "anyOf": [
+              {
+                "maxLength": 12,
+                "minLength": 5,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cas Hint"
+          },
+          "cas_hint_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "RESPONDER_CONFIRMED",
+                  "RESOLVER_CANDIDATE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cas Hint Status"
+          },
+          "query": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "top_k": {
+            "default": 5,
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "EvidenceSearchRequest",
+        "type": "object"
+      },
+      "ExecutedConflictReview": {
+        "additionalProperties": false,
+        "description": "두 CAS 확인 후 실행된 Rule 결과 wrapper.",
+        "properties": {
+          "executed": {
+            "const": true,
+            "title": "Executed",
+            "type": "boolean"
+          },
+          "gate": {
+            "const": "BOTH_CAS_RESPONDER_CONFIRMED",
+            "title": "Gate",
+            "type": "string"
+          },
+          "policy_mode": {
+            "enum": [
+              "APPROVED_ONLY",
+              "PUBLIC_SOURCE_PILOT_V1"
+            ],
+            "title": "Policy Mode",
+            "type": "string"
+          },
+          "result": {
+            "additionalProperties": true,
+            "title": "Result",
+            "type": "object"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "COMPLETED",
+                  "SCREENING_COMPLETED"
+                ],
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "VERIFY_REQUIRED",
+                  "UNCLASSIFIED",
+                  "CAMEO_GROUP_SCREENING_ONLY"
+                ],
+                "type": "string"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "required": [
+          "executed",
+          "status",
+          "gate",
+          "policy_mode",
+          "result"
+        ],
+        "title": "ExecutedConflictReview",
+        "type": "object"
+      },
+      "FacilityHistorySearchRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "province": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Province"
+          },
+          "query": {
+            "maxLength": 300,
+            "minLength": 2,
+            "title": "Query",
+            "type": "string"
+          },
+          "top_k": {
+            "default": 10,
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "FacilityHistorySearchRequest",
+        "type": "object"
+      },
+      "IncidentAnalyzeRequest": {
+        "additionalProperties": false,
+        "examples": [
+          {
+            "evidence_top_k": 5,
+            "incident_id": "INC-20260721-0001",
+            "input": {
+              "occurred_at": "2026-07-21T19:20:00+09:00",
+              "text": "차아염소산나트륨 탱크가 누출됐고 옆 저장고에는 염산이 있습니다.",
+              "type": "VOICE_TRANSCRIPT"
+            },
+            "location": {
+              "address": "경기 화성시 팔탄면",
+              "facility_name": "OO전자 공장",
+              "latitude": 37.2181,
+              "longitude": 126.9417,
+              "province": "경기도"
+            },
+            "planned_actions": [
+              {
+                "raw_text": "누출구역 통제"
+              }
+            ],
+            "request_id": "REQ-20260721-0001"
+          }
+        ],
+        "properties": {
+          "confirmed_facility_substance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConfirmedSubstanceInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confirmed_incident_substance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConfirmedSubstanceInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_top_k": {
+            "default": 5,
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Evidence Top K",
+            "type": "integer"
+          },
+          "incident_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_.:-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Incident Id"
+          },
+          "input": {
+            "$ref": "#/components/schemas/IncidentInput"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IncidentLocation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "planned_actions": {
+            "items": {
+              "$ref": "#/components/schemas/PlannedActionInput"
+            },
+            "maxItems": 20,
+            "title": "Planned Actions",
+            "type": "array"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_.:-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "required": [
+          "input"
+        ],
+        "title": "IncidentAnalyzeRequest",
+        "type": "object"
+      },
+      "IncidentInput": {
+        "additionalProperties": false,
+        "properties": {
+          "occurred_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At"
+          },
+          "text": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/IncidentInputType",
+            "default": "MANUAL_TEXT"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "IncidentInput",
+        "type": "object"
+      },
+      "IncidentInputType": {
+        "enum": [
+          "MANUAL_TEXT",
+          "DISPATCH_TEXT",
+          "VOICE_TRANSCRIPT",
+          "STRUCTURED_FORM"
+        ],
+        "title": "IncidentInputType",
+        "type": "string"
+      },
+      "IncidentLocation": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "facility_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Facility Name"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "maximum": 90.0,
+                "minimum": -90.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "maximum": 180.0,
+                "minimum": -180.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "province": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Province"
+          }
+        },
+        "title": "IncidentLocation",
+        "type": "object"
+      },
+      "MatchedProperty": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "enum": [
+              "physical_state",
+              "color",
+              "odor",
+              "use_description"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "label",
+          "value"
+        ],
+        "title": "MatchedProperty",
+        "type": "object"
+      },
+      "PlannedActionInput": {
+        "additionalProperties": false,
+        "properties": {
+          "raw_text": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Raw Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "raw_text"
+        ],
+        "title": "PlannedActionInput",
+        "type": "object"
+      },
+      "ResolveRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "top_k": {
+            "default": 3,
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "ResolveRequest",
+        "type": "object"
+      },
+      "SubstanceDiscoveryCandidate": {
+        "additionalProperties": false,
+        "properties": {
+          "cas_link_warning": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cas Link Warning"
+          },
+          "cas_number": {
+            "maxLength": 12,
+            "minLength": 5,
+            "title": "Cas Number",
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/SubstanceEvidenceCard"
+            },
+            "maxItems": 5,
+            "title": "Evidence",
+            "type": "array"
+          },
+          "evidence_notice": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Notice"
+          },
+          "evidence_status": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Evidence Status",
+            "type": "string"
+          },
+          "evidence_warning": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Warning"
+          },
+          "match_basis": {
+            "enum": [
+              "IDENTITY_EXPRESSION",
+              "PUBLIC_PROPERTY_PROFILE",
+              "IDENTITY_AND_PUBLIC_PROPERTY_PROFILE"
+            ],
+            "title": "Match Basis",
+            "type": "string"
+          },
+          "matched_expression": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Expression"
+          },
+          "matched_properties": {
+            "items": {
+              "$ref": "#/components/schemas/MatchedProperty"
+            },
+            "title": "Matched Properties",
+            "type": "array"
+          },
+          "property_profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubstancePropertyProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rank": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Rank",
+            "type": "integer"
+          },
+          "requires_responder_confirmation": {
+            "const": true,
+            "title": "Requires Responder Confirmation",
+            "type": "boolean"
+          },
+          "risk_determination_allowed": {
+            "const": false,
+            "title": "Risk Determination Allowed",
+            "type": "boolean"
+          },
+          "rule_eligible": {
+            "const": false,
+            "title": "Rule Eligible",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rank",
+          "cas_number",
+          "display_name",
+          "match_basis",
+          "evidence_status",
+          "requires_responder_confirmation",
+          "rule_eligible",
+          "risk_determination_allowed"
+        ],
+        "title": "SubstanceDiscoveryCandidate",
+        "type": "object"
+      },
+      "SubstanceDiscoveryRequest": {
+        "additionalProperties": false,
+        "description": "물질명·CAS·관찰 정보를 후보와 공식 근거 카드로 변환하는 요청.",
+        "properties": {
+          "evidence_top_k": {
+            "default": 3,
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Evidence Top K",
+            "type": "integer"
+          },
+          "query": {
+            "maxLength": 500,
+            "minLength": 2,
+            "title": "Query",
+            "type": "string"
+          },
+          "top_k": {
+            "default": 5,
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SubstanceDiscoveryRequest",
+        "type": "object"
+      },
+      "SubstanceDiscoveryResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "candidate_score_is_probability": {
+            "const": false,
+            "title": "Candidate Score Is Probability",
+            "type": "boolean"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/SubstanceDiscoveryCandidate"
+            },
+            "maxItems": 5,
+            "title": "Candidates",
+            "type": "array"
+          },
+          "method": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Method",
+            "type": "string"
+          },
+          "notice": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Notice",
+            "type": "string"
+          },
+          "profile_index_available": {
+            "title": "Profile Index Available",
+            "type": "boolean"
+          },
+          "query": {
+            "maxLength": 500,
+            "minLength": 2,
+            "title": "Query",
+            "type": "string"
+          },
+          "requires_responder_confirmation": {
+            "const": true,
+            "title": "Requires Responder Confirmation",
+            "type": "boolean"
+          },
+          "risk_determination_allowed": {
+            "const": false,
+            "title": "Risk Determination Allowed",
+            "type": "boolean"
+          },
+          "rule_eligible": {
+            "const": false,
+            "title": "Rule Eligible",
+            "type": "boolean"
+          },
+          "safety_notice": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Safety Notice",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "chemiguard119-api-v1",
+            "default": "chemiguard119-api-v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "search_mode": {
+            "enum": [
+              "IDENTITY_AND_PROPERTY_RETRIEVAL",
+              "IDENTITY_RETRIEVAL",
+              "PROPERTY_PROFILE_RETRIEVAL",
+              "ABSTAINED"
+            ],
+            "title": "Search Mode",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "CANDIDATES_FOUND",
+              "NO_RELIABLE_CANDIDATE",
+              "PROFILE_INDEX_NOT_AVAILABLE"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query",
+          "status",
+          "search_mode",
+          "method",
+          "profile_index_available",
+          "requires_responder_confirmation",
+          "rule_eligible",
+          "risk_determination_allowed",
+          "candidate_score_is_probability",
+          "notice",
+          "safety_notice"
+        ],
+        "title": "SubstanceDiscoveryResponse",
+        "type": "object"
+      },
+      "SubstanceEvidenceCard": {
+        "additionalProperties": false,
+        "properties": {
+          "body_preview": {
+            "maxLength": 2000,
+            "title": "Body Preview",
+            "type": "string"
+          },
+          "cas_link_status": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cas Link Status"
+          },
+          "cas_number": {
+            "maxLength": 12,
+            "minLength": 5,
+            "title": "Cas Number",
+            "type": "string"
+          },
+          "document_version": {
+            "maxLength": 500,
+            "title": "Document Version",
+            "type": "string"
+          },
+          "evidence_id": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "KOSHA",
+              "CAMEO"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "source_url": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Source Url",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evidence_id",
+          "cas_number",
+          "source",
+          "title",
+          "body_preview",
+          "source_url",
+          "document_version"
+        ],
+        "title": "SubstanceEvidenceCard",
+        "type": "object"
+      },
+      "SubstancePropertyProfile": {
+        "additionalProperties": false,
+        "properties": {
+          "color": {
+            "maxLength": 2000,
+            "title": "Color",
+            "type": "string"
+          },
+          "document_version": {
+            "maxLength": 500,
+            "title": "Document Version",
+            "type": "string"
+          },
+          "odor": {
+            "maxLength": 2000,
+            "title": "Odor",
+            "type": "string"
+          },
+          "physical_state": {
+            "maxLength": 2000,
+            "title": "Physical State",
+            "type": "string"
+          },
+          "source_id": {
+            "const": "NFA_ULSAN_CHEMICAL_INFORMATION",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_url": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Source Url",
+            "type": "string"
+          },
+          "use_description": {
+            "maxLength": 8000,
+            "title": "Use Description",
+            "type": "string"
+          }
+        },
+        "required": [
+          "physical_state",
+          "color",
+          "odor",
+          "use_description",
+          "source_id",
+          "source_url",
+          "document_version"
+        ],
+        "title": "SubstancePropertyProfile",
+        "type": "object"
+      },
+      "UnconfirmedConflictReview": {
+        "additionalProperties": false,
+        "description": "두 현장 확인 전 공개할 수 있는 충돌 검토 보류 상태의 전부.",
+        "properties": {
+          "executed": {
+            "const": false,
+            "title": "Executed",
+            "type": "boolean"
+          },
+          "gate": {
+            "const": "BOTH_CAS_RESPONDER_CONFIRMED",
+            "title": "Gate",
+            "type": "string"
+          },
+          "missing_confirmations": {
+            "items": {
+              "enum": [
+                "incident_cas",
+                "facility_cas"
+              ],
+              "type": "string"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Missing Confirmations",
+            "type": "array"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "const": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "executed",
+          "status",
+          "gate",
+          "missing_confirmations",
+          "reason"
+        ],
+        "title": "UnconfirmedConflictReview",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "화학사고 신고 구조화, 물질 후보 검색, 공식 근거 검색과 공개근거 CAMEO 스크리닝 또는 승인 Rule 조회를 제공하는 의사결정 지원 API입니다. 모델 출력은 현장 명령이 아닙니다.",
+    "title": "케미체크119 모델 API",
+    "version": "0.4.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/conflicts/review": {
+      "post": {
+        "operationId": "conflict_review_api_v1_conflicts_review_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConflictReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Conflict Review Api V1 Conflicts Review Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "백엔드 인증 실패"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청 계약 위반"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "출력 안전 검증 또는 내부 오류"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "인증 또는 모델 artifact 준비 실패"
+          }
+        },
+        "summary": "Conflict Review",
+        "tags": [
+          "rules"
+        ]
+      }
+    },
+    "/api/v1/evidence/search": {
+      "post": {
+        "operationId": "evidence_search_api_v1_evidence_search_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvidenceSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Evidence Search Api V1 Evidence Search Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "백엔드 인증 실패"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청 계약 위반"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "출력 안전 검증 또는 내부 오류"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "인증 또는 모델 artifact 준비 실패"
+          }
+        },
+        "summary": "Evidence Search",
+        "tags": [
+          "models"
+        ]
+      }
+    },
+    "/api/v1/facilities/candidates": {
+      "post": {
+        "operationId": "facility_candidates_api_v1_facilities_candidates_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FacilityHistorySearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Facility Candidates Api V1 Facilities Candidates Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "백엔드 인증 실패"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청 계약 위반"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "출력 안전 검증 또는 내부 오류"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "인증 또는 모델 artifact 준비 실패"
+          }
+        },
+        "summary": "Facility Candidates",
+        "tags": [
+          "models"
+        ]
+      }
+    },
+    "/api/v1/incidents/analyze": {
+      "post": {
+        "operationId": "analyze_api_v1_incidents_analyze_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncidentAnalyzeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "백엔드 인증 실패"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청 계약 위반"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "출력 안전 검증 또는 내부 오류"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "인증 또는 모델 artifact 준비 실패"
+          }
+        },
+        "summary": "사고 입력을 구조화하고 근거·Rule 검토 상태를 반환",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/v1/meta": {
+      "get": {
+        "operationId": "metadata_api_v1_meta_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Metadata Api V1 Meta Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Metadata",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
+    "/api/v1/substances/discover": {
+      "post": {
+        "operationId": "discover_api_v1_substances_discover_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubstanceDiscoveryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubstanceDiscoveryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "백엔드 인증 실패"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청 계약 위반"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "출력 안전 검증 또는 내부 오류"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "인증 또는 모델 artifact 준비 실패"
+          }
+        },
+        "summary": "물질명·CAS·관찰 정보에서 확인 전 물질 후보와 공식 근거 검색",
+        "tags": [
+          "models"
+        ]
+      }
+    },
+    "/api/v1/substances/resolve": {
+      "post": {
+        "operationId": "resolve_api_v1_substances_resolve_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Resolve Api V1 Substances Resolve Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "백엔드 인증 실패"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청 계약 위반"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "출력 안전 검증 또는 내부 오류"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "인증 또는 모델 artifact 준비 실패"
+          }
+        },
+        "summary": "Resolve",
+        "tags": [
+          "models"
+        ]
+      }
+    },
+    "/health/live": {
+      "get": {
+        "operationId": "live_health_live_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Live Health Live Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Live",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "ready_health_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ready",
+        "tags": [
+          "health"
+        ]
+      }
+    }
+  }
+}

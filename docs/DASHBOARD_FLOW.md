@@ -173,20 +173,35 @@ BE가 한 사고 기록으로 묶을 최소 값:
 ```text
 태블릿 FE
   → 서비스 BE
-    → POST /api/v1/substances/discover
-    → POST /api/v1/incidents/analyze
+    → POST /api/v1/substances/discover (BE→llm)
+    → POST /api/v1/incidents/analyze (BE→llm)
   ← 화면용 DTO와 저장 결과
 ```
 
 브라우저가 모델 API를 직접 호출하면 `X-API-Key`가 노출되므로 금지합니다.
 
+FE는 다음 BFF v1 경로만 호출합니다.
+
+```text
+POST /api/c2guard/v1/substances/discover
+POST /api/c2guard/v1/incidents/analyze
+POST /api/c2guard/v1/incidents/{incidentId}/confirmations
+POST /api/c2guard/v1/incidents/{incidentId}/record
+```
+
 기계 판독 계약:
-[`contracts/model-api-integration-v1.json`](../contracts/model-api-integration-v1.json)
+
+- [`dashboard-bff-v1.openapi.json`](../contracts/dashboard-bff-v1.openapi.json)
+- [`dashboard-bff-v1.types.ts`](../contracts/dashboard-bff-v1.types.ts)
+- [`model-api-integration-v1.json`](../contracts/model-api-integration-v1.json)
+- [`dashboard_public_pair_contract.json`](../config/dashboard_public_pair_contract.json)
 
 요청·응답 예시:
 
-- [`material_discovery_request.json`](../examples/api/material_discovery_request.json)
-- [`material_discovery_response.json`](../examples/api/material_discovery_response.json)
+- [`material_discovery_request.json`](../examples/bff/material_discovery_request.json)
+- [`material_discovery_candidates_response.json`](../examples/bff/material_discovery_candidates_response.json)
+- [`incident_awaiting_confirmation_response.json`](../examples/bff/incident_awaiting_confirmation_response.json)
+- [`incident_screening_completed_response.json`](../examples/bff/incident_screening_completed_response.json)
 
 ## 8. 아직 확정해야 할 팀 결정
 

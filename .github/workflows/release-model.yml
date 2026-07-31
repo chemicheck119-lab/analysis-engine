@@ -575,6 +575,7 @@ jobs:
             artifacts/runtime_manifest.sha256
             config/cameo_crosswalk.csv
             config/conflict_policy.json
+            config/dashboard_public_pair_contract.json
             config/data_source_registry.json
             config/pair_rules.csv
             config/release_attestation.schema.json

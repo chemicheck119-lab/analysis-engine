@@ -16,12 +16,61 @@
     "liveness_path": "/health/live",
     "readiness_path": "/health/ready"
   },
+  "dashboard_bff": {
+    "contract_version": "chemicheck119-dashboard-bff-v1",
+    "implementation_owner": "BE_Repository",
+    "implementation_status": "CONTRACT_ONLY_NOT_IMPLEMENTED_IN_LLM",
+    "openapi": "contracts/dashboard-bff-v1.openapi.json",
+    "typescript_types": "contracts/dashboard-bff-v1.types.ts",
+    "typescript_client_example": "examples/integration/dashboard-bff-client.ts",
+    "frontend_base_url_env": "VITE_CHEMICHECK119_BFF_BASE_URL",
+    "recommended_same_origin_base_url": "/api/c2guard/v1",
+    "routes": {
+      "material_discovery": "POST /api/c2guard/v1/substances/discover",
+      "incident_analysis": "POST /api/c2guard/v1/incidents/analyze",
+      "on_site_confirmation": "POST /api/c2guard/v1/incidents/{incidentId}/confirmations",
+      "record_save": "POST /api/c2guard/v1/incidents/{incidentId}/record"
+    },
+    "completed_result_projection": {
+      "policy": "LOSSLESS_SAFETY_FIELDS_ONLY",
+      "reference_function": "chemiguard119.dashboard_contract.project_completed_model_result",
+      "source_fixture": "examples/api/conflict_screening_completed_result.json",
+      "dashboard_fixture": "examples/bff/incident_screening_completed_response.json",
+      "pair_presentation_contract": "config/dashboard_public_pair_contract.json",
+      "pair_presentation_contract_version": "dashboard-public-pair-presentation-v1",
+      "supported_public_pair_count": 15,
+      "backend_must_not_generate_chemical_fields": true
+    },
+    "deprecated_frontend_shape": {
+      "path": "POST /api/incident-check",
+      "fields_not_allowed_in_v1": [
+        "hasIncompatible",
+        "heldSubstanceCount"
+      ],
+      "reason": "미실행·근거부족을 낮음/없음으로 오표현하고 과거 이력을 현재 보유로 오해할 수 있습니다."
+    }
+  },
   "fixtures": {
     "unconfirmed_request": "examples/api/incident_unconfirmed_request.json",
     "unconfirmed_response": "examples/api/incident_unconfirmed_response.json",
     "confirmed_request": "examples/api/incident_confirmed_request.json",
+    "conflict_screening_completed_result": "examples/api/conflict_screening_completed_result.json",
     "material_discovery_request": "examples/api/material_discovery_request.json",
-    "material_discovery_response": "examples/api/material_discovery_response.json"
+    "material_discovery_response": "examples/api/material_discovery_response.json",
+    "dashboard_bff": {
+      "material_discovery_request": "examples/bff/material_discovery_request.json",
+      "material_discovery_candidates_response": "examples/bff/material_discovery_candidates_response.json",
+      "material_discovery_no_match_response": "examples/bff/material_discovery_no_match_response.json",
+      "incident_analyze_request": "examples/bff/incident_analyze_request.json",
+      "incident_awaiting_confirmation_response": "examples/bff/incident_awaiting_confirmation_response.json",
+      "incident_screening_completed_response": "examples/bff/incident_screening_completed_response.json",
+      "confirmation_request": "examples/bff/confirmation_request.json",
+      "confirmation_response": "examples/bff/confirmation_response.json",
+      "record_save_request": "examples/bff/record_save_request.json",
+      "record_save_success_response": "examples/bff/record_save_success_response.json",
+      "record_save_failure_response": "examples/bff/record_save_failure_response.json",
+      "model_unavailable_error_response": "examples/bff/model_unavailable_error_response.json"
+    }
   },
   "call_path": [
     {
@@ -40,7 +89,12 @@
     "api_key_header": "X-API-Key",
     "request_id_header": "X-Request-Id",
     "api_key_owner": "BE_Repository deployment secret",
-    "api_key_minimum_length": 32
+    "api_key_minimum_length": 32,
+    "browser_calls_only_dashboard_bff": true,
+    "browser_model_api_key_allowed": false,
+    "preferred_browser_auth": "BE-managed HttpOnly Secure SameSite session",
+    "cors_owner": "BE_Repository",
+    "model_api_cors_required": false
   },
   "client_policy": {
     "connect_timeout_seconds": 2,
@@ -170,7 +224,18 @@
         "화면 초기화"
       ],
       "reset_before_save_success_allowed": false,
-      "model_api_is_stateless": true
+      "model_api_is_stateless": true,
+      "analysis_ids_required": true,
+      "message_analysis_ids_must_be_in_analysis_ids": true,
+      "authoritative_snapshots_loaded_by_backend": true,
+      "frontend_supplied_snapshots_are_authoritative": false,
+      "backend_must_verify_id_exists_and_belongs_to_incident": true,
+      "unknown_or_cross_incident_id_status": 409
+    },
+    "confirmation_refresh": {
+      "confirmation_response_sets_reanalyze_required": true,
+      "frontend_calls_incident_analysis_after_confirmation": true,
+      "backend_loads_saved_confirmation_records": true
     }
   },
   "compatibility": {

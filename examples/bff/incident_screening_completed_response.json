@@ -1,0 +1,162 @@
+{
+  "schemaVersion": "chemicheck119-dashboard-bff-v1",
+  "sourceModelSchemaVersion": "chemiguard119-api-v1",
+  "analysisId": "ANL-EXAMPLE-0002",
+  "requestId": "REQ-EXAMPLE-0002",
+  "incidentId": "INC-EXAMPLE-0001",
+  "state": "SCREENING_COMPLETED",
+  "parser": {
+    "backend": "DETERMINISTIC_BASELINE",
+    "incidentTypes": [
+      "LEAK"
+    ],
+    "substanceMentions": [
+      {
+        "surfaceText": "차아염소산나트륨",
+        "role": "INCIDENT",
+        "assertion": "AFFIRMED"
+      },
+      {
+        "surfaceText": "염산",
+        "role": "FACILITY",
+        "assertion": "AFFIRMED"
+      }
+    ],
+    "warning": "신고문 후보와 별도로 현장 확인 레코드를 사용했습니다."
+  },
+  "substanceCandidates": [],
+  "facilityHistory": {
+    "status": "NO_HISTORY_MATCH",
+    "label": "과거 공개 이력 기반 시설물질 후보",
+    "semantics": "HISTORICAL_CANDIDATE_NOT_CURRENT_INVENTORY",
+    "warning": "시설 후보는 과거 신고·취급 이력이며 현재 재고를 의미하지 않습니다.",
+    "candidates": []
+  },
+  "evidenceCards": [],
+  "confirmationGate": {
+    "policy": "TWO_AUTHENTICATED_ON_SITE_CONFIRMATIONS_REQUIRED",
+    "incidentConfirmed": true,
+    "facilityConfirmed": true,
+    "allRequiredConfirmed": true,
+    "ruleExecutionAllowed": true
+  },
+  "conflictReview": {
+    "executed": true,
+    "status": "SCREENING_COMPLETED",
+    "result": {
+      "kind": "ORDINAL_SCREENING_RESULT",
+      "status": "SCREENING_COMPLETED",
+      "scope": "PUBLIC_SOURCE_CAMEO_SCREENING",
+      "policyMode": "PUBLIC_SOURCE_PILOT_V1",
+      "incidentCas": "7681-52-9",
+      "facilityCas": "7647-01-0",
+      "ruleId": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+      "ruleVersion": "RUNTIME_MANIFEST_PINNED",
+      "severity": "HIGH_RISK",
+      "riskLevel": "HIGH",
+      "riskLevelKo": "높음",
+      "riskScale": {
+        "type": "ORDINAL_CAMEO_COMPATIBILITY_CLASS",
+        "rawClassId": 2,
+        "isProbability": false,
+        "probabilityPercent": null,
+        "lowMeansSafe": false
+      },
+      "hazardCodes": [
+        "C",
+        "E",
+        "F",
+        "G",
+        "NR",
+        "R1",
+        "R3",
+        "T"
+      ],
+      "gasProducts": [
+        "Acid Fumes",
+        "BR2",
+        "Cl2",
+        "ClO2",
+        "HX",
+        "NOx",
+        "O2",
+        "X2",
+        "X2O"
+      ],
+      "briefText": "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 가장 보수적인 등급은 높음입니다.",
+      "requiredChecks": [
+        "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
+        "저장구역·배수로·환기계통의 실제 연결 여부 확인",
+        "농도·온도·압력과 누출액의 실제 혼합 여부 확인"
+      ],
+      "evidenceUrls": [
+        "https://cameochemicals.noaa.gov/chemical/4503",
+        "https://cameochemicals.noaa.gov/chemical/3598",
+        "https://cameochemicals.noaa.gov/reactivity"
+      ],
+      "limitations": [
+        "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
+        "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
+        "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
+        "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
+        "최종 결정은 현장 지휘관이 수행합니다."
+      ],
+      "finalDecision": "현장 지휘관 판단",
+      "expertReviewed": false,
+      "humanConfirmationRequired": true,
+      "mappingProvenance": [
+        {
+          "role": "INCIDENT",
+          "casNumber": "7681-52-9",
+          "cameoChemicalId": "4503",
+          "selectedForm": "SODIUM HYPOCHLORITE",
+          "verificationStatus": "PUBLIC_SOURCE_VERIFIED",
+          "verificationMethod": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "evidenceUrl": "https://cameochemicals.noaa.gov/chemical/4503",
+          "sourceProduct": "NOAA/EPA CAMEO Chemicals",
+          "sourceVersion": "3.1.0 rev 1",
+          "checkedAtUtc": "2026-07-22T00:00:00+00:00"
+        },
+        {
+          "role": "FACILITY",
+          "casNumber": "7647-01-0",
+          "cameoChemicalId": "3598",
+          "selectedForm": "HYDROCHLORIC ACID, SOLUTION",
+          "verificationStatus": "PUBLIC_SOURCE_VERIFIED",
+          "verificationMethod": "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET",
+          "evidenceUrl": "https://cameochemicals.noaa.gov/chemical/3598",
+          "sourceProduct": "NOAA/EPA CAMEO Chemicals",
+          "sourceVersion": "3.1.0 rev 1",
+          "checkedAtUtc": "2026-07-22T00:00:00+00:00"
+        }
+      ],
+      "evidenceProvenance": {
+        "basis": "PUBLIC_OFFICIAL_SOURCE",
+        "sourceProduct": "NOAA/EPA CAMEO Chemicals",
+        "sourceVersions": [
+          "3.1.0 rev 1"
+        ],
+        "mappingEvidenceUrls": [
+          "https://cameochemicals.noaa.gov/chemical/4503",
+          "https://cameochemicals.noaa.gov/chemical/3598"
+        ],
+        "compatibilityEvidenceUrls": [
+          "https://cameochemicals.noaa.gov/reactivity"
+        ]
+      }
+    },
+    "riskDisplayAllowed": true
+  },
+  "riskDisplayAllowed": true,
+  "requiredNextSteps": [
+    "현장 상태와 근거 원문을 재확인하고 지휘관이 최종 판단합니다."
+  ],
+  "provenance": {
+    "modelVersion": "example",
+    "dataVersion": "example",
+    "rulePolicy": "PUBLIC_SOURCE_PILOT_V1",
+    "expertReviewed": false,
+    "finalDecisionAuthority": "현장 지휘관"
+  },
+  "safetyNotice": "위험등급은 확률이 아닌 CAMEO 서수 분류이며 최종 판단은 현장 지휘관이 수행합니다."
+}

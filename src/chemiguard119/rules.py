@@ -24,6 +24,22 @@ PUBLIC_SOURCE_VERIFIED = "PUBLIC_SOURCE_VERIFIED"
 PUBLIC_SOURCE_SCOPE = "PUBLIC_SOURCE_CAMEO_SCREENING"
 PUBLIC_SOURCE_METHOD = "EXACT_CAS_AND_FORM_ON_OFFICIAL_DATASHEET"
 PUBLIC_SOURCE_PRODUCT = "NOAA/EPA CAMEO Chemicals"
+PUBLIC_SCREENING_BRIEF_TEMPLATE = (
+    "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 "
+    "가장 보수적인 등급은 {risk_level_ko}입니다."
+)
+PUBLIC_SCREENING_REQUIRED_CHECKS = (
+    "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
+    "저장구역·배수로·환기계통의 실제 연결 여부 확인",
+    "농도·온도·압력과 누출액의 실제 혼합 여부 확인",
+)
+PUBLIC_SCREENING_LIMITATIONS = (
+    "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
+    "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
+    "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
+    "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
+    "최종 결정은 현장 지휘관이 수행합니다.",
+)
 
 ALLOWED_SEVERITIES = {
     "PROHIBITED",
@@ -280,11 +296,7 @@ def _approved_cameo_result(
             "전문가 승인 CAS–CAMEO 연결을 통해 조회한 반응성 그룹 조합 중 "
             f"가장 보수적인 등급은 {classification['risk_level_ko']}입니다."
         ),
-        "required_checks": [
-            "용기 라벨·현장 MSDS로 두 물질과 물리적 형태를 재확인",
-            "저장구역·배수로·환기계통의 실제 연결 여부 확인",
-            "농도·온도·압력과 누출액의 실제 혼합 여부 확인",
-        ],
+        "required_checks": list(PUBLIC_SCREENING_REQUIRED_CHECKS),
         "evidence_urls": evidence_urls,
         "cameo_group_screening": screening,
         "planned_actions": [
@@ -364,17 +376,10 @@ def _public_source_cameo_result(
         {
             "status": "SCREENING_COMPLETED",
             "scope": PUBLIC_SOURCE_SCOPE,
-            "brief_text": (
-                "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 "
-                f"가장 보수적인 등급은 {result['risk_level_ko']}입니다."
+            "brief_text": PUBLIC_SCREENING_BRIEF_TEMPLATE.format(
+                risk_level_ko=result["risk_level_ko"]
             ),
-            "limitations": [
-                "이 결과는 전문가 승인 결과가 아니라 공개 원자료 기반 파일럿 스크리닝입니다.",
-                "낮음은 '알려진 유해 반응 없음'이며 안전 보장을 뜻하지 않습니다.",
-                "이 등급은 사고확률이나 피해확률이 아닌 CAMEO 반응성 그룹의 서수 분류입니다.",
-                "시설물질의 현재 수량·농도·저장상태와 실제 혼합 여부를 현장에서 확인해야 합니다.",
-                "최종 결정은 현장 지휘관이 수행합니다.",
-            ],
+            "limitations": list(PUBLIC_SCREENING_LIMITATIONS),
         }
     )
     return result

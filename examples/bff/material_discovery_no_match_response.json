@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "chemicheck119-dashboard-bff-v1",
+  "sourceModelSchemaVersion": "chemiguard119-api-v1",
+  "requestId": "REQ-BFF-EXAMPLE-0002",
+  "query": "냄새가 나는 액체",
+  "status": "NO_RELIABLE_CANDIDATE",
+  "searchMode": "ABSTAINED",
+  "candidates": [],
+  "requiresResponderConfirmation": true,
+  "candidateScoreIsProbability": false,
+  "riskDisplayAllowed": false,
+  "noReliableCandidateMeansAbsent": false,
+  "noReliableCandidateMeansSafe": false,
+  "notice": "관찰 정보가 부족하거나 현재 지원 범위 밖입니다. 색상·상태·냄새·용도 중 구별되는 정보를 보강하고 외부 공식 MSDS를 확인하세요.",
+  "safetyNotice": "후보 없음은 물질 부재나 안전을 뜻하지 않습니다. 최종 판단은 현장 지휘관이 수행합니다."
+}

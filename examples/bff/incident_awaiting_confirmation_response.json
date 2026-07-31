@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "chemicheck119-dashboard-bff-v1",
+  "sourceModelSchemaVersion": "chemiguard119-api-v1",
+  "analysisId": "ANL-EXAMPLE-0001",
+  "requestId": "REQ-EXAMPLE-0001",
+  "incidentId": "INC-EXAMPLE-0001",
+  "state": "AWAITING_SUBSTANCE_CONFIRMATION",
+  "parser": {
+    "backend": "DETERMINISTIC_BASELINE",
+    "incidentTypes": [
+      "LEAK"
+    ],
+    "substanceMentions": [
+      {
+        "surfaceText": "차아염소산나트륨",
+        "role": "INCIDENT",
+        "assertion": "AFFIRMED"
+      },
+      {
+        "surfaceText": "염산",
+        "role": "FACILITY",
+        "assertion": "AFFIRMED"
+      }
+    ],
+    "warning": "결정적 기준선도 대원 확인 전 물질을 확정하지 않습니다."
+  },
+  "substanceCandidates": [
+    {
+      "surfaceText": "차아염소산나트륨",
+      "role": "INCIDENT",
+      "resolverStatus": "EXACT_ALIAS_CANDIDATE",
+      "candidates": [
+        {
+          "casNumber": "7681-52-9",
+          "rankingScore": 1.0,
+          "rankingScoreIsProbability": false,
+          "ruleEligible": false,
+          "currentInventoryConfirmed": false
+        }
+      ],
+      "requiresResponderConfirmation": true
+    },
+    {
+      "surfaceText": "염산",
+      "role": "FACILITY",
+      "resolverStatus": "EXACT_ALIAS_CANDIDATE",
+      "candidates": [
+        {
+          "casNumber": "7647-01-0",
+          "rankingScore": 1.0,
+          "rankingScoreIsProbability": false,
+          "ruleEligible": false,
+          "currentInventoryConfirmed": false
+        }
+      ],
+      "requiresResponderConfirmation": true
+    }
+  ],
+  "facilityHistory": {
+    "status": "NO_HISTORY_MATCH",
+    "label": "과거 공개 이력 기반 시설물질 후보",
+    "semantics": "HISTORICAL_CANDIDATE_NOT_CURRENT_INVENTORY",
+    "warning": "시설 후보는 과거 신고·취급 이력이며 현재 재고를 의미하지 않습니다.",
+    "candidates": []
+  },
+  "evidenceCards": [],
+  "confirmationGate": {
+    "policy": "TWO_AUTHENTICATED_ON_SITE_CONFIRMATIONS_REQUIRED",
+    "incidentConfirmed": false,
+    "facilityConfirmed": false,
+    "allRequiredConfirmed": false,
+    "ruleExecutionAllowed": false
+  },
+  "conflictReview": {
+    "executed": false,
+    "status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+    "missingConfirmations": [
+      "incident_cas",
+      "facility_cas"
+    ],
+    "reason": "사고물질과 시설물질 CAS의 현장 확인이 모두 필요합니다.",
+    "riskDisplayAllowed": false
+  },
+  "riskDisplayAllowed": false,
+  "requiredNextSteps": [
+    "인증된 대원이 사고물질 CAS를 확인해 백엔드 confirmation_id를 생성합니다.",
+    "시설물질의 현재 존재와 CAS를 확인해 백엔드 confirmation_id를 생성합니다."
+  ],
+  "provenance": {
+    "modelVersion": "example",
+    "dataVersion": "example",
+    "rulePolicy": "PUBLIC_SOURCE_PILOT_V1",
+    "expertReviewed": false,
+    "finalDecisionAuthority": "현장 지휘관"
+  },
+  "safetyNotice": "후보와 이력은 확인 전 충돌 판정에 사용할 수 없으며 최종 판단은 현장 지휘관이 수행합니다."
+}
