@@ -52,9 +52,29 @@
       }
     },
     "retriever_sections": {
-      "metrics_version": "retriever-section-qrel-v2",
+      "metrics_version": "retriever-section-qrel-v3",
       "minimum_case_count": 400,
       "thresholds": {
+        "answerable_case_count": {
+          "operator": "gte",
+          "value": 300
+        },
+        "metrics.graded_gain_recall_at_k": {
+          "operator": "gte",
+          "value": 0.95
+        },
+        "metrics.high_relevance_fact_complete_case_rate_at_k": {
+          "operator": "gte",
+          "value": 0.95
+        },
+        "metrics.high_relevance_fact_coverage_at_k": {
+          "operator": "gte",
+          "value": 0.98
+        },
+        "metrics.high_relevance_recall_at_k": {
+          "operator": "gte",
+          "value": 0.98
+        },
         "metrics.mrr_at_k": {
           "operator": "gte",
           "value": 0.9
@@ -63,6 +83,14 @@
           "operator": "gte",
           "value": 0.9
         },
+        "metrics.required_fact_coverage_at_k": {
+          "operator": "gte",
+          "value": 0.9
+        },
+        "metrics.unanswerable_abstention_rate": {
+          "operator": "gte",
+          "value": 0.95
+        },
         "metrics.valid_source_url_coverage_at_k": {
           "operator": "eq",
           "value": 1.0
@@ -70,6 +98,14 @@
         "metrics.wrong_cas_rate_at_k": {
           "operator": "eq",
           "value": 0
+        },
+        "unanswerable_case_count": {
+          "operator": "gte",
+          "value": 100
+        },
+        "uncertainty.high_relevance_fact_complete_case_rate_at_k.lower": {
+          "operator": "gte",
+          "value": 0.95
         }
       }
     },
