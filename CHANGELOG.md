@@ -7,6 +7,10 @@
 
 ### Added
 
+- 실제 `analyze_incident` 경로에서 확인 gate·근거 CAS 귀속·모호성 기권·충돌 규칙을
+  함께 검사하는 `evaluate-e2e`와 8건 DRAFT 안전 시나리오
+- 서비스가 해결하는 실제 문제와 살릴·축소·제외할 기능, 공모전 참신성과 상용화 조건을
+  구분한 서비스 타당성 문서
 - FE가 BE만 호출하도록 고정한 `chemicheck119-dashboard-bff-v1` OpenAPI, TypeScript 타입,
   fetch 예제와 확인 전·확인 후·저장 성공·실패 fixture
 - FastAPI 코드에서 결정적으로 생성하고 drift를 검사하는 모델 API OpenAPI snapshot

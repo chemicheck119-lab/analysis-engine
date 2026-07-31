@@ -73,6 +73,7 @@ flowchart LR
 | Rule Engine | `src/chemiguard119/rules.py` | CAMEO 그룹 호환성 lookup | 공개 근거 파일럿 스크리닝 |
 | 전처리 | `src/chemiguard119/preprocessing.py` | 원천 CSV를 SQLite·학습 입력으로 변환 | 없음 |
 | 릴리스 검증 | `src/chemiguard119/release.py` | manifest·해시·버전 검증 | 없음 |
+| E2E 평가기 | `src/chemiguard119/e2e_evaluation.py` | 실제 사고 분석 상태 전이·기권·확인 gate 회귀 | 없음 |
 
 ## 5. 사고 분석 순서
 

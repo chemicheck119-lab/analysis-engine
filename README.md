@@ -49,6 +49,7 @@ KOSHA·CAMEO 근거 검색
 | 신고문 구조화 | 구현 | 기본 결정적 파서, LM Studio는 선택 실험 |
 | 공식 근거 검색 | 구현 | KOSHA 상세 근거 9종과 CAMEO 근거, section 중심 BM25·TF-IDF |
 | Section 검색 평가 | 구현 | 핵심·보조 문서와 필수 사실 회수율·기권 성능·95% 구간을 분리, DRAFT 상용 주장은 차단 |
+| 사고 분석 E2E 평가 | 구현 | 확인 gate·기권·충돌 규칙·근거 CAS 귀속 8건 DRAFT 안전 회귀 |
 | KOSHA 근거 확장 | 수집기 구현 | 공식 OpenAPI staging 수집·검토 필요, 현재 artifact는 9종 |
 | 유사 사고 사례 RAG | 미구현 | 검증된 사고–대응 사례 corpus와 출처·라벨 부족 |
 | 시설 물질 후보 | 구현 | ICIS·PRTR 공개 **과거 취급 이력** 검색 |
@@ -62,7 +63,8 @@ KOSHA·CAMEO 근거 검색
 
 시설 이력은 현재 재고·수량·저장 위치를 의미하지 않습니다. 물질 후보 점수와 충돌 등급도
 사고 확률이 아닙니다. 자세한 경계는 [안전 및 한계](docs/SAFETY_AND_LIMITATIONS.md)를
-확인하세요.
+확인하세요. 이 기능이 실제로 필요한 이유와 살릴·축소할 기능은
+[서비스 타당성 판단](docs/SERVICE_VALIDITY.md)에 정리했습니다.
 
 ## 3. 처음 보는 용어
 
@@ -209,6 +211,9 @@ chemiguard119 search "차아염소산나트륨 산 접촉"
 
 # 신고문 구조화
 chemiguard119 parse "염산 저장탱크에서 누출 중입니다."
+
+# 실제 사고 분석 경로의 확인 gate·기권·충돌 규칙 회귀검사
+chemiguard119 evaluate-e2e --evaluation-profile INTERNAL_REGRESSION
 
 # JSON으로 출력
 chemiguard119 --json resolve "황산"

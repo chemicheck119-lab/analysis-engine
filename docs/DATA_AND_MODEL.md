@@ -366,7 +366,9 @@ LM Studio 백엔드는 다음 실험에만 사용할 수 있습니다.
 - `resolver_regression_queries.csv`: CAS, 국영문명, 별칭, 화학식, 모호 표현
 - `resolver_hint_safety_queries.csv`: 부분 문자열·다중 물질·모호 표현의 자동 CAS 힌트 잠금 회귀
 - `retrieval_regression_queries.csv`: KOSHA·CAMEO 근거의 기대 출처·CAS
+- `retrieval_section_regression.jsonl`: 질문별 근거 section과 사실 단위 relevance
 - `incident_parser_seed.jsonl`: 신고문 구조화 시드
+- `e2e_scenarios_draft.jsonl`: 실제 사고 분석 경로의 확인 gate·기권·충돌 규칙 상태 전이
 
 최근 내부 회귀 평가 스냅샷은 다음과 같았습니다. Retriever는 자동 CAS 힌트를 포함한
 전체 흐름과, 평가용 정답 CAS를 제공한 검색기 단독 진단 결과를 분리합니다.
@@ -385,6 +387,9 @@ LM Studio 백엔드는 다음 실험에만 사용할 수 있습니다.
 | Retriever 단독·정답 CAS 제공 MRR@8 | 10 | 0.6500 |
 | 자동 CAS 힌트 Coverage | 10 | 0.9000 |
 | 자동 CAS 힌트 Precision when present | 10 | 1.0000 |
+| E2E 안전 상태 전이 | 8 | 8/8 |
+| 미확인 상태 Rule 실행 | 8 | 0건 |
+| 미확인 위험 결과 노출 | 8 | 0건 |
 
 이는 작은 내부 개발셋의 회귀 지표입니다. 현장 정확도, 전체 물질 성능, 사고 대응 성공률로
 인용하면 안 됩니다. 릴리스 워크플로가 같은 평가를 다시 실행하고 결과 파일을 artifact와 함께

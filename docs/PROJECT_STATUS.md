@@ -14,6 +14,7 @@
 | 물질 후보 검색 | 부분 완료 | 4,300개 카탈로그, 내부 회귀 21건 Top-1 0.9524·Top-3 Recall 1.0 |
 | 관찰 기반 물질 탐색 | 기능 smoke 완료 | 성상 프로필 749 CAS, 최소 두 영역 일치·현장 확인 gate |
 | 자동 CAS 힌트 안전성 | 부분 완료 | 합성·내부 회귀 12건 통과, 부분 문자열 위험 힌트 0건 |
+| 사고 분석 E2E | 부분 완료 | 8건 DRAFT 상태 전이 회귀 통과, 현장 성능 평가는 미실시 |
 | 업체 이력 후보 | 부분 완료 | ICIS·PRTR 과거 이력 후보 168,424건, 현재 재고 확정 기능 아님 |
 | 공식 근거 검색 | 부분 완료 | 근거 5,858건, DRAFT section 12건의 핵심 Recall@5 1.0·가중 Recall@5 0.9688 |
 | 충돌 검토 | 파일럿 | 공개 검증 CAMEO CAS 6종, 15개 조합 회귀 검사·pair별 표시 계약 |
@@ -35,7 +36,7 @@
 Python 3.11.15 환경에서 다음을 확인했습니다.
 
 ```text
-전체 테스트: 313 passed
+전체 테스트: 320 passed
 Ruff: 통과
 형식 검사: 통과
 compileall: 통과
@@ -96,6 +97,21 @@ conflict executed: false
 ```
 
 현장 확인 두 건이 없는 요청에서 충돌 규칙이 실행되지 않은 것은 정상적인 안전 동작입니다.
+
+같은 artifact를 실제 사고 분석 E2E 8개 시나리오에 연결한 결과:
+
+```text
+scenario pass: 8/8
+output contract pass: 8/8
+unsafe conflict execution: 0
+unconfirmed risk exposure: 0
+expected abstention: 7/7
+mean latency: 86.610ms
+p95 latency: 112.537ms
+claim_scope: INTERNAL_REGRESSION_ONLY
+```
+
+개발자가 만든 DRAFT 안전 회귀이므로 현장 정확도나 상용 성능으로 해석하지 않습니다.
 
 관찰 기반 물질 탐색 artifact를 같은 원천 CSV에서 다시 생성한 결과:
 

@@ -98,6 +98,7 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
         "prepare": "데이터 전처리",
         "train": "기준선 모델 학습",
         "evaluate": "모델 평가",
+        "evaluate-e2e": "사고 분석 E2E 안전 평가",
         "resolve": "물질 후보 검색",
         "search": "공식 근거 검색",
         "parse": "신고문 구조화",
@@ -279,6 +280,27 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
                     f"MRR@8 {oracle.get('mrr_at_8', 0):.3f}"
                 )
         print("주의: 내부 회귀 평가셋이며 현장 성능 주장에 사용할 수 없습니다.")
+    elif command == "evaluate-e2e":
+        metrics = payload.get("metrics") or {}
+        latency = metrics.get("latency_ms") or {}
+        print(f"시나리오: {payload.get('case_count', 0)}건")
+        print(
+            "통과: "
+            f"{payload.get('passed_case_count', 0)}/{payload.get('case_count', 0)} "
+            f"({metrics.get('scenario_pass_rate', 0):.3f})"
+        )
+        print(
+            "안전 위반: "
+            f"미확인 Rule 실행 {metrics.get('unsafe_conflict_execution_count', 0)}건, "
+            f"미확인 위험 노출 {metrics.get('unconfirmed_risk_exposure_count', 0)}건"
+        )
+        print(
+            "처리시간: "
+            f"평균 {latency.get('mean', 0):.3f}ms, "
+            f"p95 {latency.get('p95', 0):.3f}ms"
+        )
+        print(f"주장 범위: {_short(payload.get('claim_scope'))}")
+        print("주의: DRAFT E2E 회귀 결과는 현장 정확도나 상용 성능이 아닙니다.")
     elif command == "pipeline":
         print(f"상태: {_short(payload.get('status'))}")
         print(f"마지막 단계: {_short(payload.get('last_completed_stage'))}")
@@ -585,6 +607,20 @@ def _evaluate(args: argparse.Namespace) -> dict[str, Any]:
     return payload
 
 
+def _evaluate_e2e(args: argparse.Namespace) -> dict[str, Any]:
+    from chemiguard119.e2e_evaluation import evaluate_incident_scenarios
+
+    return evaluate_incident_scenarios(
+        args.db,
+        args.resolver_model,
+        args.retriever_model,
+        args.evaluation,
+        config_dir=args.config_dir,
+        profile=args.evaluation_profile,
+        report_path=args.report,
+    )
+
+
 def _resolve(args: argparse.Namespace) -> dict[str, Any]:
     from chemiguard119.resolver import load_resolver, resolve_substance
 
@@ -769,6 +805,7 @@ def _release_manifest(args: argparse.Namespace) -> dict[str, Any]:
 
 def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
     from chemiguard119.audit import audit_dataset
+    from chemiguard119.e2e_evaluation import evaluate_incident_scenarios
     from chemiguard119.evaluation_contract import require_evaluation_dataset
     from chemiguard119.resolver import (
         evaluate_resolver,
@@ -812,6 +849,9 @@ def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
             "retriever_sections": require_evaluation_dataset(
                 args.retriever_section_evaluation, args.evaluation_profile
             ),
+            "e2e_scenarios": require_evaluation_dataset(
+                args.e2e_evaluation, args.evaluation_profile
+            ),
         }
         report["last_completed_stage"] = "evaluation_contract"
         _write_json(report_path, report)
@@ -849,6 +889,7 @@ def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
         retriever_section_eval_path = (
             args.report_dir / "retriever_section_evaluation_latest.json"
         )
+        e2e_eval_path = args.report_dir / "e2e_scenario_evaluation_latest.json"
         from chemiguard119.retrieval_evaluation import evaluate_retriever_sections
 
         report["stages"]["evaluate"] = {
@@ -875,6 +916,15 @@ def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
                 args.retriever_section_evaluation,
                 profile=args.evaluation_profile,
                 report_path=retriever_section_eval_path,
+            ),
+            "e2e_scenarios": evaluate_incident_scenarios(
+                args.db,
+                args.resolver_model,
+                args.retriever_model,
+                args.e2e_evaluation,
+                config_dir=args.config_dir,
+                profile=args.evaluation_profile,
+                report_path=e2e_eval_path,
             ),
         }
         if not report["stages"]["evaluate"]["resolver_hint_safety"]["deployment_gate"][
@@ -903,6 +953,11 @@ def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
                 retriever_section_eval_path,
                 args.retriever_section_evaluation,
                 "retriever_sections",
+            ),
+            "e2e_scenarios": (
+                e2e_eval_path,
+                args.e2e_evaluation,
+                "e2e_scenarios",
             ),
         }
         if re.fullmatch(r"[0-9a-fA-F]{40}", release_commit):
@@ -1002,6 +1057,7 @@ def _interactive(args: argparse.Namespace) -> dict[str, Any]:
             "prepare",
             "train",
             "evaluate",
+            "evaluate-e2e",
             "resolve",
             "search",
             "parse",
@@ -1148,6 +1204,37 @@ def build_parser() -> argparse.ArgumentParser:
     _add_json_option(evaluate)
     evaluate.set_defaults(handler=_evaluate)
 
+    evaluate_e2e = subparsers.add_parser(
+        "evaluate-e2e",
+        help="신고 입력부터 확인 gate·충돌 검토까지 실제 파이프라인 안전 평가",
+    )
+    _add_artifact_arguments(evaluate_e2e)
+    evaluate_e2e.add_argument("--config-dir", type=_path, default=CONFIG_DIR)
+    evaluate_e2e.add_argument(
+        "--evaluation",
+        type=_path,
+        default=EVALUATION_DIR / "e2e_scenarios_draft.jsonl",
+        help="E2E 시나리오 JSONL 경로",
+    )
+    evaluate_e2e.add_argument(
+        "--evaluation-profile",
+        choices=(
+            "INTERNAL_REGRESSION",
+            "COMPETITION_REVIEWED",
+            "PILOT_REVIEWED",
+        ),
+        default="INTERNAL_REGRESSION",
+        help="평가 데이터 검수·주장 범위 gate",
+    )
+    evaluate_e2e.add_argument(
+        "--report",
+        type=_path,
+        default=DEFAULT_REPORT_DIR / "e2e_scenario_evaluation.json",
+        help="JSON 평가 보고서 저장 경로",
+    )
+    _add_json_option(evaluate_e2e)
+    evaluate_e2e.set_defaults(handler=_evaluate_e2e)
+
     resolve = subparsers.add_parser(
         "resolve", help="물질명·CAS·별칭에서 후보 물질 검색"
     )
@@ -1292,6 +1379,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--retriever-section-evaluation",
         type=_path,
         default=EVALUATION_DIR / "retrieval_section_regression.jsonl",
+    )
+    pipeline.add_argument(
+        "--e2e-evaluation",
+        type=_path,
+        default=EVALUATION_DIR / "e2e_scenarios_draft.jsonl",
+        help="실제 사고 분석 경로 E2E 시나리오 JSONL",
     )
     pipeline.add_argument(
         "--evaluation-profile",

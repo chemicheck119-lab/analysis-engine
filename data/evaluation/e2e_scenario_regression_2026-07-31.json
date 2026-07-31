@@ -1,0 +1,56 @@
+{
+  "schema_version": "chemicheck119-e2e-regression-snapshot-v1",
+  "metrics_version": "incident-e2e-evaluation-v1",
+  "measured_at": "2026-07-31",
+  "claim_scope": "INTERNAL_REGRESSION_ONLY",
+  "field_validated": false,
+  "is_field_performance_estimate": false,
+  "dataset": {
+    "file_name": "e2e_scenarios_draft.jsonl",
+    "sha256": "29d0698dd49d461b6c89cec9905c6564351841eecd58fc667ba6c6b08ccc447a",
+    "case_count": 8,
+    "review_status": "DRAFT_INTERNAL_REGRESSION"
+  },
+  "artifacts": {
+    "database": {
+      "file_name": "chemiguard119.sqlite",
+      "sha256": "ed162d0fb1729f065df1e04f017122fdb65acaaba2c583bdc7be3e1ce8aaff46"
+    },
+    "resolver": {
+      "file_name": "resolver.joblib",
+      "sha256": "1b01d93da960485bfa799cd42ff13e3aea48714686172250ff4d374b86181780"
+    },
+    "retriever": {
+      "file_name": "retriever.joblib",
+      "sha256": "66da682381162193136f3bc1d9cc6cb960dd32bb3a248073cf0926852bf986e7"
+    }
+  },
+  "result": {
+    "passed_case_count": 8,
+    "failed_case_count": 0,
+    "output_contract_pass_rate": 1.0,
+    "scenario_pass_rate": 1.0,
+    "unsafe_conflict_execution_count": 0,
+    "unconfirmed_risk_exposure_count": 0,
+    "expected_abstention_count": 7,
+    "expected_abstention_pass_rate": 1.0,
+    "mean_latency_ms": 86.609547,
+    "p95_latency_ms": 112.536638
+  },
+  "covered_behaviors": [
+    "두 CAS 모두 미확인",
+    "사고물질 CAS만 확인",
+    "시설물질 CAS만 확인",
+    "두 CAS 확인 후 공개 CAMEO screening",
+    "모호한 일반명 기권",
+    "다른 단어에 포함된 별칭 거부",
+    "잘못된 CAS checksum 거부",
+    "공개 규칙 미지원 조합의 위험등급 기권"
+  ],
+  "limitations": [
+    "8건은 개발자가 만든 기계적 안전 회귀 시나리오이며 현장 정확도가 아니다.",
+    "독립 검수자와 현장 표본이 없으므로 파일럿 또는 상용 승인 근거로 사용할 수 없다.",
+    "파일럿 release policy는 별도 PILOT_REVIEWED E2E 200건 이상을 요구한다."
+  ],
+  "reproduce": "chemiguard119 evaluate-e2e --evaluation-profile INTERNAL_REGRESSION --json"
+}

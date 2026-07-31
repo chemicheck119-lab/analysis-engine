@@ -5,6 +5,36 @@
 > [평가 V2](EVALUATION_V2.md)를 먼저 확인하세요. `incident_parser_seed.jsonl` 6건은
 > 평가셋이 아니라 `DRAFT` 형식 시드이며 파서 성능 수치가 없습니다.
 
+## 사고 분석 E2E 안전 회귀
+
+모듈별 21건·10건·6건만으로는 신고 입력부터 현장 확인 gate, 근거 검색과 충돌 규칙까지
+연결된 상태 전이를 검증할 수 없습니다. `evaluate-e2e`는 실제 `analyze_incident` 경로를
+실행해 다음을 함께 검사합니다.
+
+- 두 CAS 확인 전 Rule Engine 미실행
+- 한쪽만 확인된 상태의 안전한 보류
+- 확인된 CAS와 근거 검색 CAS의 역할별 일치
+- 모호한 일반명과 포함 문자열의 기권
+- 잘못된 CAS checksum 거부
+- 공개 규칙 미지원 조합의 위험등급 기권
+
+```bash
+chemiguard119 evaluate-e2e \
+  --evaluation data/evaluation/e2e_scenarios_draft.jsonl \
+  --evaluation-profile INTERNAL_REGRESSION \
+  --report outputs/modeling/e2e_scenario_evaluation.json \
+  --json
+```
+
+2026-07-31 DRAFT 8건은 8/8 통과했고 미확인 Rule 실행과 미확인 위험 노출은 각각
+0건이었습니다. 평균 86.610ms, p95 112.537ms는 저장소 밖의 같은 로컬 artifact를 사용한
+단일 실행입니다. 이 결과는 안전 상태 전이 회귀일 뿐 현장 정확도나 운영 SLO가 아닙니다.
+릴리스 정책은 별도 `PILOT_REVIEWED` E2E 200건 이상을 요구합니다.
+
+원본 측정값은
+[`e2e_scenario_regression_2026-07-31.json`](../data/evaluation/e2e_scenario_regression_2026-07-31.json)에
+있습니다.
+
 ## 평가 profile과 section 평가
 
 ```bash
