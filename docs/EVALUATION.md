@@ -20,19 +20,54 @@ chemiguard119 evaluate --evaluation-profile PILOT_REVIEWED --json
 
 현재 평가행은 모두 DRAFT이므로 뒤의 두 명령은 의도적으로 차단됩니다.
 
-신규 `retrieval_section_regression.jsonl`은 같은 CAS만 확인하던 기존 10건 평가와 달리
-`evidence_id`별 0~3 relevance를 사용합니다.
+`retrieval_section_regression.jsonl`은 같은 CAS만 확인하던 기존 10건 평가와 달리
+`evidence_id`별 0~3 relevance를 사용합니다. 평가기 v3는 핵심 근거와 보조 근거를
+같은 무게로 보지 않습니다.
 
 ```text
 내부 12건: nDCG@5 0.9284 / Recall@5 0.8750 / Precision@5 0.2333 /
 MRR@5 0.9444 / unjudged rate 0.7667
+핵심 근거(grade 2~3) Recall@5: 1.0000
+보조 근거(grade 1) Recall@5: 0.0000
+중요도 가중 Recall@5: 0.9688
+필수 사실 coverage@5: 0.8750
+핵심 사실 coverage@5: 1.0000
+핵심 근거 12/12 성공의 Wilson 95% 구간: 0.7575~1.0000
+답변 불가 사례: 0건(기권 성능 평가 불가)
 claim_scope: INTERNAL_REGRESSION_ONLY
 ```
+
+쉽게 말하면 현재 `Recall@5=0.875`의 누락은 핵심 답 3건이 아니라, 세 질문에서 참고용으로
+라벨한 grade 1 보조 절 3건입니다. 12개 질문의 grade 2~3 핵심 근거 14개는 모두 Top-5에
+있었습니다. 그렇다고 “핵심 근거 정확도 100%”라고 발표하면 안 됩니다. 질문이 12개뿐이라
+12/12 성공이어도 Wilson 95% 구간의 하한은 약 75.8%입니다.
+
+| 지표 | 무엇을 세는가 | 현재 내부 값 |
+|---|---|---:|
+| `recall_at_k` | grade 1~3 문서를 모두 같은 1건으로 계산 | 0.8750 |
+| `high_relevance_recall_at_k` | grade 2~3 핵심 근거만 계산 | 1.0000 |
+| `supporting_recall_at_k` | grade 1 보조 근거만 계산 | 0.0000 |
+| `graded_gain_recall_at_k` | `2^grade-1`로 중요도를 반영 | 0.9688 |
+| `required_fact_coverage_at_k` | 관련 문서에 라벨한 필수 사실을 계산 | 0.8750 |
+| `high_relevance_fact_coverage_at_k` | 핵심 답변에 필요한 사실만 계산 | 1.0000 |
+
+검수 완료 파일럿 릴리스 정책은 400건을 한 덩어리로 세지 않습니다. 답변 가능한 질의
+300건 이상과 답변 불가 질의 100건 이상을 각각 요구하고, 전체 Recall 0.90·핵심 Recall
+0.98·가중 Recall 0.95·핵심 사실 coverage 0.98·답변 불가 기권율 0.95를 함께 검사합니다.
+핵심 사실 완전 회수율의 Wilson 95% 하한도 0.95 이상이어야 합니다. 이는 보편적인 업계
+인증값이 아니라 케미체크119가 정한 보수적 파일럿 진입 정책입니다.
+
+쉽게 말해 “쉬운 질문 1개를 맞히고, 모르는 질문 399개에는 답하지 않는 방식”으로 400건
+조건을 통과할 수 없습니다.
 
 표준 nDCG·Precision은 unjudged 문서를 비관련으로 계산하지만, qrel pool 자체가 불완전해
 반환 문서 76.7%는 실제 관련 여부를 아직 판정하지 못했습니다. 따라서 이 수치는 section
 제목 기반 DRAFT 회귀일 뿐 현장 검색 정확도가 아닙니다. 비교와 artifact hash는
-`data/evaluation/retrieval_section_comparison_2026-07-28.json`에 고정했습니다.
+`data/evaluation/retrieval_section_comparison_2026-07-28.json`에, 지표 분해와 누락
+evidence 감사 결과는
+`data/evaluation/retrieval_section_metric_audit_2026-07-31.json`에 고정했습니다.
+평가기 v2 보고서는 v3 릴리스 정책을 통과하지 못하므로 artifact와 보고서를 v3로 다시
+생성해야 합니다.
 
 ## 공개 검증 CAMEO 물질쌍 회귀 평가
 
@@ -76,6 +111,7 @@ python scripts/evaluation/evaluate_verified_pairs.py \
 | `resolver_regression_queries.csv` | 21 | CAS·명칭·별칭·화학식 회귀 검사 | 내부 초안 |
 | `resolver_hint_safety_queries.csv` | 12 | 자동 CAS 힌트 허용·보류·모호성 보존 | 내부 초안 |
 | `retrieval_regression_queries.csv` | 10 | KOSHA·CAMEO 근거 검색 회귀 검사 | 내부 초안 |
+| `retrieval_section_regression.jsonl` | 12 | 질문별 핵심·보조 MSDS 절 순위 검사 | 내부 초안 |
 | `incident_parser_seed.jsonl` | 6 | 신고문 구조화 데이터 형식 시드 | 학습·성능평가 불가 |
 
 세 파일은 표본설계로 정한 규모가 아니라 2026-07-23 커밋 `6246c49`에서 함께 추가된
@@ -102,6 +138,7 @@ chemiguard119 evaluate \
   --resolver-evaluation data/evaluation/resolver_regression_queries.csv \
   --resolver-safety-evaluation data/evaluation/resolver_hint_safety_queries.csv \
   --retriever-evaluation data/evaluation/retrieval_regression_queries.csv \
+  --retriever-section-evaluation data/evaluation/retrieval_section_regression.jsonl \
   --report-dir outputs/modeling \
   --json
 ```
@@ -112,6 +149,7 @@ chemiguard119 evaluate \
 outputs/modeling/resolver_evaluation.json
 outputs/modeling/resolver_hint_safety_evaluation.json
 outputs/modeling/retriever_evaluation.json
+outputs/modeling/retriever_section_evaluation.json
 ```
 
 ## 4. Resolver 지표

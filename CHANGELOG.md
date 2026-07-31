@@ -20,6 +20,10 @@
 - 발표용 모델 파이프라인·수치·상용 준비 판정을 정리한 최종 브리핑
 - `chemicheck119-runtime-release-v4` manifest, 버전 고정 품질 정책, 평가
   dataset·report digest 결합과 독립 검수 attestation
+- MSDS 핵심(grade 2~3)·보조(grade 1)·중요도 가중 Recall을 분리하고 작은 표본의
+  Wilson 95% 신뢰구간과 누락 evidence ID를 제공하는 section 평가기 v3
+- 문서 수가 아닌 실제 답변 사실을 측정하는 `required_fact_ids` coverage와 핵심 사실
+  완전 회수율
 
 ### Fixed
 
@@ -30,6 +34,7 @@
 - CAS 일치 문서의 ID 순서를 강한 순위 신호로 사용해 제품명·CAS 번호 절이 보호구·저장
   질문보다 먼저 노출되던 근거 검색 문제
 - 확인 완료 응답의 미실행 Rule, 상태·CAS 불일치, 확률형 위험도와 후보 승격을 허용하던 문제
+- 전체 Recall 하나가 핵심 답변 누락과 보조 문서 누락을 같은 실패로 보여주던 평가 해석 문제
 
 ### Security
 
@@ -44,6 +49,9 @@
 - attestation HMAC 서명키를 실행 컨테이너에서 제거하고 외부 manifest digest로 빌드 검증
   결과를 고정
 - 외부 bind mount Compose를 로컬 개발로 제한하고 배포 이미지는 GHCR registry digest로 기록
+- 검수 완료 section 검색 릴리스에 핵심 Recall 0.98·중요도 가중 Recall 0.95를 추가 요구
+- section 평가 400건을 답변 가능 300건·답변 불가 100건으로 분리하고, 답변 불가 기권율과
+  핵심 사실 회수율·Wilson 하한을 함께 검사
 
 ## [0.3.0] - 2026-07-28
 
