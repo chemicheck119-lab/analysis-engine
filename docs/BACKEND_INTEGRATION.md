@@ -30,6 +30,14 @@ FE가 모델 API를 직접 부르면 안 됩니다. 모델 API 키가 브라우�
 
 ## 3. 실제 호출 순서
 
+### 3.0 물질명을 모를 때
+
+1. FE가 상태·색상·냄새·용도 관찰을 BE에 보냅니다.
+2. BE가 `POST /api/v1/substances/discover`를 호출합니다.
+3. AI가 확인 전 후보, 일치 성상과 출처 카드를 반환합니다.
+4. FE는 후보를 복수로 표시하고 `현장 물질 확인`을 요청합니다.
+5. BE가 확인 레코드와 `confirmation_id`를 만든 뒤에만 충돌 검토 입력으로 사용합니다.
+
 ### 3.1 현장 확인 전
 
 1. FE가 신고문·위치·검토 중 대응을 BE에 보냅니다.
@@ -56,7 +64,8 @@ FE가 모델 API를 직접 부르면 안 됩니다. 모델 API 키가 브라우�
 
 ## 4. BE가 호출할 모델 API
 
-운영 기본 연동점은 하나입니다.
+사고 분석 통합 API 1개와 물질탐색 전용 API 1개를 제공합니다. 아래 통합 API는
+대응충돌검토 화면의 기본 연동점입니다.
 
 ```text
 POST {CHEMICHECK119_MODEL_API_BASE_URL}/api/v1/incidents/analyze
@@ -76,6 +85,12 @@ CHEMICHECK119_MODEL_API_RESPONSE_TIMEOUT_SECONDS=15
 ```
 
 API Key는 `.env` 예제에 실제 값을 쓰지 않고 배포 플랫폼의 Secret으로 주입합니다.
+
+물질검색 탭은 별도 조회 API를 사용합니다.
+
+```text
+POST {CHEMICHECK119_MODEL_API_BASE_URL}/api/v1/substances/discover
+```
 
 ## 5. BE 요청 예시
 
@@ -131,6 +146,10 @@ API Key는 `.env` 예제에 실제 값을 쓰지 않고 배포 플랫폼의 Secr
 후보 점수는 확률 컬럼에 저장하지 않습니다. 시설 이력 후보도 현재 재고 테이블로 승격하지
 않습니다.
 
+대화 전체 저장은 모델 API가 아니라 BE의 책임입니다. `incident_id`, 순서가 있는 메시지,
+분석 원본, `analysis_id` 목록, 확인 레코드, provenance, 저장 사용자·시각을 한 대응 기록으로
+묶습니다.
+
 ## 7. FE에 내려줄 상태
 
 BE는 HTTP 성공 여부와 모델 워크플로 상태를 분리합니다.
@@ -166,8 +185,10 @@ FE는 `schema_version`, `state`, `confirmation_gate`, `conflict_review`,
 [`contracts/model-api-integration-v1.json`](../contracts/model-api-integration-v1.json)의
 `presentation_policy`입니다.
 
-물질검색 모드는 현재 **물질명·별칭·CAS** 검색만 약속합니다. 성상만으로 물질을 식별하는
-모델은 아직 없으므로 FE 안내문에 포함하지 않습니다.
+물질검색 모드는 **물질명·별칭·CAS**와 **두 가지 이상 성상 관찰 기반 후보 검색**을
+지원합니다. 성상 결과는 식별 확정이 아니며 `requires_responder_confirmation=true`인
+후보입니다. 후보 카드의 `body_preview`는 “AI 판단 이유”가 아니라 “공식 문서 발췌”로
+표시합니다.
 
 ### 7.2 v1의 물질쌍 제한
 
@@ -186,6 +207,14 @@ v1 통합 요청은 사고물질 1개와 시설물질 1개, 응답은 충돌 검
 재호출은 가능하지만, `X-Request-Id`는 idempotency key가 아닙니다. BE는 각 호출 결과를
 저장할 때 `analysis_id` 중복 여부를 별도로 관리해야 합니다.
 
+`기록저장` 버튼은 다음 순서를 지켜야 합니다.
+
+```text
+초기화 안내 → BE 저장 요청 → 저장 성공 → 토스트 → 화면 초기화
+```
+
+저장 실패나 timeout이면 대화 화면을 유지합니다.
+
 ## 9. 계약 검증
 
 AI 배포 후 다음 명령으로 liveness, readiness, schema, 인증과 통합 분석을 확인합니다.
@@ -202,6 +231,9 @@ BE CI에서는 모델 서버를 직접 띄우지 않아도 다음을 fixture로 
 - API schema: `chemiguard119-api-v1`
 - 계약 manifest: `contracts/model-api-integration-v1.json`
 - 오류 계약: `docs/API.md`
+- 물질 탐색 요청·응답:
+  `examples/api/material_discovery_request.json`,
+  `examples/api/material_discovery_response.json`
 
 BE 구현 언어가 확인되면 해당 저장소 안에 실제 HTTP client와 mock server 계약 테스트를
 작성합니다.

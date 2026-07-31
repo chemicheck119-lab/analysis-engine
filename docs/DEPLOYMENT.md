@@ -126,6 +126,20 @@ curl -X POST http://127.0.0.1:8000/api/v1/substances/resolve \
   -d '{"query":"아세톤","top_k":1}'
 ```
 
+관찰 기반 물질 탐색 인덱스도 readiness에 포함된 별도 capability로 확인합니다.
+
+```bash
+curl http://127.0.0.1:8000/health/ready
+curl -X POST http://127.0.0.1:8000/api/v1/substances/discover \
+  -H "Content-Type: application/json" \
+  --data @examples/api/material_discovery_request.json
+```
+
+`material_discovery_capability.ready=true`, `profile_count >= minimum_profile_count`와 FTS
+행 수 일치를 확인합니다. 현재 운영 최소값은 700입니다. 이 조건이 실패하면 전체 readiness도
+HTTP 503이므로 물질검색 탭이 축소되거나 빈 데이터로 운영되지 않습니다. 릴리스 smoke는
+후보가 현장 확인 또는 Rule 실행 가능 상태로 승격되지 않는지도 검사합니다.
+
 익명 모드로 로컬호스트 외 주소에 bind하려 하면 실행이 차단됩니다.
 
 ## 6. 원천 데이터 bundle
@@ -286,6 +300,11 @@ dataset·evaluator report SHA, locked-test provenance, 실제 품질 임계값, 
 ## 8. GitHub Actions 릴리스
 
 `.github/workflows/release-model.yml`은 `workflow_dispatch`로 수동 실행합니다.
+
+Pull Request의 일반 CI는 단위·계약 테스트와 기본 `Dockerfile` 빌드까지만 확인합니다.
+실데이터 artifact가 포함된 `Dockerfile.bundle`과 운영 readiness smoke는 병합 후 `main`에서
+이 릴리스 workflow를 실행해야 검증됩니다. 그 전에는 “bundle 배포 검증 완료”라고 표현하지
+않습니다.
 
 1. clean commit checkout
 2. Secret URL에서 데이터 bundle 다운로드

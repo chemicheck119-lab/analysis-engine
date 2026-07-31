@@ -12,10 +12,11 @@
 
 - 신고문에서 물질 표현과 상황 표현을 제한적으로 구조화
 - 물질명·CAS·화학식으로 물질 후보 검색
+- 상태·색상·냄새·용도 관찰로 확인 전 물질 후보와 출처 검색
 - KOSHA·CAMEO 공식 근거 검색
 - 업체명·주소로 공개된 과거 취급 이력 후보 검색
 - 현장에서 확인된 두 물질의 CAMEO 충돌 스크리닝
-- 위 결과를 한 API 응답으로 조립하고 안전 불변조건 검증
+- 사고 분석 결과를 통합 응답으로 조립하고 각 API의 안전 불변조건 검증
 
 이 저장소가 담당하지 않는 일은 다음과 같습니다.
 
@@ -37,10 +38,14 @@ flowchart LR
     BE --> API["케미체크119 모델 API"]
     API --> PARSER["신고문 파서"]
     API --> RESOLVER["물질 Resolver"]
+    API --> DISCOVERY["관찰 기반 Discovery"]
     API --> RETRIEVER["근거 Retriever"]
     API --> FACILITY["시설 이력 검색"]
     API --> RULES["CAMEO Rule Engine"]
     RESOLVER --> MODEL["resolver.joblib"]
+    DISCOVERY --> DB
+    DISCOVERY --> RESOLVER
+    DISCOVERY --> RETRIEVER
     RETRIEVER --> SEARCHMODEL["retriever.joblib"]
     RETRIEVER --> DB["읽기 전용 SQLite"]
     FACILITY --> DB
@@ -62,6 +67,7 @@ flowchart LR
 | 사고 오케스트레이터 | `src/chemiguard119/pipeline.py` | 각 단계를 순서대로 실행 | 게이트 통과 시 Rule 호출만 허용 |
 | 신고문 파서 | `src/chemiguard119/incident.py` | 물질 표현·역할·상황 구조화 | 없음 |
 | Resolver | `src/chemiguard119/resolver.py` | 물질·CAS 후보 검색과 공유 exact span 경계 검사 | 없음 |
+| Discovery | `src/chemiguard119/discovery.py` | 정확 식별과 성상 FTS를 합쳐 후보별 출처 검색 | 없음 |
 | Retriever | `src/chemiguard119/retrieval.py` | 공식 근거의 하이브리드 검색 | 없음 |
 | 시설 이력 검색 | `src/chemiguard119/facility.py` | 과거 취급 이력 후보 조회 | 없음 |
 | Rule Engine | `src/chemiguard119/rules.py` | CAMEO 그룹 호환성 lookup | 공개 근거 파일럿 스크리닝 |
@@ -184,12 +190,18 @@ stateDiagram-v2
 확인된 CAS로 검색할 때는 다른 CAS의 문서를 섞지 않습니다. 해당 CAS 상세 문서가 없으면
 `CAS_EVIDENCE_NOT_LOADED`를 반환합니다.
 
-### 8.3 Rule Engine
+### 8.3 Discovery
+
+정확한 명칭·CAS는 Resolver, 성상 관찰은 SQLite FTS5 BM25가 찾습니다. 상태·색상·냄새·
+용도 중 최소 두 영역이 일치한 후보만 반환하고, 같은 CAS의 공식 근거를 연결합니다. 모든
+후보는 현장 확인 전 상태이며 Rule 입력이 아닙니다.
+
+### 8.4 Rule Engine
 
 CAMEO 반응성 그룹과 호환성 표를 결정적으로 조회합니다. 결과 등급은 CAMEO 원자료를
 서비스 UI에 맞게 매핑한 서수 등급이며 사고 확률 모델이 아닙니다.
 
-### 8.4 LM Studio
+### 8.5 LM Studio
 
 LM Studio는 신고문 구조화 실험을 비교하기 위한 선택 백엔드입니다. 기본 파이프라인과 FastAPI
 서버, Resolver, Retriever, Rule Engine은 LM Studio 없이 실행됩니다.

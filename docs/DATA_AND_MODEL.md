@@ -10,6 +10,7 @@
 상세 MSDS 근거: 현재 KOSHA 스냅샷 9종
 공식 반응성 근거: CAMEO 5,094개 물질·68개 그룹
 시설 후보: ICIS·PRTR 과거 공개 취급 이력
+관찰 후보: 울산소방 상태·색상·냄새·용도 중 카탈로그 연결 749 CAS
 충돌 검토: 공개 검증 CAS–CAMEO 매핑 + 결정적 그룹 호환성 lookup
 ```
 
@@ -24,7 +25,7 @@
 | CAMEO Chemicals | Retriever, Rule Engine | 물질 설명, 반응성 그룹, 그룹 호환성 | 사고 발생 확률, 현장 명령 |
 | ICIS 화학물질 취급현황 | Resolver | 유효 CAS와 물질명·별칭 후보 | 특정 시설의 현재 재고 |
 | ICIS·PRTR 시설 통합 입력 | 시설 검색 | 업체·지역·CAS별 과거 취급·배출·이동 이력 | 현재 존재, 수량, 저장 위치 |
-| 울산소방 화학물정보 | 보조 별칭·물성 | 공개된 화학물 이름과 물성 | 서비스 지역 제한 또는 현재 시설 재고 |
+| 울산소방 화학물정보 | Discovery·보조 별칭 | 상태·색상·냄새·용도 기반 확인 전 후보 | 물질 확정, 서비스 지역 제한, 현재 시설 재고 |
 | 프로젝트 config | Resolver, Rule Engine | 별칭 보정, 공개 검증 CAMEO 매핑, 정책 | 원천 데이터 자체 |
 
 울산소방 데이터가 일부 포함되어도 서비스가 울산 전용인 것은 아닙니다. 일반 물질 카탈로그와
@@ -40,6 +41,7 @@
 | 릴리스 입력 | 8개 파일, 201,657행 | 현재 파이프라인이 직접 사용하는 원천 CSV |
 | 통합 물질 | 4,300 | ICIS 유효 CAS 4,299개와 KOSHA-only 물질을 통합 |
 | 검색 별칭 | 9,685 | CAS·국영문명·화학식·검증된 별칭 |
+| 성상 검색 프로필 | 749 CAS | 울산 원천 4,378행 중 유효 CAS·현재 카탈로그·성상 연결 |
 | KOSHA 상세 대상 | 현재 9종 | 공식 수집·검토 후 확장 가능, 4,300종 전체가 아님 |
 | 검색 evidence | 5,858 | KOSHA와 CAMEO 검색 문서 |
 | CAMEO 물질 | 5,094 | CAMEO 원자료 물질 |
@@ -145,6 +147,27 @@ CAS에서 CAMEO 물질로 연결하는 운영 crosswalk는 원자료의 내부 �
 - 업체명 부분 일치 = 동일 사업장 확정
 - 이력 건수 = 사고 확률
 
+### 5.6 관찰 기반 물질 프로필
+
+`06_울산소방_화학물정보.csv`의 상온 상태·색상·냄새·사용 용도를 CAS별로 합칩니다.
+
+- CAS 형식과 체크디지트가 유효해야 함
+- 현재 4,300개 카탈로그에 같은 CAS가 있어야 함
+- 성상 필드가 최소 하나 있어야 프로필 생성
+- 한 CAS의 여러 공개 행은 중복을 제거해 합침
+- 릴리스 전 최소 700개 프로필을 요구해 빈 인덱스 배포를 차단
+
+실제 재현 결과:
+
+```text
+원천 행 4,378
+유효 카탈로그 연결 성상 프로필 749 CAS
+```
+
+온라인 검색은 물질명 열이 성상 순위를 왜곡하지 않도록 성상 네 필드만 FTS5 BM25로
+검색합니다. “액체·냄새” 같은 일반어를 제거하고, 서로 다른 성상 영역이 두 개 이상
+일치하지 않으면 후보 반환을 포기합니다.
+
 ## 6. 전처리 결과
 
 ### 6.1 SQLite
@@ -155,6 +178,8 @@ CAS에서 CAMEO 물질로 연결하는 운영 crosswalk는 원자료의 내부 �
 |---|---|
 | `substance` | CAS별 통합 물질 레코드 |
 | `alias` | Resolver 후보용 이름·CAS·화학식 |
+| `substance_profile` | CAS별 상태·색상·냄새·용도와 소방청 출처 |
+| `substance_profile_fts` | 관찰 후보용 SQLite FTS5 BM25 인덱스 |
 | `evidence` | KOSHA·CAMEO 검색 문서 |
 | `evidence_fts` | SQLite FTS5 BM25 검색 인덱스 |
 | `cameo_chemical` | CAMEO 물질 정보 |
@@ -199,9 +224,28 @@ joblib은 pickle 기반이므로 외부 SHA-256과 manifest를 검증하기 전�
 - 모든 이름 기반 결과는 현장 확인 필요
 - 후보 점수는 확률이 아님
 
-## 8. 모델 2: 공식 근거 Retriever
+## 8. 모델 2: 관찰 기반 물질 Discovery
 
-### 8.1 검색 조합
+정확한 명칭·CAS는 Resolver가 찾고, 성상 관찰은 `substance_profile_fts`가 찾습니다. 두
+후보를 합친 뒤 각 CAS에 대해 KOSHA·CAMEO 상세 근거를 엄격히 같은 CAS로 제한해 검색합니다.
+
+```text
+정확 명칭·CAS Resolver
+        +
+성상 FTS5 BM25
+        ↓
+확인 전 Top-K 후보
+        ↓
+후보별 같은 CAS 공식 근거
+```
+
+후보는 항상 `rule_eligible=false`이며 상세 근거가 없으면
+`CAS_EVIDENCE_NOT_LOADED`로 남깁니다. 현재 smoke는 기능 연결만 검증했으며 독립 정확도
+평가는 아직 없습니다.
+
+## 9. 모델 3: 공식 근거 Retriever
+
+### 9.1 검색 조합
 
 Retriever는 다음 검색 결과를 Reciprocal Rank Fusion으로 결합합니다.
 
@@ -212,12 +256,12 @@ Retriever는 다음 검색 결과를 Reciprocal Rank Fusion으로 결합합니�
 
 한 분기당 최대 30,000 피처를 사용하고, 매우 긴 CAMEO 본문은 학습 시 8,000자로 제한합니다.
 
-### 8.2 CAS 제한
+### 9.2 CAS 제한
 
 확인된 CAS가 있으면 결과를 그 CAS 문서로 제한합니다. 해당 CAS의 상세 evidence가 없을 때는
 다른 물질의 상위 문서를 보여주지 않고 `CAS_EVIDENCE_NOT_LOADED`를 반환합니다.
 
-### 8.3 점수 해석
+### 9.3 점수 해석
 
 RRF·TF-IDF 점수는 검색 순위를 위한 값입니다. 위험도, 사고확률, 근거의 사실성 확률로
 표현하면 안 됩니다.
@@ -226,7 +270,7 @@ RRF·TF-IDF 점수는 검색 순위를 위한 값입니다. 위험도, 사고확
 검증된 사례 corpus가 없어 **유사 사고 사례 RAG는 아직 구현하지 않았습니다.** 사례 출처,
 사고 단위 중복 제거, 대응 결과 라벨과 개인정보 처리 기준이 마련된 뒤 별도 평가해야 합니다.
 
-## 9. 모델 3: 시설 이력 검색
+## 10. 모델 4: 시설 이력 검색
 
 이 구성요소는 피해 예측 모델이 아닙니다. 시설명·주소·시도 조건으로 SQLite를 조회하고 다음
 신호를 사용해 후보를 정렬합니다.
@@ -245,13 +289,13 @@ rule_eligible=false
 requires_on_site_confirmation=true
 ```
 
-## 10. 모델 4: CAMEO Rule Engine
+## 11. 모델 5: CAMEO Rule Engine
 
-### 10.1 입력
+### 11.1 입력
 
 Resolver 후보가 아니라 현장에서 각각 확인된 사고물질 CAS와 시설물질 CAS만 받습니다.
 
-### 10.2 공개 근거 매핑
+### 11.2 공개 근거 매핑
 
 `PUBLIC_SOURCE_PILOT_V1`에서 매핑이 사용되려면 다음 조건을 모두 만족해야 합니다.
 
@@ -278,7 +322,7 @@ Resolver 후보가 아니라 현장에서 각각 확인된 사고물질 CAS와 �
 이는 전문가 승인이 아니라 공개 출처 검증이며, 실제 충돌 스크리닝은 두 물질의 현장 확인과
 원자료 반응성 그룹 조합이 모두 존재할 때만 실행됩니다.
 
-### 10.3 계산
+### 11.3 계산
 
 1. 두 CAS를 각각 CAMEO chemical ID로 연결
 2. 각 물질의 모든 반응성 그룹 조회
@@ -297,10 +341,14 @@ Resolver 후보가 아니라 현장에서 각각 확인된 사고물질 CAS와 �
 }
 ```
 
-## 11. 신고문 파서와 LM Studio
+## 12. 신고문 파서와 LM Studio
 
 기본 신고문 파서는 결정적 규칙으로 물질 표현, 사고·시설 역할, 부정 표현 등을 제한적으로
 구조화합니다.
+
+시설명·주소·지역·좌표·설비는 현재 파서가 추출하지 않으며 `location` 구조화 입력으로
+받습니다. `VOICE_TRANSCRIPT`는 외부에서 이미 문자로 변환된 신고문이고 이 API가 ASR을
+수행한다는 뜻이 아닙니다.
 
 LM Studio 백엔드는 다음 실험에만 사용할 수 있습니다.
 
@@ -311,7 +359,7 @@ LM Studio 백엔드는 다음 실험에만 사용할 수 있습니다.
 운영 API는 LM Studio를 호출하지 않습니다. 생성형 모델이 CAS, 충돌 class, 대응 허용 여부를
 만들게 하지 않습니다.
 
-## 12. 평가
+## 13. 평가
 
 평가 입력은 `data/evaluation/`에 있습니다.
 
@@ -348,7 +396,7 @@ LM Studio 백엔드는 다음 실험에만 사용할 수 있습니다.
 근거 검색을 제한하지 않습니다. 찾지 못한 경우에는 잘못된 CAS를 선택하는 대신 CAS 없는
 일반 근거 검색과 현장 확인 요청으로 남깁니다.
 
-## 13. 파인튜닝 위치
+## 14. 파인튜닝 위치
 
 현재 운영 파이프라인에 파인튜닝 모델은 필수가 아닙니다. 신고문 구조화용 학습 데이터가 충분히
 쌓였을 때만 선택적으로 검토합니다.
@@ -364,7 +412,7 @@ LM Studio 백엔드는 다음 실험에만 사용할 수 있습니다.
 `chemiguard119 finetune-check`는 데이터 준비도만 검사합니다. 파인튜닝 여부와 관계없이 운영
 Rule Engine은 결정적 공개 근거 경로를 유지합니다.
 
-## 14. 재현 가능한 학습
+## 15. 재현 가능한 학습
 
 ```bash
 chemiguard119 pipeline \
@@ -389,7 +437,7 @@ chemiguard119 pipeline \
 - 평가 결과
 - 최종 `runtime_manifest.json`
 
-## 15. 공식 출처
+## 16. 공식 출처
 
 - [KOSHA MSDS 검색](https://msds.kosha.or.kr/MSDSInfo/kcic/msdssearchMsds.do)
 - [ICIS 화학물질 통계 정보 공개](https://icis.mcee.go.kr/search/searchType6.do)
@@ -398,14 +446,16 @@ chemiguard119 pipeline \
 - [CAMEO 차아염소산나트륨 datasheet](https://cameochemicals.noaa.gov/chemical/4503)
 - [CAMEO 염산 수용액 datasheet](https://cameochemicals.noaa.gov/chemical/3598)
 - [공공데이터포털 ICIS 관련 OpenAPI](https://www.data.go.kr/data/15157612/openapi.do)
+- [소방청 울산 화학물질 정보](https://www.data.go.kr/data/15081005/fileData.do)
 
 각 릴리스의 실제 출처 URL과 문서 버전은 DB evidence와 config provenance를 우선합니다.
 
-## 16. 관련 문서
+## 17. 관련 문서
 
 - [README](../README.md)
 - [아키텍처](ARCHITECTURE.md)
 - [API](API.md)
 - [모델 평가](EVALUATION.md)
 - [배포](DEPLOYMENT.md)
+- [대시보드 적용 흐름](DASHBOARD_FLOW.md)
 - [안전 및 한계](SAFETY_AND_LIMITATIONS.md)
