@@ -31,7 +31,7 @@
       "provider": "소방청",
       "source_url": "https://www.data.go.kr/data/15081005/fileData.do",
       "terms_url": "https://www.data.go.kr/data/15081005/fileData.do",
-      "runtime_artifacts": ["substance", "alias", "facility_candidate"],
+      "runtime_artifacts": ["substance", "alias", "substance_profile", "facility_candidate"],
       "redistribution_status": "APPROVED",
       "review_basis": "공공데이터포털 이용허락범위 제한 없음 표시를 2026-07-28 확인",
       "reviewer": "PROJECT_DATA_GOVERNANCE_REVIEW_REQUIRED_FOR_CHANGES"

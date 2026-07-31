@@ -147,6 +147,31 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
                 print(f"  - {item}")
     elif command == "resolve":
         _print_candidates(payload)
+    elif command == "discover":
+        print(f"질의: {_short(payload.get('query'))}")
+        print(f"상태: {_short(payload.get('status'))}")
+        print(f"검색 방식: {_short(payload.get('search_mode'))}")
+        candidates = payload.get("candidates") or []
+        print(f"현장 확인 전 후보: {len(candidates)}개")
+        for item in candidates:
+            print(
+                f"  {item.get('rank', '-')}. {_short(item.get('display_name'))} "
+                f"| CAS {_short(item.get('cas_number'))}"
+            )
+            matched = item.get("matched_properties") or []
+            if matched:
+                print(
+                    "     일치 관찰: "
+                    + ", ".join(
+                        f"{match.get('label')}: {_short(match.get('value'), 80)}"
+                        for match in matched
+                    )
+                )
+            print(
+                f"     공식 근거 카드: {len(item.get('evidence') or [])}개 / "
+                f"{_short(item.get('evidence_status'))}"
+            )
+        print(f"주의: {_short(payload.get('notice'), 500)}")
     elif command == "search":
         print(f"질의: {_short(payload.get('query'))}")
         print(f"CAS 힌트: {_short(payload.get('cas_hint'))}")
@@ -565,6 +590,21 @@ def _resolve(args: argparse.Namespace) -> dict[str, Any]:
 
     artifact = load_resolver(args.resolver_model)
     return resolve_substance(args.query, artifact, args.top_k, args.minimum_score)
+
+
+def _discover(args: argparse.Namespace) -> dict[str, Any]:
+    from chemiguard119.discovery import discover_substances
+    from chemiguard119.resolver import load_resolver
+    from chemiguard119.retrieval import load_retriever
+
+    return discover_substances(
+        args.query,
+        db_path=args.db,
+        resolver_artifact=load_resolver(args.resolver_model),
+        retriever_artifact=load_retriever(args.retriever_model),
+        top_k=args.top_k,
+        evidence_top_k=args.evidence_top_k,
+    )
 
 
 def _search(args: argparse.Namespace) -> dict[str, Any]:
@@ -1117,6 +1157,22 @@ def build_parser() -> argparse.ArgumentParser:
     resolve.add_argument("--minimum-score", type=float, default=0.20)
     _add_json_option(resolve)
     resolve.set_defaults(handler=_resolve)
+
+    discover = subparsers.add_parser(
+        "discover",
+        help="물질명·CAS·색상·냄새·상태 관찰에서 확인 전 후보와 근거 검색",
+    )
+    discover.add_argument("query", help="물질명, CAS 또는 두 가지 이상 관찰 정보")
+    _add_artifact_arguments(discover)
+    discover.add_argument("--top-k", type=int, choices=range(1, 6), default=5)
+    discover.add_argument(
+        "--evidence-top-k",
+        type=int,
+        choices=range(1, 6),
+        default=3,
+    )
+    _add_json_option(discover)
+    discover.set_defaults(handler=_discover)
 
     search = subparsers.add_parser("search", help="KOSHA·CAMEO 공식 근거 검색")
     search.add_argument("query", help="검색 질의")

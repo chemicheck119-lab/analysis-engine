@@ -625,6 +625,125 @@ class ResolveRequest(StrictModel):
     top_k: int = Field(default=3, ge=1, le=10)
 
 
+class SubstanceDiscoveryRequest(StrictModel):
+    """물질명·CAS·관찰 정보를 후보와 공식 근거 카드로 변환하는 요청."""
+
+    query: str = Field(min_length=2, max_length=500)
+    top_k: int = Field(default=5, ge=1, le=5)
+    evidence_top_k: int = Field(default=3, ge=1, le=5)
+
+
+class MatchedProperty(StrictModel):
+    field: Literal["physical_state", "color", "odor", "use_description"]
+    label: str = Field(min_length=1, max_length=40)
+    value: str = Field(min_length=1, max_length=2_000)
+
+
+class SubstancePropertyProfile(StrictModel):
+    physical_state: str = Field(max_length=2_000)
+    color: str = Field(max_length=2_000)
+    odor: str = Field(max_length=2_000)
+    use_description: str = Field(max_length=8_000)
+    source_id: Literal["NFA_ULSAN_CHEMICAL_INFORMATION"]
+    source_url: str = Field(min_length=1, max_length=2_000)
+    document_version: str = Field(max_length=500)
+
+
+class SubstanceEvidenceCard(StrictModel):
+    evidence_id: str = Field(min_length=1, max_length=500)
+    cas_number: str = Field(min_length=5, max_length=12)
+    source: Literal["KOSHA", "CAMEO"]
+    title: str = Field(min_length=1, max_length=2_000)
+    body_preview: str = Field(max_length=2_000)
+    source_url: str = Field(min_length=1, max_length=2_000)
+    document_version: str = Field(max_length=500)
+    cas_link_status: str | None = Field(default=None, max_length=120)
+
+    @field_validator("cas_number")
+    @classmethod
+    def validate_evidence_cas(cls, value: str) -> str:
+        normalized = normalize_cas(value)
+        if not valid_cas_checksum(normalized):
+            raise ValueError("근거 카드의 CAS가 올바르지 않습니다.")
+        return normalized
+
+
+class SubstanceDiscoveryCandidate(StrictModel):
+    rank: int = Field(ge=1, le=5)
+    cas_number: str = Field(min_length=5, max_length=12)
+    display_name: str = Field(min_length=1, max_length=500)
+    match_basis: Literal[
+        "IDENTITY_EXPRESSION",
+        "PUBLIC_PROPERTY_PROFILE",
+        "IDENTITY_AND_PUBLIC_PROPERTY_PROFILE",
+    ]
+    matched_expression: str | None = Field(default=None, max_length=500)
+    matched_properties: list[MatchedProperty] = Field(default_factory=list)
+    property_profile: SubstancePropertyProfile | None = None
+    evidence_status: str = Field(min_length=1, max_length=120)
+    evidence_warning: str | None = Field(default=None, max_length=2_000)
+    evidence_notice: str | None = Field(default=None, max_length=2_000)
+    cas_link_warning: str | None = Field(default=None, max_length=2_000)
+    evidence: list[SubstanceEvidenceCard] = Field(default_factory=list, max_length=5)
+    requires_responder_confirmation: Literal[True]
+    rule_eligible: Literal[False]
+    risk_determination_allowed: Literal[False]
+
+    @field_validator("cas_number")
+    @classmethod
+    def validate_candidate_cas(cls, value: str) -> str:
+        normalized = normalize_cas(value)
+        if not valid_cas_checksum(normalized):
+            raise ValueError("물질 후보의 CAS가 올바르지 않습니다.")
+        return normalized
+
+    @model_validator(mode="after")
+    def evidence_must_match_candidate_cas(self) -> "SubstanceDiscoveryCandidate":
+        if any(item.cas_number != self.cas_number for item in self.evidence):
+            raise ValueError("근거 카드의 CAS는 물질 후보 CAS와 같아야 합니다.")
+        return self
+
+
+class SubstanceDiscoveryResponse(StrictModel):
+    schema_version: Literal["chemiguard119-api-v1"] = API_SCHEMA_VERSION
+    query: str = Field(min_length=2, max_length=500)
+    status: Literal[
+        "CANDIDATES_FOUND",
+        "NO_RELIABLE_CANDIDATE",
+        "PROFILE_INDEX_NOT_AVAILABLE",
+    ]
+    search_mode: Literal[
+        "IDENTITY_AND_PROPERTY_RETRIEVAL",
+        "IDENTITY_RETRIEVAL",
+        "PROPERTY_PROFILE_RETRIEVAL",
+        "ABSTAINED",
+    ]
+    method: str = Field(min_length=1, max_length=1_000)
+    profile_index_available: bool
+    candidates: list[SubstanceDiscoveryCandidate] = Field(
+        default_factory=list,
+        max_length=5,
+    )
+    requires_responder_confirmation: Literal[True]
+    rule_eligible: Literal[False]
+    risk_determination_allowed: Literal[False]
+    candidate_score_is_probability: Literal[False]
+    notice: str = Field(min_length=1, max_length=2_000)
+    safety_notice: str = Field(min_length=1, max_length=2_000)
+
+    @model_validator(mode="after")
+    def candidates_must_remain_unconfirmed(self) -> "SubstanceDiscoveryResponse":
+        if self.status == "CANDIDATES_FOUND" and not self.candidates:
+            raise ValueError("CANDIDATES_FOUND에는 후보가 필요합니다.")
+        if self.status != "CANDIDATES_FOUND" and self.candidates:
+            raise ValueError("후보 없음 상태에는 candidates가 비어 있어야 합니다.")
+        if contains_candidate_promotion(self.model_dump()):
+            raise ValueError("물질 탐색 후보를 현장 확인 상태로 승격할 수 없습니다.")
+        if contains_unconfirmed_risk_output(self.model_dump()):
+            raise ValueError("물질 탐색 응답에 위험도·충돌 판정을 포함할 수 없습니다.")
+        return self
+
+
 class EvidenceSearchRequest(StrictModel):
     query: str = Field(min_length=1, max_length=500)
     cas_hint: str | None = Field(default=None, min_length=5, max_length=12)
@@ -825,6 +944,8 @@ __all__ = [
     "OrdinalRiskScale",
     "PUBLIC_SERVICE_NAME",
     "ResolveRequest",
+    "SubstanceDiscoveryRequest",
+    "SubstanceDiscoveryResponse",
     "UnconfirmedConflictReview",
     "UnvalidatedPlannedAction",
     "analysis_state_for_review_status",

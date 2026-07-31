@@ -13,7 +13,7 @@ from pydantic import ValidationError
 
 from chemiguard119 import api, pipeline
 from chemiguard119.api import ModelRuntime, create_app
-from chemiguard119.api_models import AnalysisResponse
+from chemiguard119.api_models import AnalysisResponse, SubstanceDiscoveryCandidate
 from chemiguard119.rules import APPROVED_ONLY_POLICY, PUBLIC_SOURCE_PILOT_POLICY
 
 
@@ -78,8 +78,28 @@ def runtime(tmp_path: Path) -> ModelRuntime:
     resolver_path = tmp_path / "substance_resolver.joblib"
     retriever_path = tmp_path / "evidence_retriever.joblib"
     config_dir = tmp_path / "config"
-    for path in (db_path, resolver_path, retriever_path):
+    for path in (resolver_path, retriever_path):
         path.touch()
+    with sqlite3.connect(db_path) as connection:
+        connection.execute(
+            "CREATE TABLE substance_profile(cas_number TEXT PRIMARY KEY)"
+        )
+        connection.execute(
+            """
+            CREATE VIRTUAL TABLE substance_profile_fts USING fts5(
+                cas_number UNINDEXED
+            )
+            """
+        )
+        profile_rows = [("78-93-3",)] + [(f"TEST-{index:04d}",) for index in range(699)]
+        connection.executemany(
+            "INSERT INTO substance_profile VALUES (?)",
+            profile_rows,
+        )
+        connection.executemany(
+            "INSERT INTO substance_profile_fts VALUES (?)",
+            profile_rows,
+        )
     config_dir.mkdir()
     _write_policy_config(config_dir)
     return ModelRuntime(
@@ -353,6 +373,12 @@ def test_health_and_readiness_with_injected_runtime(runtime: ModelRuntime) -> No
         "loaded_at_utc": "2026-07-21T00:00:00+00:00",
         "resolver_schema": "resolver-test-v1",
         "retriever_schema": "retriever-test-v1",
+        "material_discovery_capability": {
+            "ready": True,
+            "profile_count": 700,
+            "minimum_profile_count": 700,
+            "reason": None,
+        },
         "conflict_review_capability": {
             "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
             "public_source_verified_crosswalk_count": 2,
@@ -387,6 +413,95 @@ def test_health_and_readiness_with_injected_runtime(runtime: ModelRuntime) -> No
             "conflict_review_ready": True,
             "production_integrity_ready": True,
         },
+    }
+
+
+def test_readiness_fails_when_material_discovery_index_is_missing(
+    runtime: ModelRuntime,
+) -> None:
+    with sqlite3.connect(runtime.db_path) as connection:
+        connection.execute("DROP TABLE substance_profile")
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        ready = client.get("/health/ready")
+
+    body = ready.json()
+    assert ready.status_code == 503
+    assert body["status"] == "NOT_READY"
+    assert body["ready"] is False
+    assert body["material_discovery_capability"] == {
+        "ready": False,
+        "profile_count": 0,
+        "minimum_profile_count": 700,
+        "reason": "substance_profile·FTS 인덱스를 확인하지 못했습니다.",
+    }
+    assert body["operational_checks"]["runtime_ready"] is False
+
+
+def test_readiness_fails_when_material_discovery_fts_index_is_missing(
+    runtime: ModelRuntime,
+) -> None:
+    with sqlite3.connect(runtime.db_path) as connection:
+        connection.execute("DROP TABLE substance_profile_fts")
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        ready = client.get("/health/ready")
+
+    body = ready.json()
+    assert ready.status_code == 503
+    assert body["ready"] is False
+    assert body["material_discovery_capability"] == {
+        "ready": False,
+        "profile_count": 0,
+        "minimum_profile_count": 700,
+        "reason": "substance_profile·FTS 인덱스를 확인하지 못했습니다.",
+    }
+
+
+def test_readiness_fails_when_material_discovery_indexes_have_different_counts(
+    runtime: ModelRuntime,
+) -> None:
+    with sqlite3.connect(runtime.db_path) as connection:
+        connection.execute("DELETE FROM substance_profile_fts")
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        ready = client.get("/health/ready")
+
+    assert ready.status_code == 503
+    assert ready.json()["material_discovery_capability"] == {
+        "ready": False,
+        "profile_count": 700,
+        "minimum_profile_count": 700,
+        "reason": "substance_profile과 FTS 인덱스의 행 수가 다릅니다.",
+    }
+
+
+def test_readiness_fails_when_material_discovery_profile_count_is_below_minimum(
+    runtime: ModelRuntime,
+) -> None:
+    with sqlite3.connect(runtime.db_path) as connection:
+        connection.execute(
+            "DELETE FROM substance_profile WHERE cas_number = ?",
+            ("TEST-0698",),
+        )
+        connection.execute(
+            "DELETE FROM substance_profile_fts WHERE cas_number = ?",
+            ("TEST-0698",),
+        )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        ready = client.get("/health/ready")
+
+    assert ready.status_code == 503
+    assert ready.json()["material_discovery_capability"] == {
+        "ready": False,
+        "profile_count": 699,
+        "minimum_profile_count": 700,
+        "reason": "substance_profile 인덱스가 운영 최소 700건보다 적습니다.",
     }
 
 
@@ -702,6 +817,12 @@ def test_readiness_reports_startup_failure_without_loading_real_artifacts(
     assert response.status_code == 503
     assert response.json()["status"] == "NOT_READY"
     assert response.json()["reason"] == "ARTIFACT_LOAD_FAILED"
+    assert response.json()["material_discovery_capability"] == {
+        "ready": False,
+        "profile_count": 0,
+        "minimum_profile_count": 700,
+        "reason": "runtime artifact를 불러오지 못했습니다.",
+    }
 
 
 def test_protected_endpoint_requires_backend_api_key(runtime: ModelRuntime) -> None:
@@ -1974,6 +2095,146 @@ def test_resolve_and_search_results_are_never_rule_eligible(
     assert searched.json()["risk_determination_allowed"] is False
 
 
+def test_material_discovery_exposes_safe_dashboard_contract(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        api,
+        "discover_substances",
+        lambda query, **kwargs: {
+            "query": query,
+            "status": "CANDIDATES_FOUND",
+            "search_mode": "PROPERTY_PROFILE_RETRIEVAL",
+            "method": "test property retrieval",
+            "profile_index_available": True,
+            "candidates": [
+                {
+                    "rank": 1,
+                    "cas_number": "78-93-3",
+                    "display_name": "메틸 에틸 케톤",
+                    "match_basis": "PUBLIC_PROPERTY_PROFILE",
+                    "matched_expression": None,
+                    "matched_properties": [
+                        {
+                            "field": "odor",
+                            "label": "냄새",
+                            "value": "박하 및 달콤한 냄새",
+                        }
+                    ],
+                    "property_profile": {
+                        "physical_state": "액체(휘발성)",
+                        "color": "무색 투명",
+                        "odor": "박하 및 달콤한 냄새",
+                        "use_description": "용제",
+                        "source_id": "NFA_ULSAN_CHEMICAL_INFORMATION",
+                        "source_url": (
+                            "https://www.data.go.kr/data/15081005/fileData.do"
+                        ),
+                        "document_version": "2021-01-15 기준",
+                    },
+                    "evidence_status": "COMPLETED",
+                    "evidence_warning": (
+                        "검색 순위는 위험등급이 아니며 원문을 확인해야 합니다."
+                    ),
+                    "evidence_notice": None,
+                    "cas_link_warning": None,
+                    "evidence": [
+                        {
+                            "evidence_id": "KOSHA:MEK-1",
+                            "cas_number": "78-93-3",
+                            "source": "KOSHA",
+                            "title": "메틸 에틸 케톤 MSDS",
+                            "body_preview": "공식 문서 발췌",
+                            "source_url": "https://example.test/kosha/mek",
+                            "document_version": "2026-01-01",
+                            "cas_link_status": "SOURCE_EXACT",
+                        }
+                    ],
+                    "requires_responder_confirmation": True,
+                    "rule_eligible": False,
+                    "risk_determination_allowed": False,
+                }
+            ],
+            "requires_responder_confirmation": True,
+            "rule_eligible": False,
+            "risk_determination_allowed": False,
+            "candidate_score_is_probability": False,
+            "notice": "용기 라벨·현장 MSDS로 확인해야 합니다.",
+        },
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/substances/discover",
+            json={
+                "query": "무색 투명하고 박하 냄새가 나는 휘발성 액체",
+                "top_k": 5,
+                "evidence_top_k": 3,
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["schema_version"] == "chemiguard119-api-v1"
+    assert body["status"] == "CANDIDATES_FOUND"
+    assert body["candidates"][0]["cas_number"] == "78-93-3"
+    assert body["candidates"][0]["requires_responder_confirmation"] is True
+    assert body["candidates"][0]["rule_eligible"] is False
+    assert body["candidates"][0]["risk_determination_allowed"] is False
+    assert "위험등급이 아니며" in body["candidates"][0]["evidence_warning"]
+    assert body["candidates"][0]["evidence"][0]["cas_link_status"] == "SOURCE_EXACT"
+    assert body["candidate_score_is_probability"] is False
+    assert "현장 지휘관" in body["safety_notice"]
+
+
+def test_material_discovery_rejects_too_short_observation(
+    runtime: ModelRuntime,
+) -> None:
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/substances/discover",
+            json={"query": "물"},
+        )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_SCHEMA"
+
+
+def test_material_discovery_candidate_rejects_mismatched_evidence_cas() -> None:
+    with pytest.raises(ValidationError, match="근거 카드의 CAS"):
+        SubstanceDiscoveryCandidate.model_validate(
+            {
+                "rank": 1,
+                "cas_number": "78-93-3",
+                "display_name": "메틸 에틸 케톤",
+                "match_basis": "IDENTITY_EXPRESSION",
+                "matched_expression": "메틸 에틸 케톤",
+                "matched_properties": [],
+                "property_profile": None,
+                "evidence_status": "COMPLETED",
+                "evidence": [
+                    {
+                        "evidence_id": "KOSHA:OTHER",
+                        "cas_number": "67-64-1",
+                        "source": "KOSHA",
+                        "title": "다른 물질 문서",
+                        "body_preview": "다른 CAS 근거",
+                        "source_url": "https://example.test/kosha/other",
+                        "document_version": "2026-01-01",
+                        "cas_link_status": "SOURCE_EXACT",
+                    }
+                ],
+                "requires_responder_confirmation": True,
+                "rule_eligible": False,
+                "risk_determination_allowed": False,
+            }
+        )
+
+
 def test_facility_history_is_not_current_inventory_or_rule_input(
     runtime: ModelRuntime,
     stub_pipeline_boundaries: list[dict[str, Any]],
@@ -2034,12 +2295,20 @@ def test_openapi_exposes_only_documented_v1_and_health_paths(
         "/health/ready",
         "/api/v1/meta",
         "/api/v1/incidents/analyze",
+        "/api/v1/substances/discover",
         "/api/v1/substances/resolve",
         "/api/v1/evidence/search",
         "/api/v1/facilities/candidates",
         "/api/v1/conflicts/review",
     }
     assert "post" in paths["/api/v1/incidents/analyze"]
+    assert "post" in paths["/api/v1/substances/discover"]
     assert "post" in paths["/api/v1/conflicts/review"]
+    assert (
+        paths["/api/v1/substances/discover"]["post"]["responses"]["200"]["content"][
+            "application/json"
+        ]["schema"]["$ref"]
+        == "#/components/schemas/SubstanceDiscoveryResponse"
+    )
     assert "ErrorResponse" in response.json()["components"]["schemas"]
     assert not any("demo" in path for path in paths)

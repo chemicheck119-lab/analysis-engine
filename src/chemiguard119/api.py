@@ -9,6 +9,7 @@ import logging
 import os
 import re
 import secrets
+import sqlite3
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -37,6 +38,8 @@ from chemiguard119.api_models import (
     FacilityHistorySearchRequest,
     IncidentAnalyzeRequest,
     ResolveRequest,
+    SubstanceDiscoveryRequest,
+    SubstanceDiscoveryResponse,
     UnconfirmedConflictReview,
     analysis_state_for_review_status,
     contains_candidate_promotion,
@@ -49,9 +52,12 @@ from chemiguard119.paths import (
     DEFAULT_RESOLVER_MODEL,
     DEFAULT_RETRIEVER_MODEL,
 )
+from chemiguard119.discovery import discover_substances
+from chemiguard119.database import connect_readonly
 from chemiguard119.observability import configure_json_logging, emit_json_event
 from chemiguard119.facility import search_facility_history
 from chemiguard119.pipeline import PIPELINE_SCHEMA_VERSION, analyze_incident
+from chemiguard119.preprocessing import MINIMUM_ULSAN_PROFILE_COUNT
 from chemiguard119.resolver import load_resolver, resolve_substance
 from chemiguard119.retrieval import load_retriever, search_evidence
 from chemiguard119.release import (
@@ -373,12 +379,56 @@ class ModelRuntime:
             "status": "INJECTED_OR_LEGACY_RUNTIME",
             "manifest_sha256_verified": False,
         }
+        material_discovery = {
+            "ready": False,
+            "profile_count": 0,
+            "minimum_profile_count": MINIMUM_ULSAN_PROFILE_COUNT,
+            "reason": "substance_profile·FTS 인덱스를 확인하지 못했습니다.",
+        }
+        if self.db_path.is_file():
+            try:
+                with connect_readonly(self.db_path) as connection:
+                    profile_count = int(
+                        connection.execute(
+                            "SELECT COUNT(*) FROM substance_profile"
+                        ).fetchone()[0]
+                    )
+                    fts_profile_count = int(
+                        connection.execute(
+                            "SELECT COUNT(*) FROM substance_profile_fts"
+                        ).fetchone()[0]
+                    )
+                discovery_ready = (
+                    profile_count >= MINIMUM_ULSAN_PROFILE_COUNT
+                    and fts_profile_count == profile_count
+                )
+                material_discovery = {
+                    "ready": discovery_ready,
+                    "profile_count": profile_count,
+                    "minimum_profile_count": MINIMUM_ULSAN_PROFILE_COUNT,
+                    "reason": (
+                        None
+                        if discovery_ready
+                        else (
+                            "substance_profile과 FTS 인덱스의 행 수가 다릅니다."
+                            if fts_profile_count != profile_count
+                            else (
+                                "substance_profile 인덱스가 운영 최소 "
+                                f"{MINIMUM_ULSAN_PROFILE_COUNT}건보다 적습니다."
+                            )
+                        )
+                    ),
+                }
+            except sqlite3.OperationalError as error:
+                if "no such table: substance_profile" not in str(error).lower():
+                    raise
         return {
-            "ready": all(artifact_checks.values()),
+            "ready": all(artifact_checks.values()) and material_discovery["ready"],
             "artifacts": artifact_checks,
             "loaded_at_utc": self.loaded_at_utc,
             "resolver_schema": self.resolver_artifact.get("schema_version"),
             "retriever_schema": self.retriever_artifact.get("schema_version"),
+            "material_discovery_capability": material_discovery,
             "conflict_review_capability": conflict_review_capability,
             "integrity": {
                 "status": integrity.get("status"),
@@ -1122,6 +1172,12 @@ def create_app(
                     "service": SERVICE_ID,
                     "service_name": PUBLIC_SERVICE_NAME,
                     "reason": getattr(request.app.state, "startup_error", None),
+                    "material_discovery_capability": {
+                        "ready": False,
+                        "profile_count": 0,
+                        "minimum_profile_count": MINIMUM_ULSAN_PROFILE_COUNT,
+                        "reason": "runtime artifact를 불러오지 못했습니다.",
+                    },
                     "rule_policy": policy_mode,
                     "rule_policy_ready": False,
                     "rule_policy_error": request.app.state.rule_policy_error,
@@ -1290,6 +1346,31 @@ def create_app(
             rule_policy=request.app.state.rule_policy,
             facility_history=facility_history,
         )
+
+    @application.post(
+        "/api/v1/substances/discover",
+        response_model=SubstanceDiscoveryResponse,
+        tags=["models"],
+        responses=STANDARD_ERROR_RESPONSES,
+        summary="물질명·CAS·관찰 정보에서 확인 전 물질 후보와 공식 근거 검색",
+    )
+    def discover(
+        payload: SubstanceDiscoveryRequest,
+        request: Request,
+        _: Annotated[None, Depends(_authorize)],
+    ) -> SubstanceDiscoveryResponse:
+        active_runtime = _runtime_or_error(request)
+        result = discover_substances(
+            payload.query,
+            db_path=active_runtime.db_path,
+            resolver_artifact=active_runtime.resolver_artifact,
+            retriever_artifact=active_runtime.retriever_artifact,
+            top_k=payload.top_k,
+            evidence_top_k=payload.evidence_top_k,
+        )
+        result["schema_version"] = API_SCHEMA_VERSION
+        result["safety_notice"] = SAFETY_NOTICE
+        return SubstanceDiscoveryResponse.model_validate(result)
 
     @application.post(
         "/api/v1/substances/resolve",

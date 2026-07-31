@@ -4,7 +4,7 @@
   "request_id": "REQ-EXAMPLE-0001",
   "incident_id": "INC-EXAMPLE-0001",
   "state": "AWAITING_SUBSTANCE_CONFIRMATION",
-  "input_fingerprint": "19b684d72c0f92431e7793d4590867890feb9f17cc0549a2d73654fe5f667c44",
+  "input_fingerprint": "08b0fed9c94ce9bee9d078669f309c6dbbf385996dcce61b8286025713ddc0cf",
   "model_outputs": {
     "pipeline_schema_version": "incident-analysis-v1",
     "parser": {
@@ -13,34 +13,68 @@
         "LEAK"
       ],
       "fire_status": "UNKNOWN",
-      "substance_mentions": [],
+      "substance_mentions": [
+        {
+          "surface_text": "차아염소산나트륨",
+          "role": "INCIDENT",
+          "assertion": "AFFIRMED"
+        },
+        {
+          "surface_text": "염산",
+          "role": "FACILITY",
+          "assertion": "AFFIRMED"
+        }
+      ],
       "planned_actions": [],
       "needs_substance_confirmation": true,
-      "missing_fields": [
-        "confirmed_substance"
-      ]
+      "missing_fields": [],
+      "warning": "결정적 기준선도 대원 확인 전 물질을 확정하지 않습니다."
     },
-    "substance_candidates": [],
+    "substance_candidates": [
+      {
+        "surface_text": "차아염소산나트륨",
+        "role": "INCIDENT",
+        "assertion": "AFFIRMED",
+        "resolver_status": "EXACT_ALIAS_CANDIDATE",
+        "evidence_cas_hint": "7681-52-9",
+        "requires_responder_confirmation": true,
+        "matches_confirmed_cas": false,
+        "candidates": [
+          {
+            "cas_number": "7681-52-9",
+            "score": 1.0,
+            "rule_eligible": false,
+            "current_inventory_confirmed": false
+          }
+        ]
+      },
+      {
+        "surface_text": "염산",
+        "role": "FACILITY",
+        "assertion": "AFFIRMED",
+        "resolver_status": "EXACT_ALIAS_CANDIDATE",
+        "evidence_cas_hint": "7647-01-0",
+        "requires_responder_confirmation": true,
+        "matches_confirmed_cas": false,
+        "candidates": [
+          {
+            "cas_number": "7647-01-0",
+            "score": 1.0,
+            "rule_eligible": false,
+            "current_inventory_confirmed": false
+          }
+        ]
+      }
+    ],
     "candidate_score_notice": "후보 점수는 이름 유사도·정렬값이며 사고확률, 위험확률 또는 Rule 실행 권한이 아닙니다.",
     "output_validation": {
       "status": "PASSED",
       "errors": []
     },
     "facility_history_candidates": {
-      "status": "CANDIDATES_FOUND",
+      "status": "NO_HISTORY_MATCH",
       "warning": "시설 후보는 과거 신고·취급 이력이며 현재 재고를 의미하지 않습니다.",
-      "results": [
-        {
-          "facility_name": "예시 사업장",
-          "cas_number": "7647-01-0",
-          "latest_survey_year": "2024",
-          "evidence_class": "REPORTED_HANDLING_HISTORY",
-          "current_inventory_confirmed": false,
-          "rule_eligible": false,
-          "requires_on_site_confirmation": true,
-          "source_url": "https://icis.mcee.go.kr/search/searchType6.do"
-        }
-      ]
+      "results": []
     }
   },
   "evidence": [],

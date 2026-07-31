@@ -1,8 +1,8 @@
 # 케미체크119 AI·모델 API
 
 화학사고 신고를 **물질 후보 검색 → 공식 근거 검색 → 물질 간 충돌 검토**로 연결하는
-FastAPI 서비스와 CLI입니다. 백엔드는 하나의 분석 API를 호출하고, 이 저장소의 파이프라인이
-여러 모델·규칙 구성요소를 순서대로 실행합니다.
+FastAPI 서비스와 CLI입니다. 백엔드는 대응충돌검토용 통합 분석 API와 물질검색 탭용 탐색
+API를 호출하며, 이 저장소의 파이프라인이 여러 모델·규칙 구성요소를 순서대로 실행합니다.
 
 > 현재 충돌 검토 정책은 `PUBLIC_SOURCE_PILOT_V1`입니다. 공식 CAMEO 페이지에서 CAS와
 > 물질 형태를 직접 대조해 기록한 매핑을 사용하고, 코드는 그 출처·형식·일관성을 검사합니다.
@@ -19,6 +19,8 @@ FastAPI 서비스와 CLI입니다. 백엔드는 하나의 분석 API를 호출�
         ↓
 물질명·CAS 후보 검색
         ↓
+색상·냄새·상태·용도 기반 관찰 후보 검색
+        ↓
 KOSHA·CAMEO 근거 검색
         ↓
 사고물질과 시설물질을 현장에서 각각 확인
@@ -31,9 +33,10 @@ KOSHA·CAMEO 근거 검색
 하나의 거대한 LLM이 화학적 위험을 직접 판단하는 구조가 아닙니다.
 
 - **Resolver**: 물질명·CAS·화학식에서 후보를 찾습니다.
+- **Discovery**: 두 가지 이상 성상 관찰에서 공개자료 기반 후보와 출처를 찾습니다.
 - **Retriever**: KOSHA·CAMEO 문서에서 관련 근거를 검색합니다.
 - **Rule Engine**: 현장에서 확인된 두 CAS를 CAMEO 반응성 데이터와 대조합니다.
-- **FastAPI**: 위 구성요소를 한 번의 백엔드 요청으로 실행합니다.
+- **FastAPI**: 사고 분석은 통합 API 하나로, 관찰 기반 물질탐색은 별도 API로 제공합니다.
 - **LM Studio**: 신고문 구조화 비교 실험에만 선택적으로 사용합니다. 운영 API에 필요하지 않습니다.
 
 ## 2. 현재 구현 상태
@@ -41,6 +44,7 @@ KOSHA·CAMEO 근거 검색
 | 기능 | 상태 | 현재 범위 |
 |---|---|---|
 | 물질 후보 검색 | 구현 | ICIS 중심 총 4,300개 물질 카탈로그 |
+| 관찰 기반 물질 탐색 | 구현 | 울산소방 원천 4,378행 중 카탈로그 연결 성상 프로필 749 CAS |
 | 자동 CAS 힌트 안전 회귀 | 구현 | 부분 문자열·모호 표현 12건, 위험 힌트 0건 |
 | 신고문 구조화 | 구현 | 기본 결정적 파서, LM Studio는 선택 실험 |
 | 공식 근거 검색 | 구현 | KOSHA 상세 근거 9종과 CAMEO 근거, section 중심 BM25·TF-IDF |
@@ -149,6 +153,17 @@ curl -X POST http://127.0.0.1:8000/api/v1/substances/resolve \
 식별할 수 없는 입력은 `UNRESOLVED` 또는 확인이 필요한 퍼지 후보로 남기고, 현장 라벨이나
 MSDS 확인을 요청합니다.
 
+물질명을 모를 때는 구별되는 관찰 정보를 두 가지 이상 입력합니다.
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/substances/discover \
+  -H "Content-Type: application/json" \
+  --data @examples/api/material_discovery_request.json
+```
+
+응답은 후보와 공개자료 출처를 제공하지만 물질을 확정하지 않습니다. 대원이 용기 라벨·현장
+MSDS 등으로 CAS와 현장 존재를 확인해야 충돌 검토에 사용할 수 있습니다.
+
 사고 분석은 먼저 현장 확인 정보 없이 후보만 요청합니다.
 
 ```bash
@@ -181,6 +196,9 @@ X-API-Key: 배포-Secret으로-주입한-키
 ```bash
 # 물질명·CAS·화학식 후보 검색
 chemiguard119 resolve "아세톤"
+
+# 물질명을 모를 때 관찰 정보로 후보와 출처 검색
+chemiguard119 discover "무색 투명하고 박하 냄새가 나는 휘발성 액체"
 
 # 임의 신고문을 전체 파이프라인으로 실행
 chemiguard119 incident "황산 저장탱크에서 누출 중이며 옆 창고에 아세톤이 있습니다."
@@ -267,6 +285,7 @@ Secret 이름과 bundle 계약은 [배포 가이드](docs/DEPLOYMENT.md)에 설�
 | `GET` | `/health/ready` | artifact·인증·정책 준비 상태 확인 |
 | `GET` | `/api/v1/meta` | 서비스·스키마·정책 메타데이터 |
 | `POST` | `/api/v1/incidents/analyze` | 전체 사고 분석 파이프라인 |
+| `POST` | `/api/v1/substances/discover` | 관찰 정보 기반 확인 전 물질 후보·출처 검색 |
 | `POST` | `/api/v1/substances/resolve` | 물질 후보 검색 |
 | `POST` | `/api/v1/evidence/search` | 공식 근거 검색 |
 | `POST` | `/api/v1/facilities/candidates` | 시설의 과거 취급 이력 후보 검색 |
@@ -295,11 +314,14 @@ CAS·물질 형태를 직접 대조해 provenance로 기록한 매핑만 사용�
 | 데이터 | 파이프라인에서 하는 일 | 해석하면 안 되는 것 |
 |---|---|---|
 | ICIS | 4,300개 일반 물질 카탈로그와 별칭 후보 | 현장에 실제 존재한다는 확정 |
+| 울산소방 화학물정보 | 749 CAS의 상태·색상·냄새·용도 후보 검색 | 물질 확정·울산 전용 서비스라는 주장 |
 | KOSHA MSDS | 현재 스냅샷의 상세 근거 9종 검색 | 전체 4,300개에 상세 MSDS가 있다는 주장 |
 | ICIS·PRTR 시설 이력 | 업체명·지역 기반 과거 취급 후보 | 현재 재고·보유량·저장 위치 |
 | CAMEO | 반응성 그룹 기반 충돌 스크리닝 | 사고 발생 확률 또는 현장 명령 |
 
 상세한 전처리와 모델 설명은 [데이터와 모델](docs/DATA_AND_MODEL.md)을 참고하세요.
+대시보드 버튼·저장·파서 역할은
+[대시보드 적용 흐름](docs/DASHBOARD_FLOW.md)에 정리했습니다.
 
 ## 12. 프로젝트 구조
 
@@ -371,8 +393,10 @@ python -m pip check
 
 ### 총 모델 호출은 하나인가요?
 
-백엔드 관점에서는 `POST /api/v1/incidents/analyze` 한 번입니다. 내부에서는 신고문 파서,
-Resolver, Retriever, Rule Engine이 순서대로 실행됩니다.
+항상 한 번은 아닙니다. 일반 사고 분석은 `POST /api/v1/incidents/analyze`, 물질명을 모를
+때는 별도 `POST /api/v1/substances/discover`를 사용합니다. 현장 확인 뒤 충돌 검토를 위해
+`incidents/analyze`를 다시 호출할 수 있습니다. 각 요청 내부에서는 외부 LLM 호출 없이
+Resolver·Retriever·Rule Engine이 목적에 맞게 실행됩니다.
 
 ### 서버에 LM Studio를 설치해야 하나요?
 

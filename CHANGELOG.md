@@ -7,6 +7,12 @@
 
 ### Added
 
+- 물질명·CAS 또는 두 가지 이상 성상 관찰에서 확인 전 후보와 출처를 반환하는
+  `POST /api/v1/substances/discover`
+- 울산소방 공개 물성 749 CAS를 위한 `substance_profile`·FTS5 인덱스와 최소 건수 gate
+- 대시보드 물질검색·현장 확인·대화 기록 저장 순서를 고정한 연동 계약과 예제
+- 같은 CAS로 제한한 후보별 KOSHA·CAMEO 근거 카드와 `CAS_EVIDENCE_NOT_LOADED` 상태
+- 근거 미적재·검색 순위·CAMEO–CAS 연결 경고를 보존하는 물질탐색 응답 필드
 - 요청 ID·route·상태 코드·처리시간을 기록하는 `chemicheck119-log-v1` JSON 운영 로그
 - API Key·query string·요청 본문이 로그에 포함되지 않는 회귀 테스트
 - 운영 모니터링과 장애 확인 절차 문서
@@ -27,6 +33,11 @@
 
 ### Fixed
 
+- 일반어 한 개만 맞는 성상 질의가 임의 물질 후보를 반환하거나, 물질명 열이 냄새·색상
+  순위를 왜곡할 수 있던 문제
+- 물성 프로필 또는 FTS 인덱스가 없거나 행 수가 다를 때도 readiness가 통과하던 문제
+- 물질탐색 후보 CAS와 다른 CAS의 근거 카드가 출력 계약을 통과할 수 있던 문제
+- `NO_RELIABLE_CANDIDATE`를 물질 부재나 위험 없음으로 오해할 수 있던 안내 계약
 - `염산염`·`염산성`처럼 다른 표현에 포함된 물질명 부분 문자열이 정확 CAS 힌트로
   승격되어 다른 물질의 근거로 검색을 제한하던 문제
 - 현장 확인 전 응답에 서수 위험등급·구체적 반응 또는 완료 상태가 섞여 대시보드에 노출될
@@ -38,6 +49,7 @@
 
 ### Security
 
+- 임시 디렉터리 처리 취약점이 수정된 개발 테스트 의존성 `pytest 9.0.3`으로 갱신
 - Uvicorn 원 URL access log와 raw exception traceback을 비활성화하고 예외 타입·request ID만
   구조화 로그로 기록
 - 알 수 없는 배포 환경과 staging·production의 미검증 runtime을 readiness에서 fail-closed

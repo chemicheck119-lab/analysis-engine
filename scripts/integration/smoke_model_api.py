@@ -97,6 +97,16 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     )
     _require(ready.get("status") == "READY", "readiness가 READY가 아닙니다.")
     _require(ready.get("ready") is True, "runtime ready가 true가 아닙니다.")
+    material_capability = ready.get("material_discovery_capability") or {}
+    _require(
+        material_capability.get("ready") is True,
+        "관찰 기반 물질 탐색 인덱스가 준비되지 않았습니다.",
+    )
+    _require(
+        int(material_capability.get("profile_count") or 0)
+        >= int(material_capability.get("minimum_profile_count") or 700),
+        "관찰 기반 물질 프로필이 운영 최소 건수보다 적습니다.",
+    )
 
     metadata, _ = _request_json(
         args.base_url,
@@ -153,6 +163,31 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         (analysis.get("conflict_review") or {}).get("executed") is False,
         "미확인 smoke 요청에서 충돌 검토가 실행됐습니다.",
     )
+    discovery, _ = _request_json(
+        args.base_url,
+        "/api/v1/substances/discover",
+        timeout=args.timeout,
+        api_key=api_key,
+        payload={
+            "query": "무색 투명하고 박하 냄새가 나는 휘발성 액체",
+            "top_k": 3,
+            "evidence_top_k": 3,
+        },
+    )
+    _require(
+        discovery.get("status") == "CANDIDATES_FOUND",
+        "관찰 기반 물질 탐색 smoke 후보가 없습니다.",
+    )
+    _require(
+        bool(discovery.get("candidates")),
+        "관찰 기반 물질 탐색 candidates가 비어 있습니다.",
+    )
+    _require(
+        discovery.get("requires_responder_confirmation") is True
+        and discovery.get("rule_eligible") is False
+        and discovery.get("risk_determination_allowed") is False,
+        "관찰 기반 물질 후보 안전 계약이 깨졌습니다.",
+    )
     return {
         "status": "PASSED",
         "service": SERVICE_ID,
@@ -160,6 +195,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "runtime_integrity": (ready.get("integrity") or {}).get("status"),
         "analysis_state": analysis.get("state"),
         "confirmation_gate_closed": True,
+        "material_discovery_profile_count": material_capability.get("profile_count"),
+        "material_discovery_candidate_count": len(discovery["candidates"]),
+        "material_discovery_gate_closed": True,
     }
 
 

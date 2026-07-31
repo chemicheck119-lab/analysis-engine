@@ -63,6 +63,7 @@ staging·production에서 익명 접근을 켜거나 올바른 API Key가 없으
 | `GET` | `/health/ready` | 없음 | runtime·인증·충돌 정책 준비 여부 |
 | `GET` | `/api/v1/meta` | 없음 | 버전·정책·인증 방식·OpenAPI 위치 |
 | `POST` | `/api/v1/incidents/analyze` | 필요 | 전체 사고 분석 |
+| `POST` | `/api/v1/substances/discover` | 필요 | 관찰 정보 기반 확인 전 물질 후보·출처 검색 |
 | `POST` | `/api/v1/substances/resolve` | 필요 | 물질 후보 검색 |
 | `POST` | `/api/v1/evidence/search` | 필요 | KOSHA·CAMEO 근거 검색 |
 | `POST` | `/api/v1/facilities/candidates` | 필요 | 시설 과거 취급 이력 후보 검색 |
@@ -90,6 +91,7 @@ staging·production에서 익명 접근을 켜거나 올바른 API Key가 없으
 다음을 함께 검사합니다.
 
 - SQLite, Resolver, Retriever, config 존재
+- 관찰 검색용 `substance_profile` 인덱스 존재와 프로필 수
 - runtime manifest 무결성
 - API 인증 구성
 - `PUBLIC_SOURCE_PILOT_V1` 충돌 정책과 공개 검증 crosswalk 준비 상태
@@ -107,6 +109,12 @@ staging·production에서 익명 접근을 켜거나 올바른 API Key가 없으
   "expert_reviewed": false,
   "decision_support_only": true,
   "responder_confirmation_required": true,
+  "material_discovery_capability": {
+    "ready": true,
+    "profile_count": 749,
+    "minimum_profile_count": 700,
+    "reason": null
+  },
   "conflict_review_capability": {
     "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
     "public_source_verified_crosswalk_count": 2,
@@ -305,7 +313,68 @@ curl -X POST http://127.0.0.1:8000/api/v1/incidents/analyze \
 `provenance.responder_confirmation_required`, `provenance.conflict_review_capability`에
 기록됩니다.
 
-## 7. 물질 후보 검색
+## 7. 관찰 정보 기반 물질 탐색
+
+### `POST /api/v1/substances/discover`
+
+정확한 물질명·CAS뿐 아니라 상태·색상·냄새·용도 같은 관찰 표현에서 공개자료 기반 후보를
+찾습니다. 성상 검색은 일반어를 제외하고 서로 다른 물성 영역이 최소 두 개 일치할 때만 후보를
+반환합니다.
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/substances/discover \
+  -H "Content-Type: application/json" \
+  --data @examples/api/material_discovery_request.json
+```
+
+요청:
+
+```json
+{
+  "query": "무색 투명하고 박하 냄새가 나는 휘발성 액체",
+  "top_k": 3,
+  "evidence_top_k": 3
+}
+```
+
+| 필드 | 범위 | 의미 |
+|---|---:|---|
+| `query` | 2~500자 | 물질명·CAS 또는 구별되는 관찰 정보 |
+| `top_k` | 1~5 | 후보 최대 수 |
+| `evidence_top_k` | 1~5 | 후보별 공식 근거 카드 최대 수 |
+
+주요 응답 필드:
+
+| 필드 | 의미 |
+|---|---|
+| `status` | 후보 발견, 신뢰할 후보 없음, 프로필 인덱스 미준비 |
+| `search_mode` | 명칭 검색, 성상 검색 또는 결합 검색 |
+| `matched_properties` | 질의와 일치한 상태·색상·냄새·용도 |
+| `property_profile` | 소방청 공개자료의 성상과 출처 |
+| `evidence` | 같은 CAS로 제한한 KOSHA·CAMEO 공식 문서 카드 |
+| `evidence_status` | 상세 근거 검색 상태 |
+| `evidence_warning` | 검색 순위·미적재 상태에 대한 안전 경고 |
+| `evidence_notice` | 외부 원문 확인 등 후속 조치 안내 |
+| `cas_link_warning` | CAMEO–CAS 연결 검증 상태 경고 |
+| `evidence[].cas_link_status` | 개별 근거의 CAS 연결 검증 상태 |
+| `requires_responder_confirmation` | 항상 `true` |
+| `rule_eligible` | 항상 `false` |
+| `risk_determination_allowed` | 항상 `false` |
+| `candidate_score_is_probability` | 항상 `false` |
+
+`CAS_EVIDENCE_NOT_LOADED`는 후보가 안전하다는 뜻이 아니라 해당 CAS의 상세 KOSHA·CAMEO
+근거가 현재 artifact에 없다는 뜻입니다. 클라이언트는 `evidence_warning`,
+`evidence_notice`, `cas_link_warning`을 숨기지 않아야 합니다. 후보 순위만으로 현장 물질을
+확정하지 않습니다.
+
+`NO_RELIABLE_CANDIDATE`도 물질이 없거나 안전하다는 뜻이 아닙니다. 현재 749개 프로필 밖의
+물질이거나 관찰 표현이 부족할 수 있으므로, 화면은 “관찰 정보 보강 또는 외부 공식 MSDS
+확인”을 안내해야 하며 위험 부재로 표시하면 안 됩니다.
+
+전체 예시:
+[`material_discovery_response.json`](../examples/api/material_discovery_response.json)
+
+## 8. 물질명·CAS 후보 검색
 
 ### `POST /api/v1/substances/resolve`
 
@@ -341,7 +410,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/incidents/analyze \
 염산 CAS 자동 힌트가 되지 않습니다. 이 경우 후보 누락보다 잘못된 동일-CAS 근거 제한을
 피하는 것을 우선합니다.
 
-## 8. 공식 근거 검색
+## 9. 공식 근거 검색
 
 ### `POST /api/v1/evidence/search`
 
@@ -371,7 +440,7 @@ Resolver 후보를 검색 힌트로만 사용하는 경우:
 Rule 입력이 아니며 `risk_determination_allowed=false`입니다. 해당 CAS의 상세 근거가 로드되지
 않았다면 `CAS_EVIDENCE_NOT_LOADED`를 반환하고 다른 CAS 문서로 대체하지 않습니다.
 
-## 9. 시설 이력 후보 검색
+## 10. 시설 이력 후보 검색
 
 ### `POST /api/v1/facilities/candidates`
 
@@ -399,7 +468,7 @@ Rule 입력이 아니며 `risk_determination_allowed=false`입니다. 해당 CAS
 
 과거 취급 이력을 현재 재고·보유량·저장 위치로 표시해서는 안 됩니다.
 
-## 10. 충돌 검토 단독 호출
+## 11. 충돌 검토 단독 호출
 
 ### `POST /api/v1/conflicts/review`
 
@@ -440,7 +509,7 @@ API는 두 현장 확인 게이트를 통과한 뒤 `PUBLIC_SOURCE_PILOT_V1`로 
 `responder_confirmation_required`, `conflict_review_capability`가 포함되고, 실제 스크리닝
 내용은 `result`에 들어갑니다.
 
-## 11. 오류 형식
+## 12. 오류 형식
 
 모든 표준 오류는 같은 envelope를 사용합니다.
 
@@ -476,7 +545,7 @@ API는 두 현장 확인 게이트를 통과한 뒤 `PUBLIC_SOURCE_PILOT_V1`로 
 오류입니다. 클라이언트는 이 응답을 후보 또는 정상 결과로 표시하지 않고 운영자가 같은
 `request_id`를 조사하게 해야 합니다.
 
-## 12. 프론트·백엔드 구현 규칙
+## 13. 프론트·백엔드 구현 규칙
 
 1. Resolver 첫 후보를 자동 확정하지 않습니다.
 2. 백엔드가 인증된 현장 확인 레코드를 만든 후 확인 객체를 전송합니다.
@@ -488,8 +557,10 @@ API는 두 현장 확인 게이트를 통과한 뒤 `PUBLIC_SOURCE_PILOT_V1`로 
 7. 시설 이력은 “과거 공개 이력 후보”로 표시합니다.
 8. `required_next_steps`와 업무 상태를 사용자에게 그대로 전달합니다.
 9. `X-Request-Id`, `analysis_id`, `incident_id`를 함께 기록해 장애를 추적합니다.
+10. 물질 탐색 후보는 `현장 물질 확인` 이후에만 확인 객체로 변환합니다.
+11. 기록 저장은 BE 성공 응답 뒤 화면을 초기화합니다.
 
-## 13. TypeScript 호출 예시
+## 14. TypeScript 호출 예시
 
 ```ts
 type AnalyzeRequest = Record<string, unknown>;
@@ -519,10 +590,11 @@ export async function analyzeIncident(
 
 API Key는 서버 환경변수나 Secret Manager에서 읽어야 하며 프론트 번들에 포함하면 안 됩니다.
 
-## 14. 관련 문서
+## 15. 관련 문서
 
 - [README](../README.md)
 - [아키텍처](ARCHITECTURE.md)
 - [데이터와 모델](DATA_AND_MODEL.md)
 - [배포](DEPLOYMENT.md)
 - [안전 및 한계](SAFETY_AND_LIMITATIONS.md)
+- [대시보드 적용 흐름](DASHBOARD_FLOW.md)

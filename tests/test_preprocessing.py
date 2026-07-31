@@ -47,6 +47,18 @@ ICIS_COLUMNS = (
     "원본데이터셋_URL",
 )
 
+ULSAN_COLUMNS = (
+    "CAS번호",
+    "화학물질명_한글",
+    "화학물질명_영문",
+    "상온상태",
+    "색상",
+    "냄새",
+    "사용용도_설명",
+    "자료기간",
+    "원본데이터셋_URL",
+)
+
 
 def _write_csv(
     path: Path, columns: tuple[str, ...], rows: list[dict[str, object]]
@@ -66,6 +78,7 @@ def _patch_expected_counts(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(preprocessing, "EXPECTED_REACTIVE_GROUP_COUNT", 2)
     monkeypatch.setattr(preprocessing, "EXPECTED_CAMEO_MAPPING_COUNT", 2)
     monkeypatch.setattr(preprocessing, "EXPECTED_COMPATIBILITY_PAIR_COUNT", 3)
+    monkeypatch.setattr(preprocessing, "MINIMUM_ULSAN_PROFILE_COUNT", 2)
 
 
 def _facility_row(**updates: object) -> dict[str, object]:
@@ -269,27 +282,51 @@ def _make_fixture(root: Path) -> tuple[Path, Path, Path]:
 
     _write_csv(
         data_dir / preprocessing.SOURCE_FILES["ulsan_substance"],
-        ("CAS번호", "화학물질명_한글", "화학물질명_영문"),
+        ULSAN_COLUMNS,
         [
             {
                 "CAS번호": "7647-01-0",
                 "화학물질명_한글": "염산가스",
                 "화학물질명_영문": "Hydrogen chloride",
+                "상온상태": "기체",
+                "색상": "무색",
+                "냄새": "자극적인 냄새",
+                "사용용도_설명": "금속 세정",
+                "자료기간": "2021-01-15 기준",
+                "원본데이터셋_URL": preprocessing.ULSAN_CHEMICAL_SOURCE_URL,
             },
             {
                 "CAS번호": "7681-52-9",
                 "화학물질명_한글": "미확인 세정제 원액",
                 "화학물질명_영문": "Sodium hypochlorite",
+                "상온상태": "액체",
+                "색상": "담황색",
+                "냄새": "염소 냄새",
+                "사용용도_설명": "표백 및 소독",
+                "자료기간": "2021-01-15 기준",
+                "원본데이터셋_URL": preprocessing.ULSAN_CHEMICAL_SOURCE_URL,
             },
             {
                 "CAS번호": "2024-01-01",
                 "화학물질명_한글": "날짜형 잘못된 CAS",
                 "화학물질명_영문": "Invalid CAS alias",
+                "상온상태": "액체",
+                "색상": "무색",
+                "냄새": "",
+                "사용용도_설명": "",
+                "자료기간": "2021-01-15 기준",
+                "원본데이터셋_URL": preprocessing.ULSAN_CHEMICAL_SOURCE_URL,
             },
             {
                 "CAS번호": "7732-18-5",
                 "화학물질명_한글": "물",
                 "화학물질명_영문": "Water",
+                "상온상태": "",
+                "색상": "",
+                "냄새": "",
+                "사용용도_설명": "",
+                "자료기간": "2021-01-15 기준",
+                "원본데이터셋_URL": preprocessing.ULSAN_CHEMICAL_SOURCE_URL,
             },
         ],
     )
@@ -485,6 +522,32 @@ def test_prepare_dataset_builds_safe_lookup_artifacts(
             connection.execute("SELECT COUNT(*) FROM evidence_fts").fetchone()[0] == 4
         )
         assert (
+            connection.execute("SELECT COUNT(*) FROM substance_profile").fetchone()[0]
+            == 2
+        )
+        assert (
+            connection.execute("SELECT COUNT(*) FROM substance_profile_fts").fetchone()[
+                0
+            ]
+            == 2
+        )
+        assert connection.execute(
+            """
+            SELECT physical_state, color, odor, requires_responder_confirmation,
+                   rule_eligible
+            FROM substance_profile WHERE cas_number = '7681-52-9'
+            """
+        ).fetchone() == ("액체", "담황색", "염소 냄새", 1, 0)
+        assert (
+            connection.execute(
+                """
+                SELECT COUNT(*) FROM substance_profile_fts
+                WHERE substance_profile_fts MATCH '"담황색" OR "염소"'
+                """
+            ).fetchone()[0]
+            == 1
+        )
+        assert (
             connection.execute(
                 "SELECT COUNT(*) FROM evidence_fts WHERE evidence_fts MATCH 'chlorine'"
             ).fetchone()[0]
@@ -621,6 +684,10 @@ def test_prepare_dataset_builds_safe_lookup_artifacts(
     assert manifest["counts"]["icis_invalid_cas_rows"] == 1
     assert manifest["counts"]["icis_split_alias_rows"] == 4
     assert manifest["counts"]["icis_unique_aliases"] == 4
+    assert manifest["counts"]["ulsan_profile_source_rows"] == 4
+    assert manifest["counts"]["ulsan_profile_invalid_cas_rows"] == 1
+    assert manifest["counts"]["ulsan_profile_without_properties_rows"] == 1
+    assert manifest["counts"]["ulsan_profile_count"] == 2
     assert manifest["counts"]["excluded_non_exact_cas_rows"] == 1
     assert manifest["counts"]["source_current_inventory_y_rows"] == 1
     assert manifest["safety_constraints"]["risk_level_training_included"] is False
@@ -646,6 +713,16 @@ def test_prepare_dataset_builds_safe_lookup_artifacts(
     )
     assert (
         manifest["safety_constraints"]["icis_catalog_aliases_used_for_rule_promotion"]
+        is False
+    )
+    assert (
+        manifest["safety_constraints"][
+            "property_profile_candidates_require_responder_confirmation"
+        ]
+        is True
+    )
+    assert (
+        manifest["safety_constraints"]["property_profile_candidates_are_rule_eligible"]
         is False
     )
     crosswalk_manifest = manifest["config_files"]["cameo_crosswalk"]

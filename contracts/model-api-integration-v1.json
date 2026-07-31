@@ -8,6 +8,10 @@
       "method": "POST",
       "path": "/api/v1/incidents/analyze"
     },
+    "material_discovery_endpoint": {
+      "method": "POST",
+      "path": "/api/v1/substances/discover"
+    },
     "metadata_path": "/api/v1/meta",
     "liveness_path": "/health/live",
     "readiness_path": "/health/ready"
@@ -15,13 +19,15 @@
   "fixtures": {
     "unconfirmed_request": "examples/api/incident_unconfirmed_request.json",
     "unconfirmed_response": "examples/api/incident_unconfirmed_response.json",
-    "confirmed_request": "examples/api/incident_confirmed_request.json"
+    "confirmed_request": "examples/api/incident_confirmed_request.json",
+    "material_discovery_request": "examples/api/material_discovery_request.json",
+    "material_discovery_response": "examples/api/material_discovery_response.json"
   },
   "call_path": [
     {
       "from": "FE_Repository",
       "to": "BE_Repository",
-      "rule": "프론트엔드는 서비스 백엔드의 사고 분석 API만 호출한다."
+      "rule": "프론트엔드는 모델 API를 직접 호출하지 않고 서비스 백엔드 API만 호출한다."
     },
     {
       "from": "BE_Repository",
@@ -57,11 +63,35 @@
     "material_search_capabilities": [
       "CAS_NUMBER",
       "STANDARD_NAME",
-      "ALIAS"
+      "ALIAS",
+      "MULTI_FIELD_PROPERTY_PROFILE_RETRIEVAL",
+      "CANDIDATE_SPECIFIC_OFFICIAL_EVIDENCE"
     ],
     "material_search_not_yet_supported": [
-      "PROPERTY_ONLY_IDENTIFICATION"
+      "PROPERTY_ONLY_AUTO_CONFIRMATION",
+      "IMAGE_OR_SENSOR_AUTHENTICITY_VERIFICATION"
     ],
+    "material_discovery": {
+      "minimum_distinct_property_fields": 2,
+      "minimum_distinct_property_tokens": 2,
+      "candidate_only": true,
+      "requires_responder_confirmation": true,
+      "rule_eligible": false,
+      "risk_display_allowed": false,
+      "empty_evidence_means_safe": false,
+      "no_reliable_candidate_means_absent": false,
+      "no_reliable_candidate_means_safe": false,
+      "no_reliable_candidate_next_action": "관찰 정보 보강 및 외부 공식 MSDS 확인",
+      "property_source_label": "소방청 울산 화학물질 정보 기반 관찰 후보",
+      "evidence_card_body_label": "공식 문서 발췌",
+      "ranking_score_must_not_be_displayed_as_confidence": true,
+      "warning_fields_must_be_preserved": [
+        "evidence_warning",
+        "evidence_notice",
+        "cas_link_warning",
+        "evidence.cas_link_status"
+      ]
+    },
     "unconfirmed_states": [
       "AWAITING_SUBSTANCE_CONFIRMATION",
       "AWAITING_INCIDENT_CONFIRMATION",
@@ -93,6 +123,54 @@
       "conflict_reviews": 1,
       "multiple_facility_candidates_before_confirmation_allowed": true,
       "multiple_executed_pair_reviews_in_one_response_allowed": false
+    }
+  },
+  "parser_scope": {
+    "extracts": [
+      "incident_type",
+      "registered_substance_expression",
+      "substance_role_in_supported_context",
+      "assertion",
+      "limited_planned_action_expression"
+    ],
+    "does_not_extract": [
+      "facility_name",
+      "address",
+      "province",
+      "coordinates",
+      "equipment",
+      "raw_audio_to_text"
+    ],
+    "location_input_owner": "BE dispatch record or responder selection",
+    "voice_transcript_meaning": "이미 문자로 변환된 신고문"
+  },
+  "dashboard_workflow": {
+    "material_discovery": [
+      "관찰 내용 또는 물질 표현 입력",
+      "후보와 출처 카드 표시",
+      "용기 라벨·현장 MSDS 등으로 현장 물질 확인",
+      "BE가 confirmation_id 발급",
+      "두 CAS가 모두 확인된 뒤 충돌 검토"
+    ],
+    "confirmation_button": {
+      "recommended_label": "현장 물질 확인",
+      "meaning": "현장 확인 레코드 생성",
+      "not_meaning": [
+        "AI 판정 승인",
+        "전체 대응 기록 저장",
+        "지휘관 전자서명"
+      ]
+    },
+    "record_save": {
+      "owner": "BE_Repository",
+      "sequence": [
+        "초기화 안내 표시",
+        "전체 대화·분석·확인 기록 저장 요청",
+        "저장 성공 확인",
+        "화면 초기화"
+      ],
+      "reset_before_save_success_allowed": false,
+      "model_api_is_stateless": true
     }
   },
   "compatibility": {
