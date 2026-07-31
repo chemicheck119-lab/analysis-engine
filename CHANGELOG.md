@@ -7,6 +7,12 @@
 
 ### Added
 
+- 공개 검증 CAMEO 15쌍의 확인 상태 45건과 안전 hard case 5건을 정답 없이 생성하는
+  E2E 공모전 검수 후보팩
+- 서로 다른 라벨러·검수자의 빈 CSV를 내보내고 완전 일치·안전 불변조건을 통과한 경우에만
+  `DOUBLE_REVIEWED_NON_EXPERT` locked set으로 승격하는 이중 검수 gate
+- 정답과 비교하지 않고 충돌 실행 gate·확인 전 위험 노출·출력 계약·artifact hash·지연시간만
+  기록하는 E2E candidate preflight
 - 실제 `analyze_incident` 경로에서 확인 gate·근거 CAS 귀속·모호성 기권·충돌 규칙을
   함께 검사하는 `evaluate-e2e`와 8건 DRAFT 안전 시나리오
 - 서비스가 해결하는 실제 문제와 살릴·축소·제외할 기능, 공모전 참신성과 상용화 조건을

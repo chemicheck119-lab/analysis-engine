@@ -1,0 +1,1423 @@
+{
+  "schema_version": "chemicheck119-e2e-candidate-preflight-v1",
+  "action": "PREFLIGHT_CANDIDATE_POOL",
+  "status": "COMPLETED",
+  "machine_observation_only": true,
+  "is_accuracy_evaluation": false,
+  "field_validated": false,
+  "candidate_count": 50,
+  "candidate_pool": {
+    "file_name": "e2e_competition_candidate_pool.jsonl",
+    "sha256": "6446e211c4a0dcd6f0775cf5ad5a27c220016c228c638c54c3fdc20b55c50cdf"
+  },
+  "artifacts": {
+    "database": {
+      "file_name": "chemiguard119.sqlite",
+      "exists": true,
+      "sha256": "96a1baab0384af1d1eb5f8a5a95366f740e05692677440536031e276df8c1015",
+      "size_bytes": 196009984
+    },
+    "resolver": {
+      "file_name": "resolver.joblib",
+      "exists": true,
+      "sha256": "7baba59ec6219f3a8989d5debe5334d4fd3ee5ea5f33e9b0a6c453cdaee205c9",
+      "size_bytes": 8451661
+    },
+    "retriever": {
+      "file_name": "retriever.joblib",
+      "exists": true,
+      "sha256": "2e93e066648890400b26f56b532d6ed608b828203f8668e4af3cf63de1bc544b",
+      "size_bytes": 95125338
+    }
+  },
+  "metrics": {
+    "status_counts": {
+      "INVALID_INPUT": 1,
+      "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION": 15,
+      "NEEDS_INCIDENT_SUBSTANCE_CONFIRMATION": 1,
+      "NEEDS_SUBSTANCE_CONFIRMATION": 17,
+      "SCREENING_COMPLETED": 15,
+      "UNCLASSIFIED": 1
+    },
+    "rule_executed_count": 16,
+    "unsafe_conflict_execution_count": 0,
+    "unconfirmed_risk_exposure_count": 0,
+    "pipeline_contract_failure_count": 0,
+    "latency_ms": {
+      "mean": 99.06115834,
+      "p95": 118.31203125
+    }
+  },
+  "cases": [
+    {
+      "case_id": "E2E-CAND-PAIR-01-NONE",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas",
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "PARSER_CANDIDATE",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 96.603375
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-01-INCIDENT",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 95.593625
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-01-BOTH",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "SCREENING_COMPLETED",
+        "rule_executed": true,
+        "rule_status": "SCREENING_COMPLETED",
+        "missing_confirmations": [],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "RESPONDER_CONFIRMED"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": "LOW",
+        "severity": "NO_KNOWN_HAZARDOUS_REACTION"
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 116.9135
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-02-NONE",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas",
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "PARSER_CANDIDATE",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 94.735958
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-02-INCIDENT",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 94.179833
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-02-BOTH",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "SCREENING_COMPLETED",
+        "rule_executed": true,
+        "rule_status": "SCREENING_COMPLETED",
+        "missing_confirmations": [],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "RESPONDER_CONFIRMED"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": "LOW",
+        "severity": "NO_KNOWN_HAZARDOUS_REACTION"
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 115.681958
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-03-NONE",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas",
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "PARSER_CANDIDATE",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 94.88775
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-03-INCIDENT",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 94.689875
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-03-BOTH",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "SCREENING_COMPLETED",
+        "rule_executed": true,
+        "rule_status": "SCREENING_COMPLETED",
+        "missing_confirmations": [],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "RESPONDER_CONFIRMED"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": "LOW",
+        "severity": "NO_KNOWN_HAZARDOUS_REACTION"
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 118.145292
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-04-NONE",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas",
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "PARSER_CANDIDATE",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 95.8225
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-04-INCIDENT",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 95.205875
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-04-BOTH",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "SCREENING_COMPLETED",
+        "rule_executed": true,
+        "rule_status": "SCREENING_COMPLETED",
+        "missing_confirmations": [],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "RESPONDER_CONFIRMED"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": "LOW",
+        "severity": "NO_KNOWN_HAZARDOUS_REACTION"
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 117.91825
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-05-NONE",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas",
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "PARSER_CANDIDATE",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 96.006541
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-05-INCIDENT",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 96.257958
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-05-BOTH",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "SCREENING_COMPLETED",
+        "rule_executed": true,
+        "rule_status": "SCREENING_COMPLETED",
+        "missing_confirmations": [],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "RESPONDER_CONFIRMED"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": "HIGH",
+        "severity": "HIGH_RISK"
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 118.194125
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-06-NONE",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas",
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "PARSER_CANDIDATE",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 94.688166
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-06-INCIDENT",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 93.891917
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-06-BOTH",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "SCREENING_COMPLETED",
+        "rule_executed": true,
+        "rule_status": "SCREENING_COMPLETED",
+        "missing_confirmations": [],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "RESPONDER_CONFIRMED"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": "MEDIUM",
+        "severity": "CAUTION"
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 115.907709
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-07-NONE",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas",
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "PARSER_CANDIDATE",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 95.808709
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-07-INCIDENT",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 94.778042
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-07-BOTH",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "SCREENING_COMPLETED",
+        "rule_executed": true,
+        "rule_status": "SCREENING_COMPLETED",
+        "missing_confirmations": [],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "RESPONDER_CONFIRMED"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": "HIGH",
+        "severity": "HIGH_RISK"
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 117.069333
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-08-NONE",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas",
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "PARSER_CANDIDATE",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 94.958916
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-08-INCIDENT",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 94.222667
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-08-BOTH",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "SCREENING_COMPLETED",
+        "rule_executed": true,
+        "rule_status": "SCREENING_COMPLETED",
+        "missing_confirmations": [],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "RESPONDER_CONFIRMED"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": "MEDIUM",
+        "severity": "CAUTION"
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 117.525458
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-09-NONE",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas",
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "PARSER_CANDIDATE",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 96.082292
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-09-INCIDENT",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 93.913625
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-09-BOTH",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "SCREENING_COMPLETED",
+        "rule_executed": true,
+        "rule_status": "SCREENING_COMPLETED",
+        "missing_confirmations": [],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "RESPONDER_CONFIRMED"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": "HIGH",
+        "severity": "HIGH_RISK"
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 116.730584
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-10-NONE",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas",
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "PARSER_CANDIDATE",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 95.244416
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-10-INCIDENT",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 96.455375
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-10-BOTH",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "SCREENING_COMPLETED",
+        "rule_executed": true,
+        "rule_status": "SCREENING_COMPLETED",
+        "missing_confirmations": [],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "RESPONDER_CONFIRMED"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": "HIGH",
+        "severity": "HIGH_RISK"
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 118.95975
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-11-NONE",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas",
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "PARSER_CANDIDATE",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 97.038
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-11-INCIDENT",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 96.008
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-11-BOTH",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "SCREENING_COMPLETED",
+        "rule_executed": true,
+        "rule_status": "SCREENING_COMPLETED",
+        "missing_confirmations": [],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "RESPONDER_CONFIRMED"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": "LOW",
+        "severity": "NO_KNOWN_HAZARDOUS_REACTION"
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 117.452042
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-12-NONE",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas",
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "PARSER_CANDIDATE",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 95.348708
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-12-INCIDENT",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 94.752083
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-12-BOTH",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "SCREENING_COMPLETED",
+        "rule_executed": true,
+        "rule_status": "SCREENING_COMPLETED",
+        "missing_confirmations": [],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "RESPONDER_CONFIRMED"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": "HIGH",
+        "severity": "HIGH_RISK"
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 116.954417
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-13-NONE",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas",
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "PARSER_CANDIDATE",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 95.434459
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-13-INCIDENT",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 94.99675
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-13-BOTH",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "SCREENING_COMPLETED",
+        "rule_executed": true,
+        "rule_status": "SCREENING_COMPLETED",
+        "missing_confirmations": [],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "FACILITY"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "RESPONDER_CONFIRMED"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": "HIGH",
+        "severity": "HIGH_RISK"
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 118.5295
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-14-NONE",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas",
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "PARSER_CANDIDATE",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 96.984084
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-14-INCIDENT",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 95.786667
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-14-BOTH",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "SCREENING_COMPLETED",
+        "rule_executed": true,
+        "rule_status": "SCREENING_COMPLETED",
+        "missing_confirmations": [],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "RESPONDER_CONFIRMED"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": "HIGH",
+        "severity": "HIGH_RISK"
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 118.4085
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-15-NONE",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas",
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "PARSER_CANDIDATE",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 96.258
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-15-INCIDENT",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "facility_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "PARSER_CANDIDATE"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 94.198
+    },
+    {
+      "case_id": "E2E-CAND-PAIR-15-BOTH",
+      "scenario_origin": "MECHANICAL_PUBLIC_SOURCE_RECONSTRUCTION",
+      "actual": {
+        "status": "SCREENING_COMPLETED",
+        "rule_executed": true,
+        "rule_status": "SCREENING_COMPLETED",
+        "missing_confirmations": [],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "FACILITY",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "RESPONDER_CONFIRMED"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": "HIGH",
+        "severity": "HIGH_RISK"
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 116.708958
+    },
+    {
+      "case_id": "E2E-CAND-HARD-01-FACILITY-ONLY",
+      "scenario_origin": "MECHANICAL_CONTRACT_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_INCIDENT_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas"
+        ],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "PARSER_CANDIDATE",
+          "FACILITY": "RESPONDER_CONFIRMED"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 95.766417
+    },
+    {
+      "case_id": "E2E-CAND-HARD-02-INVALID-CAS",
+      "scenario_origin": "MECHANICAL_CONTRACT_RECONSTRUCTION",
+      "actual": {
+        "status": "INVALID_INPUT",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_INVALID_INPUT",
+        "missing_confirmations": [],
+        "candidate_count": 0,
+        "candidate_roles": [],
+        "evidence_bases": {},
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 0.0195
+    },
+    {
+      "case_id": "E2E-CAND-HARD-03-AMBIGUOUS-PRODUCT",
+      "scenario_origin": "MECHANICAL_CONTRACT_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas",
+          "facility_cas"
+        ],
+        "candidate_count": 0,
+        "candidate_roles": [],
+        "evidence_bases": {
+          "UNKNOWN": "NO_CAS_HINT"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 78.863542
+    },
+    {
+      "case_id": "E2E-CAND-HARD-04-EMBEDDED-ALIAS",
+      "scenario_origin": "MECHANICAL_CONTRACT_RECONSTRUCTION",
+      "actual": {
+        "status": "NEEDS_SUBSTANCE_CONFIRMATION",
+        "rule_executed": false,
+        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+        "missing_confirmations": [
+          "incident_cas",
+          "facility_cas"
+        ],
+        "candidate_count": 0,
+        "candidate_roles": [],
+        "evidence_bases": {
+          "UNKNOWN": "NO_CAS_HINT"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 78.311708
+    },
+    {
+      "case_id": "E2E-CAND-HARD-05-UNSUPPORTED-PAIR",
+      "scenario_origin": "MECHANICAL_CONTRACT_RECONSTRUCTION",
+      "actual": {
+        "status": "UNCLASSIFIED",
+        "rule_executed": true,
+        "rule_status": "UNCLASSIFIED",
+        "missing_confirmations": [],
+        "candidate_count": 2,
+        "candidate_roles": [
+          "INCIDENT",
+          "INCIDENT"
+        ],
+        "evidence_bases": {
+          "INCIDENT": "RESPONDER_CONFIRMED",
+          "FACILITY": "RESPONDER_CONFIRMED"
+        },
+        "output_validation_status": "PASSED",
+        "risk_level": null,
+        "severity": null
+      },
+      "unsafe_conflict_execution": false,
+      "unconfirmed_risk_exposure": false,
+      "pipeline_contract_errors": [],
+      "latency_ms": 78.165208
+    }
+  ],
+  "warning": "정답 라벨이 없는 모델 관찰값입니다. 정확도·Recall·현장 성능으로 인용하지 마세요."
+}

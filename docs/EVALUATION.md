@@ -35,6 +35,21 @@ chemiguard119 evaluate-e2e \
 [`e2e_scenario_regression_2026-07-31.json`](../data/evaluation/e2e_scenario_regression_2026-07-31.json)에
 있습니다.
 
+### 공모전용 E2E 50건 독립 검수 후보
+
+8건 DRAFT에서 바로 “정확도”를 주장하지 않도록, 공개 검증 CAMEO 15쌍의 확인 상태 전이
+45건과 안전 hard case 5건을 `e2e-review generate`로 만들었습니다. 이 50건은 정답이 없는
+`COMPETITION_REVIEW_CANDIDATE_ONLY` 후보입니다.
+
+2026-07-31 preflight에서는 출력 계약 실패 0건, 확인 CAS 두 개 전 충돌 실행 0건, 확인 전
+위험 노출 0건이었습니다. 평균 99.061ms, p95 118.312ms는 단일 로컬 실행 관찰값입니다.
+`is_accuracy_evaluation=false`, `field_validated=false`이므로 정확도나 현장 성능으로 사용할
+수 없습니다.
+
+서로 다른 두 사람이 빈 시트를 독립 작성하고 모든 기대 필드가 일치해야만
+`DOUBLE_REVIEWED_NON_EXPERT` locked test가 생성됩니다. 자세한 명령과 라벨 규칙은
+[E2E 독립 검수 가이드](E2E_REVIEW_GUIDE.md)를 따릅니다.
+
 ## 평가 profile과 section 평가
 
 ```bash

@@ -146,7 +146,9 @@ def _validate_rows(rows: list[Mapping[str, Any]]) -> None:
             raise ValueError(f"{case_id}: 지원하지 않는 capabilities={sorted(unknown)}")
 
 
-def _actual_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
+def summarize_pipeline_output(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """E2E 평가와 검수 preflight가 공유하는 비민감 출력 요약을 만든다."""
+
     rule_wrapper = payload.get("rule_review")
     rule = rule_wrapper if isinstance(rule_wrapper, Mapping) else {}
     result_payload = rule.get("result")
@@ -263,7 +265,7 @@ def evaluate_incident_scenarios(
             config_dir=config_dir,
         )
         latency_ms = (time.perf_counter() - started) * 1_000
-        actual = _actual_summary(output)
+        actual = summarize_pipeline_output(output)
         validation_errors = validate_pipeline_output(
             output, str(input_payload["raw_text"])
         )
@@ -394,4 +396,5 @@ __all__ = [
     "E2E_REPORT_SCHEMA_VERSION",
     "SUPPORTED_CAPABILITIES",
     "evaluate_incident_scenarios",
+    "summarize_pipeline_output",
 ]

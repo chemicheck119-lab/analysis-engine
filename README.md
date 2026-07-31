@@ -49,7 +49,7 @@ KOSHA·CAMEO 근거 검색
 | 신고문 구조화 | 구현 | 기본 결정적 파서, LM Studio는 선택 실험 |
 | 공식 근거 검색 | 구현 | KOSHA 상세 근거 9종과 CAMEO 근거, section 중심 BM25·TF-IDF |
 | Section 검색 평가 | 구현 | 핵심·보조 문서와 필수 사실 회수율·기권 성능·95% 구간을 분리, DRAFT 상용 주장은 차단 |
-| 사고 분석 E2E 평가 | 구현 | 확인 gate·기권·충돌 규칙·근거 CAS 귀속 8건 DRAFT 안전 회귀 |
+| 사고 분석 E2E 평가 | 부분 구현 | 8건 DRAFT 회귀 + 50건 독립 검수 후보·이중 검수 gate, 사람 검수 전 정확도 주장 금지 |
 | KOSHA 근거 확장 | 수집기 구현 | 공식 OpenAPI staging 수집·검토 필요, 현재 artifact는 9종 |
 | 유사 사고 사례 RAG | 미구현 | 검증된 사고–대응 사례 corpus와 출처·라벨 부족 |
 | 시설 물질 후보 | 구현 | ICIS·PRTR 공개 **과거 취급 이력** 검색 |
@@ -214,6 +214,9 @@ chemiguard119 parse "염산 저장탱크에서 누출 중입니다."
 
 # 실제 사고 분석 경로의 확인 gate·기권·충돌 규칙 회귀검사
 chemiguard119 evaluate-e2e --evaluation-profile INTERNAL_REGRESSION
+
+# E2E 50건 독립 검수 후보 생성·시트 내보내기·병합·사전점검
+chemiguard119 e2e-review --help
 
 # JSON으로 출력
 chemiguard119 --json resolve "황산"
@@ -394,6 +397,7 @@ python -m pip check
 - [데이터와 모델](docs/DATA_AND_MODEL.md): 출처, 전처리, 모델 역할과 평가
 - [모델 평가](docs/EVALUATION.md): 지표 정의, 기준선, 실패 원인 분리
 - [평가 V2](docs/EVALUATION_V2.md): 21·10·6의 출처, 상용 타당성, 공모전 AI 고도화 기준
+- [E2E 독립 검수](docs/E2E_REVIEW_GUIDE.md): 정답 없는 50건 후보를 이중 검수 locked set으로 만드는 절차
 - [최종 브리핑](docs/BRIEFING.md): 발표문, 최신 AI 주제, 수치와 상용 준비 판정
 - [배포](docs/DEPLOYMENT.md): artifact, Secret, Docker, CI/CD, 롤백
 - [운영](docs/OPERATIONS.md): 구조화 로그, 요청 추적, 장애 확인 절차

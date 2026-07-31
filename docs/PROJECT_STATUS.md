@@ -14,7 +14,7 @@
 | 물질 후보 검색 | 부분 완료 | 4,300개 카탈로그, 내부 회귀 21건 Top-1 0.9524·Top-3 Recall 1.0 |
 | 관찰 기반 물질 탐색 | 기능 smoke 완료 | 성상 프로필 749 CAS, 최소 두 영역 일치·현장 확인 gate |
 | 자동 CAS 힌트 안전성 | 부분 완료 | 합성·내부 회귀 12건 통과, 부분 문자열 위험 힌트 0건 |
-| 사고 분석 E2E | 부분 완료 | 8건 DRAFT 상태 전이 회귀 통과, 현장 성능 평가는 미실시 |
+| 사고 분석 E2E | 부분 완료 | 8건 DRAFT 회귀 + 50건 이중 검수 후보·gate, 사람 독립 검수는 미실시 |
 | 업체 이력 후보 | 부분 완료 | ICIS·PRTR 과거 이력 후보 168,424건, 현재 재고 확정 기능 아님 |
 | 공식 근거 검색 | 부분 완료 | 근거 5,858건, DRAFT section 12건의 핵심 Recall@5 1.0·가중 Recall@5 0.9688 |
 | 충돌 검토 | 파일럿 | 공개 검증 CAMEO CAS 6종, 15개 조합 회귀 검사·pair별 표시 계약 |
@@ -113,6 +113,22 @@ claim_scope: INTERNAL_REGRESSION_ONLY
 
 개발자가 만든 DRAFT 안전 회귀이므로 현장 정확도나 상용 성능으로 해석하지 않습니다.
 
+독립 평가 구축을 위해 별도로 만든 E2E 후보 50건의 preflight 결과:
+
+```text
+candidate: 50 (공개 검증 15쌍 × 확인 상태 3 = 45, hard case 5)
+pipeline contract failure: 0
+unsafe conflict execution: 0
+unconfirmed risk exposure: 0
+mean latency: 99.061ms
+p95 latency: 118.312ms
+is_accuracy_evaluation: false
+```
+
+이 수치는 현재 모델이 안전 gate와 JSON 계약을 지켰다는 기계 관찰입니다. 두 사람이
+독립적으로 정답을 작성하기 전에는 정확도·Recall·상용 성능이 아닙니다. 같은 사람이 두
+역할을 맡거나 두 시트를 미리 공유하면 병합 도구가 차단합니다.
+
 관찰 기반 물질 탐색 artifact를 같은 원천 CSV에서 다시 생성한 결과:
 
 ```text
@@ -143,7 +159,7 @@ Top-1: 메틸 에틸 케톤 / 78-93-3
 
 ### P0 — 배포·안전 검증을 막는 항목
 
-1. 실제 현장 검증과 독립 보류 평가셋이 없습니다.
+1. 50건 검수 후보와 이중 검수 gate는 있으나 실제 사람 검수가 끝난 독립 보류셋은 없습니다.
 2. KOSHA 상세 근거는 현재 artifact 기준 9종으로 전체 카탈로그보다 매우 적습니다.
 3. 공개 검증 CAMEO 범위가 CAS 6종·물질쌍 15개로 제한됩니다.
 4. 검증된 스테이징 URL과 실제 서버 배포 성공 기록이 없습니다.
@@ -191,7 +207,7 @@ staging·production manifest는 `PILOT_REVIEWED` 평가와 데이터 재배포 �
 
 1. FE·BE가 물질탐색·사고분석 계약을 구현하고 배포된 BFF를 대상으로 contract smoke를
    실행합니다.
-2. 독립 검수 locked set을 구축해 핵심·전체·가중 Recall을 같은 데이터에서 검증합니다.
+2. 서로 다른 두 사람이 E2E 50건을 독립 라벨링해 locked set으로 병합하고 실제 E2E 성능을 검증합니다.
 3. CAMEO·ICIS 파생 데이터의 재배포 조건을 확인해 registry 승인을 기록합니다.
 4. 독립 검수 evidence bundle과 attestation을 생성합니다.
 5. Python 3.11 bundle 이미지를 registry digest로 고정해 staging 부하·장애 시험을 수행합니다.
@@ -199,6 +215,7 @@ staging·production manifest는 `PILOT_REVIEWED` 평가와 데이터 재배포 �
 
 21·10·6의 정확한 출처, 단계별 목표 규모와 화면 적용 기준은
 [평가 V2](EVALUATION_V2.md)에 정리했습니다.
+E2E 50건의 실제 검수 절차는 [E2E 독립 검수 가이드](E2E_REVIEW_GUIDE.md)에 있습니다.
 
 ## 6. GitHub 상태 확인 원칙
 

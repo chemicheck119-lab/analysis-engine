@@ -99,6 +99,7 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
         "train": "기준선 모델 학습",
         "evaluate": "모델 평가",
         "evaluate-e2e": "사고 분석 E2E 안전 평가",
+        "e2e-review": "E2E 독립 검수팩",
         "resolve": "물질 후보 검색",
         "search": "공식 근거 검색",
         "parse": "신고문 구조화",
@@ -301,6 +302,22 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
         )
         print(f"주장 범위: {_short(payload.get('claim_scope'))}")
         print("주의: DRAFT E2E 회귀 결과는 현장 정확도나 상용 성능이 아닙니다.")
+    elif command == "e2e-review":
+        print(f"작업: {_short(payload.get('action'))}")
+        print(f"상태: {_short(payload.get('status'))}")
+        count = payload.get("candidate_count", payload.get("case_count"))
+        if count is not None:
+            print(f"사례: {count}건")
+        if payload.get("merged_case_count") is not None:
+            print(f"병합된 검수 사례: {payload.get('merged_case_count')}건")
+        if payload.get("disagreement_count") is not None:
+            print(f"검수 불일치: {payload.get('disagreement_count')}건")
+        if payload.get("output_path"):
+            print(f"출력: {payload['output_path']}")
+        if payload.get("warning"):
+            print(f"주의: {_short(payload.get('warning'), 500)}")
+        for blocker in payload.get("blockers") or []:
+            print(f"차단: {_short(blocker, 500)}")
     elif command == "pipeline":
         print(f"상태: {_short(payload.get('status'))}")
         print(f"마지막 단계: {_short(payload.get('last_completed_stage'))}")
@@ -619,6 +636,43 @@ def _evaluate_e2e(args: argparse.Namespace) -> dict[str, Any]:
         profile=args.evaluation_profile,
         report_path=args.report,
     )
+
+
+def _e2e_review(args: argparse.Namespace) -> dict[str, Any]:
+    from chemiguard119.e2e_review import (
+        export_review_sheet,
+        generate_review_candidate_pool,
+        merge_review_sheets,
+        preflight_candidate_pool,
+    )
+
+    if args.e2e_review_action == "generate":
+        return generate_review_candidate_pool(args.pair_snapshot, args.output)
+    if args.e2e_review_action == "export":
+        return export_review_sheet(
+            args.candidates,
+            args.output,
+            actor_role=args.actor_role,
+            actor_id=args.actor_id,
+        )
+    if args.e2e_review_action == "merge":
+        return merge_review_sheets(
+            args.candidates,
+            args.labeler_sheet,
+            args.reviewer_sheet,
+            args.output,
+            report_path=args.report,
+        )
+    if args.e2e_review_action == "preflight":
+        return preflight_candidate_pool(
+            args.candidates,
+            args.db,
+            args.resolver_model,
+            args.retriever_model,
+            config_dir=args.config_dir,
+            report_path=args.report,
+        )
+    raise ValueError(f"지원하지 않는 e2e-review action={args.e2e_review_action!r}")
 
 
 def _resolve(args: argparse.Namespace) -> dict[str, Any]:
@@ -1058,6 +1112,7 @@ def _interactive(args: argparse.Namespace) -> dict[str, Any]:
             "train",
             "evaluate",
             "evaluate-e2e",
+            "e2e-review",
             "resolve",
             "search",
             "parse",
@@ -1234,6 +1289,70 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_json_option(evaluate_e2e)
     evaluate_e2e.set_defaults(handler=_evaluate_e2e)
+
+    e2e_review = subparsers.add_parser(
+        "e2e-review",
+        help="E2E 후보 생성·독립 검수 시트·합의 병합·모델 preflight",
+    )
+    e2e_review_actions = e2e_review.add_subparsers(
+        dest="e2e_review_action",
+        required=True,
+    )
+    e2e_review.set_defaults(handler=_e2e_review)
+
+    e2e_review_dir = DEFAULT_REPORT_DIR / "e2e_review"
+    review_generate = e2e_review_actions.add_parser(
+        "generate",
+        help="공개 검증 15쌍과 hard case로 검수 전 50건 후보 생성",
+    )
+    review_generate.add_argument(
+        "--pair-snapshot",
+        type=_path,
+        default=EVALUATION_DIR / "verified_pair_snapshot_2024.json",
+    )
+    review_generate.add_argument(
+        "--output",
+        type=_path,
+        default=e2e_review_dir / "e2e_competition_candidates.jsonl",
+    )
+    _add_json_option(review_generate)
+
+    review_export = e2e_review_actions.add_parser(
+        "export",
+        help="정답이 비어 있는 라벨러 또는 독립 검수자 CSV 생성",
+    )
+    review_export.add_argument("--candidates", type=_path, required=True)
+    review_export.add_argument(
+        "--actor-role", choices=("LABELER", "REVIEWER"), required=True
+    )
+    review_export.add_argument("--actor-id", required=True)
+    review_export.add_argument("--output", type=_path, required=True)
+    _add_json_option(review_export)
+
+    review_merge = e2e_review_actions.add_parser(
+        "merge",
+        help="두 독립 검수 시트가 완전히 일치할 때 reviewed JSONL 생성",
+    )
+    review_merge.add_argument("--candidates", type=_path, required=True)
+    review_merge.add_argument("--labeler-sheet", type=_path, required=True)
+    review_merge.add_argument("--reviewer-sheet", type=_path, required=True)
+    review_merge.add_argument("--output", type=_path, required=True)
+    review_merge.add_argument("--report", type=_path)
+    _add_json_option(review_merge)
+
+    review_preflight = e2e_review_actions.add_parser(
+        "preflight",
+        help="정답 없이 현재 모델 상태와 안전 위반만 관찰",
+    )
+    review_preflight.add_argument("--candidates", type=_path, required=True)
+    _add_artifact_arguments(review_preflight)
+    review_preflight.add_argument("--config-dir", type=_path, default=CONFIG_DIR)
+    review_preflight.add_argument(
+        "--report",
+        type=_path,
+        default=e2e_review_dir / "e2e_candidate_preflight.json",
+    )
+    _add_json_option(review_preflight)
 
     resolve = subparsers.add_parser(
         "resolve", help="물질명·CAS·별칭에서 후보 물질 검색"
