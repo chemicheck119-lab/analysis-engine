@@ -44,6 +44,7 @@
 
 ### Security
 
+- 임시 디렉터리 처리 취약점이 수정된 개발 테스트 의존성 `pytest 9.0.3`으로 갱신
 - Uvicorn 원 URL access log와 raw exception traceback을 비활성화하고 예외 타입·request ID만
   구조화 로그로 기록
 - 알 수 없는 배포 환경과 staging·production의 미검증 runtime을 readiness에서 fail-closed
