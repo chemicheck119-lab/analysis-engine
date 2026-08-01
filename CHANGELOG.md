@@ -7,6 +7,12 @@
 
 ### Added
 
+- 현재 사고 입력과 BE 저장 외부 memory를 바탕으로 6개 도구 중 필요한 것만 선택하는
+  `PLAN → ACT → OBSERVE → REPLAN` 사고대응 에이전트 루프
+- 에이전트 상태·도구 trace·대기 입력·checksum 연결 memory를 반환하는
+  `POST /api/v1/agents/incidents/step`
+- 분석 직후 안전 계약 재검증, 새 관찰 없는 중복 호출 생략, 도구 장애의 구조화 실패,
+  동시 분기 parent hash와 BE compare-and-swap 연동 계약
 - 심사위원과 신규 개발자가 문제·AI 차별성·파이프라인·실제 수치·대표 시연·배포 한계를
   첫 화면에서 이해할 수 있도록 재구성한 프로젝트 중심 README
 - 사람 독립검수 없이 공모전 시연을 마감할 때 적용하는 공식기관 다중근거 자동검증 기준,

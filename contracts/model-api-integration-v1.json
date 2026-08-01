@@ -8,6 +8,12 @@
       "method": "POST",
       "path": "/api/v1/incidents/analyze"
     },
+    "incident_agent_endpoint": {
+      "method": "POST",
+      "path": "/api/v1/agents/incidents/step",
+      "memory_owner": "BE_Repository",
+      "server_side_session_storage": false
+    },
     "material_discovery_endpoint": {
       "method": "POST",
       "path": "/api/v1/substances/discover"
@@ -49,6 +55,26 @@
       "backend_must_not_invent_route_or_eta": true,
       "backward_compatible_optional_bff_field": true
     },
+    "incident_agent_loop": {
+      "endpoint": "POST /api/v1/agents/incidents/step",
+      "planning_mode": "DETERMINISTIC_POLICY_PLANNER",
+      "phases": [
+        "PLAN",
+        "ACT",
+        "OBSERVE",
+        "REPLAN"
+      ],
+      "memory_mode": "BE_PERSISTED_EXTERNAL_MEMORY",
+      "memory_can_trigger_rule": false,
+      "autonomous_risk_decision_allowed": false,
+      "trace_is_chain_of_thought": false,
+      "backend_compare_and_swap_fields": [
+        "revision",
+        "runtime_state_fingerprint",
+        "memory_sha256",
+        "parent_memory_sha256"
+      ]
+    },
     "deprecated_frontend_shape": {
       "path": "POST /api/incident-check",
       "fields_not_allowed_in_v1": [
@@ -65,6 +91,7 @@
     "conflict_screening_completed_result": "examples/api/conflict_screening_completed_result.json",
     "material_discovery_request": "examples/api/material_discovery_request.json",
     "material_discovery_response": "examples/api/material_discovery_response.json",
+    "incident_agent_step_request": "examples/api/incident_agent_step_request.json",
     "dashboard_bff": {
       "material_discovery_request": "examples/bff/material_discovery_request.json",
       "material_discovery_candidates_response": "examples/bff/material_discovery_candidates_response.json",

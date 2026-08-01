@@ -57,7 +57,7 @@
 | 평가 관점 | 강점 | 구현 증거 |
 |---|---|---|
 | 문제 적합성 | 출동 중 정보 취합과 물질 혼합 위험 확인이라는 구체적 현장 문제 해결 | 통합 사고분석 API·태블릿 BFF 계약 |
-| AI 기술성 | 규칙 파서, 하이브리드 검색, Grounded RAG, 도구 기반 에이전트 결합 | `src/chemiguard119/`와 383개 테스트 |
+| AI 기술성 | 규칙 파서, 하이브리드 검색, Grounded RAG, 상태 기반 도구 에이전트 결합 | `src/chemiguard119/`와 자동 테스트 |
 | 안전성 | 모호하면 기권하고 확인된 CAS 두 개 전에는 충돌 결과를 숨김 | confirmation gate·fail-closed 검증 |
 | 근거성 | 위험 주장마다 CAMEO와 독립 공식기관 출처·문서 위치·미증명 조건 반환 | Reference Assurance registry |
 | 실현 가능성 | 외부 LLM 없이 CPU 실행 가능, FastAPI·Docker·CI·Cloud Run 배포 | 서울 preview·readiness·이미지 digest |
@@ -71,7 +71,8 @@
 
 ```mermaid
 flowchart LR
-    A["신고문·위치"] --> B["신고문 구조화"]
+    A["신고문·위치·이전 memory"] --> P["Agent PLAN"]
+    P --> B["신고문 구조화"]
     B --> C["물질 Resolver·Discovery"]
     B --> D["ICIS·PRTR 시설 과거 이력"]
     C --> E["KOSHA·CAMEO 하이브리드 검색"]
@@ -81,15 +82,17 @@ flowchart LR
     F -->|"미확인"| H["확인 대기·다음 행동"]
     G --> I["공식근거 교차검증"]
     I --> J["Grounded RAG"]
-    H --> K["FastAPI 구조화 응답"]
-    J --> K
+    H --> O["OBSERVE·REPLAN"]
+    J --> O
+    O --> K["FastAPI 응답·외부 memory"]
     K --> L["BE·태블릿 대시보드"]
 ```
 
-내부 에이전트는 10단계 workflow와 8개 도구 상태를 관리합니다. 각 단계는 `완료`, `대기`,
-`차단`, `실패` 중 하나로 기록되고 다음 안전 행동을 반환합니다. 전국 출동 위치·현재 위치·
-서버 길찾기 계약은 [전국 현장대응 에이전트와 지도 연동](docs/OPERATIONS_AGENT_AND_MAP.md)에
-있습니다.
+실행 에이전트는 `PLAN → ACT → OBSERVE → REPLAN`을 제한된 6개 도구로 반복합니다. 이전
+결과와 확인 대기 상태는 BE가 저장한 `memory`로 이어지며, 새 관찰이 없으면 분석을 반복하지
+않습니다. 기존 10단계 workflow·8개 도구 상태는 이 실행 기록을 태블릿에 읽기 쉽게 보여주는
+UI projection입니다. 전국 출동 위치·현재 위치·서버 길찾기 계약은
+[전국 현장대응 에이전트와 지도 연동](docs/OPERATIONS_AGENT_AND_MAP.md)에 있습니다.
 
 ## 5. 적용된 AI 기술
 
@@ -102,6 +105,7 @@ flowchart LR
 | Selective Abstention | 미등록·모호성·점수 격차·확인 상태 gate | 근거가 부족하면 억지로 하나를 확정하지 않음 |
 | 충돌 Rule Engine | CAMEO 반응성 그룹·호환성 규칙 | 확인된 CAS 조합의 위험을 재현 가능하게 검토 |
 | Grounded RAG | 인용 허용목록·문장별 source ID·extractive fallback | Rule과 검색 근거 밖의 문장 생성을 차단 |
+| Incident Agent | 외부 memory·정책 planner·도구 registry·bounded replan | 상태에 따라 분석·확인 요청·안전 재검증·결과 제시 도구를 선택 |
 | Reference Assurance | 독립기관 그룹·claim 단위 검증·SHA-256 | 근거 수준과 문헌으로 증명하지 못한 조건 공개 |
 | MLOps | manifest·checksum·readiness·Docker·CI/CD | 데이터·모델·규칙 버전을 고정하고 롤백 가능하게 배포 |
 
@@ -191,7 +195,7 @@ CAMEO 기반 서수 등급으로 `is_probability=false`입니다. 시설 이력�
 | Artifact | 전처리·학습으로 생성된 SQLite DB와 모델 파일 |
 | 현장 확인 Gate | 사고물질과 시설물질을 각각 확인하기 전 충돌 결과를 내지 않는 규칙 |
 | Reference Assurance | 위험 주장을 지지하는 공식기관 수와 미증명 조건을 기록하는 계층 |
-| 현장대응 에이전트 | 파서·검색·확인·규칙 상태를 관리하고 다음 안전 행동을 선택하는 상태 머신 |
+| 현장대응 에이전트 | 현재 사고 상태를 관찰해 필요한 도구를 선택하고 결과에 따라 다시 계획하는 상태 머신 |
 
 ## 11. 5분 빠른 시작: artifact가 없을 때
 
@@ -430,6 +434,7 @@ Secret 이름과 bundle 계약은 [배포 가이드](docs/DEPLOYMENT.md)에 설�
 | `GET` | `/health/ready` | artifact·인증·정책 준비 상태 확인 |
 | `GET` | `/api/v1/meta` | 서비스·스키마·정책 메타데이터 |
 | `POST` | `/api/v1/incidents/analyze` | 전체 사고 분석 파이프라인 |
+| `POST` | `/api/v1/agents/incidents/step` | 상태 기반 도구 선택·재계획과 외부 memory 반환 |
 | `POST` | `/api/v1/substances/discover` | 관찰 정보 기반 확인 전 물질 후보·출처 검색 |
 | `POST` | `/api/v1/substances/resolve` | 물질 후보 검색 |
 | `POST` | `/api/v1/evidence/search` | 공식 근거 검색 |

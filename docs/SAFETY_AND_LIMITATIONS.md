@@ -82,6 +82,24 @@ UI는 근거가 없을 때 “정보 없음”을 명확히 표시하고 공식 
   전환하며 충돌 검토 자체를 실패시키지 않습니다.
 - 현재 근거는 KOSHA·CAMEO이며 검증된 유사 사고사례 corpus는 포함하지 않습니다.
 
+## 5.2 사고대응 에이전트의 권한과 한계
+
+- 에이전트는 현재 상태에 따라 분석·확인 요청·안전 재검증·결과 제시 도구를 선택하지만 화학
+  위험을 직접 결정하지 않습니다.
+- 위험 결과의 원본은 기존 CAMEO Rule Engine뿐이며, 에이전트가 Rule 출력이나 위험등급을
+  수정할 수 없습니다.
+- 모든 분석 직후 `VERIFY_SAFETY_CONTRACT`를 실행하고 미확인 상태에서 Rule 결과가 있으면
+  `FAILED_SAFETY`로 중단합니다.
+- `events`는 도구와 상태 코드만 담는 감사 trace이며 숨겨진 chain-of-thought가 아닙니다.
+- 외부 `memory`는 BE가 저장합니다. checksum은 비의도적 손상 탐지용이지 암호학적 인증이나
+  전자서명이 아닙니다.
+- memory는 오케스트레이션에만 사용하고, Rule 실행 여부는 매 요청의 두 현장 확인 레코드로
+  다시 계산합니다.
+- 동시에 갈라진 두 응답은 같은 `parent_memory_sha256`을 가질 수 있으므로 BE가 revision과
+  parent hash를 compare-and-swap으로 저장해야 합니다.
+- 모델 API는 대화·사고기록의 영구 저장소가 아니며 서버 인스턴스 메모리에 세션을 보관하지
+  않습니다.
+
 ## 6. 시설 이력의 한계
 
 ICIS·PRTR 시설 결과는 `REPORTED_HANDLING_HISTORY`입니다.

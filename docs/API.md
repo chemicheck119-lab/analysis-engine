@@ -63,6 +63,7 @@ staging·production에서 익명 접근을 켜거나 올바른 API Key가 없으
 | `GET` | `/health/ready` | 없음 | runtime·인증·충돌 정책 준비 여부 |
 | `GET` | `/api/v1/meta` | 없음 | 버전·정책·인증 방식·OpenAPI 위치 |
 | `POST` | `/api/v1/incidents/analyze` | 필요 | 전체 사고 분석 |
+| `POST` | `/api/v1/agents/incidents/step` | 필요 | 상태 기반 도구 선택·재계획 |
 | `POST` | `/api/v1/substances/discover` | 필요 | 관찰 정보 기반 확인 전 물질 후보·출처 검색 |
 | `POST` | `/api/v1/substances/resolve` | 필요 | 물질 후보 검색 |
 | `POST` | `/api/v1/evidence/search` | 필요 | KOSHA·CAMEO 근거 검색 |
@@ -142,7 +143,9 @@ staging·production에서 익명 접근을 켜거나 올바른 API Key가 없으
 
 `rule_policy`, `rule_policy_ready`, `rule_policy_error`, `expert_reviewed`,
 `decision_support_only`, `responder_confirmation_required`,
-`conflict_review_capability`를 `/health/ready`와 같은 의미로 제공합니다.
+`conflict_review_capability`를 `/health/ready`와 같은 의미로 제공합니다. 추가로
+`incident_agent_capability`에서 agent endpoint, planner 방식, 외부 memory 방식, 도구 수와
+자율 위험판정 금지 여부를 확인할 수 있습니다.
 
 ## 6. 전체 분석 API
 
@@ -150,6 +153,34 @@ staging·production에서 익명 접근을 켜거나 올바른 API Key가 없으
 
 백엔드의 기본 연동점입니다. 한 번의 요청 안에서 파서, Resolver, Retriever, 시설 이력 검색과
 조건부 Rule Engine을 실행합니다.
+
+### 6.1.1 `POST /api/v1/agents/incidents/step`
+
+현장 확인을 기다리며 같은 사고를 여러 번 이어갈 때 사용하는 실제 에이전트 API입니다.
+`analysis`에는 기존 사고 분석 요청을 그대로 넣고, 첫 응답 이후에는 반환된 `memory`를 BE가
+저장했다가 다음 요청에 포함합니다.
+`max_actions`는 현재 안전 임계 경로를 한 번에 끝내도록 4~8만 허용하며 기본값은 6입니다.
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/agents/incidents/step \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: ${CHEMIGUARD119_API_KEY}" \
+  --data @examples/api/incident_agent_step_request.json
+```
+
+| 응답 상태 | 의미 | BE 동작 |
+|---|---|---|
+| `WAITING_FOR_HUMAN` | 사고·시설물질 확인 또는 추가 공식근거가 필요 | memory 저장 후 새 관찰이 생길 때 재호출 |
+| `PARTIAL_MAX_ACTIONS` | 한 요청의 도구 실행 한도에 도달 | 같은 최신 입력과 memory로 다음 step 호출 |
+| `GOAL_COMPLETED` | 확인 gate와 안전 재검증 후 결과 제시 준비 | 분석·근거·trace를 대응 기록에 저장 |
+| `FAILED_RETRYABLE` | 내부 도구 일시 실패 | `request_id`로 로그 확인 후 제한 재시도 |
+| `FAILED_SAFETY` | 확인·Rule·응답 안전 계약 불일치 | 결과 사용 금지, 운영 조사 |
+
+`events`에는 `PLAN`, `ACT`, `OBSERVE`, `REPLAN`과 선택한 도구·결정 코드만 들어갑니다.
+숨겨진 chain-of-thought는 반환하지 않으며 `trace_is_chain_of_thought=false`입니다. memory의
+SHA-256은 손상 탐지용이고 인증 서명이 아닙니다. API Key를 유지하고 BE는 revision을
+compare-and-swap 방식으로 저장해야 합니다. memory 자체는 Rule 실행 권한이 될 수 없습니다.
+`runtime_state_fingerprint`가 달라지면 신고가 같아도 새 artifact·정책으로 다시 분석합니다.
 
 ### 6.2 1차 요청: 현장 확인 전
 
@@ -233,8 +264,9 @@ curl -X POST http://127.0.0.1:8000/api/v1/incidents/analyze \
 후보가 한 개여도 API가 물질 존재를 확정한 것은 아닙니다. 서비스 백엔드는 대원의 확인 행위를
 별도 레코드로 보관해야 합니다.
 
-`agent.workflow`는 숨겨진 추론 과정이 아니라 실제 파서·검색·확인 게이트·CAMEO·RAG의
-실행 상태입니다. 전국 지도와 이동 갱신의 전체 설명은
+분석 응답의 `agent.workflow`는 실행 에이전트 trace가 아니라 실제 분석 결과를 태블릿용
+10단계로 투영한 상태입니다. 동적 도구 trace는 agent step 응답의 `events`를 사용합니다.
+전국 지도와 이동 갱신의 전체 설명은
 [전국 현장대응 에이전트와 지도 연동](OPERATIONS_AGENT_AND_MAP.md)을 참고합니다.
 
 ### 6.3 현장 확인 입력

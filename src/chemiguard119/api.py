@@ -46,6 +46,14 @@ from chemiguard119.api_models import (
     contains_unconfirmed_risk_output,
     validate_evidence_confirmation_gate,
 )
+from chemiguard119.agent_loop import (
+    AGENT_MEMORY_SCHEMA_VERSION,
+    AGENT_SCHEMA_VERSION,
+    TOOL_REGISTRY,
+    IncidentAgentRunner,
+    IncidentAgentStepRequest,
+    IncidentAgentStepResponse,
+)
 from chemiguard119.coverage import facility_history_coverage
 from chemiguard119.paths import (
     CONFIG_DIR,
@@ -1017,6 +1025,84 @@ def _public_analysis_response(
     )
 
 
+def _execute_incident_analysis(
+    payload: IncidentAnalyzeRequest,
+    request: Request,
+    *,
+    request_id: str,
+    analysis_id: str,
+) -> AnalysisResponse:
+    """기존 사고분석 계약을 단일 도구로 재사용한다."""
+
+    active_runtime = _runtime_or_error(request)
+    started = time.perf_counter()
+    result = analyze_incident(
+        payload.input.text,
+        db_path=active_runtime.db_path,
+        resolver_artifact=active_runtime.resolver_artifact,
+        retriever_artifact=active_runtime.retriever_artifact,
+        confirmed_incident_cas=(
+            payload.confirmed_incident_substance.cas_number
+            if payload.confirmed_incident_substance
+            else None
+        ),
+        confirmed_facility_cas=(
+            payload.confirmed_facility_substance.cas_number
+            if payload.confirmed_facility_substance
+            else None
+        ),
+        planned_actions=[item.raw_text for item in payload.planned_actions],
+        allow_demo_rules=False,
+        policy_mode=request.app.state.rule_policy,
+        config_dir=active_runtime.config_dir,
+        evidence_top_k=payload.evidence_top_k,
+    )
+    facility_history = None
+    if payload.location:
+        facility_query = payload.location.facility_name or payload.location.address
+        if facility_query:
+            facility_history = search_facility_history(
+                facility_query,
+                active_runtime.db_path,
+                province=payload.location.province,
+                top_k=10,
+            )
+    return _public_analysis_response(
+        payload,
+        result,
+        active_runtime,
+        request_id=request_id,
+        analysis_id=analysis_id,
+        started_at=started,
+        rule_policy=request.app.state.rule_policy,
+        rag_service=request.app.state.rag_service,
+        facility_history=facility_history,
+    )
+
+
+def _agent_runtime_state_fingerprint(request: Request) -> str:
+    """새 artifact·정책·RAG 설정이면 대기 memory도 다시 분석하게 한다."""
+
+    runtime = _runtime_or_error(request)
+    payload = {
+        "service_version": __version__,
+        "runtime_loaded_at_utc": runtime.loaded_at_utc,
+        "resolver_schema_version": runtime.resolver_artifact.get("schema_version"),
+        "retriever_schema_version": runtime.retriever_artifact.get("schema_version"),
+        "runtime_integrity": runtime.integrity,
+        "rule_policy": request.app.state.rule_policy,
+        "rag": request.app.state.rag_service.metadata(),
+    }
+    serialized = json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    ).encode("utf-8")
+    return hashlib.sha256(serialized).hexdigest()
+
+
 def create_app(
     *,
     runtime: ModelRuntime | None = None,
@@ -1358,6 +1444,17 @@ def create_app(
             "responder_confirmation_required": True,
             "conflict_review_capability": capability,
             "grounded_rag_capability": request.app.state.rag_service.metadata(),
+            "incident_agent_capability": {
+                "schema_version": AGENT_SCHEMA_VERSION,
+                "memory_schema_version": AGENT_MEMORY_SCHEMA_VERSION,
+                "endpoint": "/api/v1/agents/incidents/step",
+                "planning_mode": "DETERMINISTIC_POLICY_PLANNER",
+                "memory_mode": "BE_PERSISTED_EXTERNAL_MEMORY",
+                "server_side_session_storage": False,
+                "memory_can_trigger_rule": False,
+                "autonomous_risk_decision_allowed": False,
+                "tool_count": len(TOOL_REGISTRY),
+            },
             "confirmation_gate_policy": CONFIRMATION_GATE_POLICY,
             "docs": "/docs",
             "openapi": "/openapi.json",
@@ -1376,49 +1473,36 @@ def create_app(
         request: Request,
         _: Annotated[None, Depends(_authorize)],
     ) -> AnalysisResponse:
-        active_runtime = _runtime_or_error(request)
-        started = time.perf_counter()
-        result = analyze_incident(
-            payload.input.text,
-            db_path=active_runtime.db_path,
-            resolver_artifact=active_runtime.resolver_artifact,
-            retriever_artifact=active_runtime.retriever_artifact,
-            confirmed_incident_cas=(
-                payload.confirmed_incident_substance.cas_number
-                if payload.confirmed_incident_substance
-                else None
-            ),
-            confirmed_facility_cas=(
-                payload.confirmed_facility_substance.cas_number
-                if payload.confirmed_facility_substance
-                else None
-            ),
-            planned_actions=[item.raw_text for item in payload.planned_actions],
-            allow_demo_rules=False,
-            policy_mode=request.app.state.rule_policy,
-            config_dir=active_runtime.config_dir,
-            evidence_top_k=payload.evidence_top_k,
-        )
-        facility_history = None
-        if payload.location:
-            facility_query = payload.location.facility_name or payload.location.address
-            if facility_query:
-                facility_history = search_facility_history(
-                    facility_query,
-                    active_runtime.db_path,
-                    province=payload.location.province,
-                    top_k=10,
-                )
-        return _public_analysis_response(
+        return _execute_incident_analysis(
             payload,
-            result,
-            active_runtime,
             request_id=_request_id(request, payload.request_id),
             analysis_id=_new_id("ANL"),
-            started_at=started,
-            rule_policy=request.app.state.rule_policy,
-            rag_service=request.app.state.rag_service,
-            facility_history=facility_history,
+            request=request,
+        )
+
+    @application.post(
+        "/api/v1/agents/incidents/step",
+        response_model=IncidentAgentStepResponse,
+        responses=STANDARD_ERROR_RESPONSES,
+        tags=["agent"],
+        summary="사고 상태를 관찰해 필요한 도구를 선택하고 재계획",
+    )
+    def run_incident_agent_step(
+        payload: IncidentAgentStepRequest,
+        request: Request,
+        _: Annotated[None, Depends(_authorize)],
+    ) -> IncidentAgentStepResponse:
+        request_id = _request_id(request, payload.analysis.request_id)
+        return IncidentAgentRunner().run(
+            payload,
+            request_id=request_id,
+            analysis_tool=lambda: _execute_incident_analysis(
+                payload.analysis,
+                request,
+                request_id=request_id,
+                analysis_id=_new_id("ANL"),
+            ),
+            runtime_state_fingerprint=_agent_runtime_state_fingerprint(request),
         )
 
     @application.post(

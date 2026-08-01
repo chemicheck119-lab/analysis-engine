@@ -2,19 +2,23 @@
 
 ## 1. 한 문장 설명
 
-케미체크119의 에이전트는 대화만 생성하는 챗봇이 아니라, **출동 중 해야 할 검색과 확인을
-순서대로 실행하고 현재 막힌 단계와 다음 행동을 구조화해서 반환하는 안전 상태 머신**입니다.
+케미체크119의 에이전트는 대화만 생성하는 챗봇이 아니라, **현재 사고 상태를 관찰해 필요한
+도구를 고르고, 결과를 본 뒤 다시 계획하며, 막힌 입력을 구조화해서 반환하는 안전 상태
+머신**입니다.
 
 ```mermaid
 flowchart LR
-    A["119 신고·출동 정보"] --> B["신고문 구조화"]
+    A["119 신고·출동 정보 + 이전 memory"] --> P["PLAN"]
+    P --> B["ACT: 사고 분석"]
     B --> C["물질 후보·시설 과거 이력"]
-    C --> D["공식 근거 RAG 검색"]
+    C --> D["공식 근거 검색·RAG"]
     D --> E{"현장 확인 CAS 2개?"}
-    E -->|"아니요"| F["다음 확인 행동 안내"]
+    E -->|"아니요"| F["OBSERVE: 확인 요청"]
     E -->|"예"| G["CAMEO 결정 규칙"]
-    G --> H["근거 제한 설명"]
-    H --> I["지휘관 확인·대응 기록"]
+    F --> R["REPLAN + 외부 memory"]
+    G --> H["안전 재검증·근거 제한 설명"]
+    H --> R
+    R --> I["지휘관 확인·대응 기록"]
     J["사고 위치"] --> K["전국 지도 컨텍스트"]
     L["MDT·차량 GPS"] --> K
     M["BE 서버 길찾기"] --> K
@@ -77,24 +81,26 @@ chemiguard119 coverage --json
 
 ## 4. 모델 API 사용
 
-기존 통합 API에 선택 입력 `operations_context`가 추가됐습니다. 기존 요청은 그대로
-동작하며 새 백엔드만 위치·경로 문맥을 단계적으로 붙일 수 있습니다.
+단발 분석은 기존 `/api/v1/incidents/analyze`로 계속 동작합니다. 같은 사고를 현장 확인까지
+이어가는 실제 에이전트는 `/api/v1/agents/incidents/step`을 사용합니다. 요청의 `analysis`에는
+기존 사고 분석 입력을 넣고, 두 번째 호출부터는 직전 응답의 `memory`도 함께 보냅니다.
 
 ```json
 {
-  "incident_id": "INC-20260801-0001",
-  "input": {
+  "analysis": {
+    "incident_id": "INC-20260801-0001",
+    "input": {
     "type": "DISPATCH_TEXT",
     "text": "화성 공장에서 차아염소산나트륨 저장탱크 누출 신고"
-  },
-  "location": {
+    },
+    "location": {
     "address": "경기 화성시 팔탄면",
     "latitude": 37.2181,
     "longitude": 126.9417,
     "coordinate_source": "DISPATCH_SYSTEM",
     "resolved_at": "2026-08-01T12:20:00+09:00"
-  },
-  "operations_context": {
+    },
+    "operations_context": {
     "dispatch_station_name": "화성소방서",
     "journey_state": "EN_ROUTE",
     "responder_position": {
@@ -104,35 +110,37 @@ chemiguard119 coverage --json
       "source": "MDT_DEVICE_GPS",
       "accuracy_m": 12
     }
-  }
+    }
+  },
+  "max_actions": 6
 }
 ```
 
-응답의 `agent`가 화면에 필요한 상태를 제공합니다.
+에이전트 응답은 실행 상태와 다음 입력, 다음 호출에 돌려줄 memory, 기존 분석 결과를 함께
+제공합니다.
 
 ```json
 {
-  "agent": {
-    "phase": "EN_ROUTE_TRIAGE",
-    "current_objective": "이동 중 신고·시설 이력·공식 근거를 미리 정리합니다.",
-    "next_actions": [
-      "백엔드 서버에서 길찾기 API를 호출해 경로를 전달하세요.",
-      "용기 라벨·현장 MSDS 등으로 사고물질 CAS를 확인하세요."
-    ],
-    "map_context": {
-      "coverage_scope": "NATIONWIDE_KOREA",
-      "incident_position": {},
-      "responder_position": {},
-      "route": {
-        "status": "ROUTE_UNAVAILABLE",
-        "eta_seconds": null,
-        "progress_ratio_is_probability": false
-      },
-      "hazard_overlay_status": "NOT_COMPUTED_NO_VALIDATED_DISPERSION_MODEL"
-    }
-  }
+  "status": "WAITING_FOR_HUMAN",
+  "selected_tool_count": 3,
+  "pending_inputs": [
+    "FACILITY_SUBSTANCE_CONFIRMATION",
+    "INCIDENT_SUBSTANCE_CONFIRMATION"
+  ],
+  "events": [
+    {"phase": "PLAN", "tool_id": "RUN_INCIDENT_ANALYSIS"},
+    {"phase": "REPLAN", "tool_id": "REQUEST_INCIDENT_CONFIRMATION"}
+  ],
+  "memory": {"revision": 1, "memory_can_trigger_rule": false},
+  "analysis": {"state": "AWAITING_SUBSTANCE_CONFIRMATION"},
+  "trace_is_chain_of_thought": false
 }
 ```
+
+`events`는 숨겨진 생각을 공개한 것이 아니라 도구 ID·결정 코드·성공/대기 상태만 기록한
+감사 로그입니다. `memory`의 SHA-256은 전송 중 손상 탐지용이지 인증 서명이 아닙니다. API
+Key로 호출자를 인증하고, BE는 `incident_id + revision + parent_memory_sha256`를 비교해 최신
+memory만 저장해야 합니다. memory는 Rule 실행 권한으로 사용되지 않습니다.
 
 전체 모델 API 계약은 `contracts/generated/model-api-v1.openapi.json`, 대시보드용 계약은
 `contracts/dashboard-bff-v1.openapi.json`을 사용합니다.
@@ -193,8 +201,20 @@ provider + mode + routeId + GeoJSON LineString
 
 ## 7. 에이전트가 실제로 하는 일
 
-응답의 `workflow` 10단계와 `tool_executions` 8개는 숨겨진 사고과정이 아닙니다. 실제 코드가
-어떤 도구를 실행했고 어떤 안전 게이트에서 멈췄는지를 보여주는 감사 가능한 실행 기록입니다.
+실제 실행 에이전트의 registry는 다음 6개 도구입니다. 매 step에서 모두 실행하는 것이 아니라
+현재 상태의 전제조건을 만족하는 도구만 선택합니다.
+
+| 실행 도구 | 선택되는 조건 |
+|---|---|
+| `RUN_INCIDENT_ANALYSIS` | 최초 호출 또는 신고·확인 정보가 변경됨 |
+| `REQUEST_INCIDENT_CONFIRMATION` | 사고물질 현장 확인 없음 |
+| `REQUEST_FACILITY_CONFIRMATION` | 시설물질 현장 확인 없음 |
+| `VERIFY_SAFETY_CONTRACT` | 두 확인 후 결과 제시 전 이중 검증 |
+| `REQUEST_OFFICIAL_EVIDENCE_REVIEW` | 지원 범위 밖·근거 불충분 |
+| `PRESENT_DECISION_SUPPORT` | 확인 gate·Rule·응답 안전 계약 통과 |
+
+아래 10단계 workflow와 8개 `tool_executions`는 실제 분석 결과를 화면에 읽기 쉽게 펼친
+대시보드 projection입니다. 실행 에이전트의 동적 trace와 구분합니다.
 
 | 도구 | 기능 | 실패 또는 대기 시 |
 |---|---|---|
@@ -214,7 +234,8 @@ provider + mode + routeId + GeoJSON LineString
 
 | 항목 | 상태 | 저장소 |
 |---|---|---|
-| 에이전트 상태 머신·지도 응답 | 구현 | `llm` |
+| 외부 memory 기반 실행 에이전트 | 구현 | `llm` |
+| 10단계 대시보드 projection·지도 응답 | 구현 | `llm` |
 | 전국 시설 이력 범위 자동 측정 | 구현 | `llm` |
 | 모델 API 입력·응답 OpenAPI | 구현 | `llm` |
 | BFF 이동 갱신 OpenAPI·TS·fixture | 계약 완료 | `llm` |

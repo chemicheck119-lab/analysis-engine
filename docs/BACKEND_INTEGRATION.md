@@ -94,8 +94,8 @@ BE는 `grounded_rag.statements[].source_ids`와 `citations[].source_id`를 연�
 
 ## 4. BE가 호출할 모델 API
 
-사고 분석 통합 API 1개와 물질탐색 전용 API 1개를 제공합니다. 아래 통합 API는
-대응충돌검토 화면의 기본 연동점입니다.
+사고 분석, 사고 에이전트 step, 물질탐색 API를 제공합니다. 단발 조회는 기존 통합 API를,
+현장 확인까지 대화를 이어가는 화면은 agent step API를 기본 연동점으로 사용합니다.
 
 ```text
 POST {CHEMICHECK119_MODEL_API_BASE_URL}/api/v1/incidents/analyze
@@ -103,6 +103,19 @@ X-API-Key: {CHEMICHECK119_MODEL_API_KEY}
 X-Request-Id: {BE가 생성한 추적 ID}
 Content-Type: application/json
 ```
+
+상태를 이어가는 권장 경로:
+
+```text
+POST {CHEMICHECK119_MODEL_API_BASE_URL}/api/v1/agents/incidents/step
+X-API-Key: {CHEMICHECK119_MODEL_API_KEY}
+X-Request-Id: {BE가 생성한 추적 ID}
+Content-Type: application/json
+```
+
+요청의 `analysis`에는 기존 `/incidents/analyze` body를 넣습니다. 첫 호출은 `memory` 없이
+보내고, 이후에는 직전 응답의 `memory`를 BE 사고 레코드에 저장했다가 함께 보냅니다. 서버
+인스턴스 내부에는 사고 세션을 저장하지 않습니다.
 
 BE 환경변수 권장 계약:
 
@@ -187,6 +200,8 @@ POST {CHEMICHECK119_MODEL_API_BASE_URL}/api/v1/substances/discover
 | `provenance` | 모델·데이터·정책 버전 |
 | `confirmation_gate` | 충돌 검토 실행 조건 감사 |
 | `agent` | 대응 단계·다음 행동·사고/현재 위치·경로 provenance |
+| agent step `memory` | 사고별 revision·대기 입력·도구 실행 이력·parent hash |
+| agent step `events` | PLAN·ACT·OBSERVE·REPLAN 도구 감사 로그 |
 | `created_at` | BE 저장 시각 |
 
 후보 점수는 확률 컬럼에 저장하지 않습니다. 시설 이력 후보도 현재 재고 테이블로 승격하지
@@ -195,6 +210,14 @@ POST {CHEMICHECK119_MODEL_API_BASE_URL}/api/v1/substances/discover
 대화 전체 저장은 모델 API가 아니라 BE의 책임입니다. `incident_id`, 순서가 있는 메시지,
 분석 원본, `analysis_id` 목록, 확인 레코드, provenance, 저장 사용자·시각을 한 대응 기록으로
 묶습니다.
+
+에이전트 memory 저장은 낙관적 잠금으로 처리합니다. BE는 현재 저장된
+`memory_sha256`이 새 응답의 `parent_memory_sha256`과 같은 경우에만 다음 revision으로
+교체합니다. 다르면 동시에 진행된 더 최신 요청이 있다는 뜻이므로 자동 덮어쓰지 않습니다.
+SHA-256은 손상 감지용이며 호출 인증은 반드시 `X-API-Key`로 유지합니다. memory의 확인 상태만
+믿어 Rule을 실행해서도 안 됩니다. 모델 API는 매번 현재 요청의 두 확인 레코드를 다시 검사합니다.
+모델·artifact·Rule 정책·RAG 설정이 바뀌면 `runtime_state_fingerprint`가 달라져 대기 중인
+동일 신고도 자동으로 다시 분석됩니다.
 
 ## 7. FE에 내려줄 상태
 

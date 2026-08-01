@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from chemiguard119.api import create_app
+from chemiguard119.agent_loop import IncidentAgentStepRequest
 from chemiguard119.api_models import (
     API_SCHEMA_VERSION,
     AnalysisResponse,
@@ -27,17 +28,21 @@ MATERIAL_DISCOVERY_REQUEST_PATH = (
 MATERIAL_DISCOVERY_RESPONSE_PATH = (
     PROJECT_ROOT / "examples/api/material_discovery_response.json"
 )
+AGENT_STEP_REQUEST_PATH = PROJECT_ROOT / "examples/api/incident_agent_step_request.json"
 
 
 def test_cross_repository_contract_matches_fastapi_schema() -> None:
     contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
     openapi = create_app(runtime=None, allow_anonymous=True).openapi()
     primary = contract["service"]["primary_endpoint"]
+    incident_agent = contract["service"]["incident_agent_endpoint"]
     material_discovery = contract["service"]["material_discovery_endpoint"]
 
     assert contract["api_schema_version"] == API_SCHEMA_VERSION
     assert primary["path"] in openapi["paths"]
     assert primary["method"].lower() in openapi["paths"][primary["path"]]
+    assert incident_agent["path"] in openapi["paths"]
+    assert incident_agent["method"].lower() in openapi["paths"][incident_agent["path"]]
     assert material_discovery["path"] in openapi["paths"]
     assert (
         material_discovery["method"].lower()
@@ -61,6 +66,11 @@ def test_cross_repository_contract_keeps_model_secret_in_backend() -> None:
     assert contract["merge_order"][0].startswith("llm")
     assert contract["merge_order"][1].startswith("BE_Repository")
     assert contract["merge_order"][2].startswith("FE_Repository")
+    agent = contract["dashboard_bff"]["incident_agent_loop"]
+    assert agent["memory_mode"] == "BE_PERSISTED_EXTERNAL_MEMORY"
+    assert agent["memory_can_trigger_rule"] is False
+    assert agent["autonomous_risk_decision_allowed"] is False
+    assert agent["trace_is_chain_of_thought"] is False
 
 
 def test_dashboard_contract_never_displays_risk_before_confirmation() -> None:
@@ -144,6 +154,16 @@ def test_shared_unconfirmed_request_example_is_valid_contract_fixture() -> None:
     assert validated.incident_id == "INC-EXAMPLE-0001"
     assert validated.confirmed_incident_substance is None
     assert validated.confirmed_facility_substance is None
+
+
+def test_shared_agent_step_request_is_valid_contract_fixture() -> None:
+    payload = json.loads(AGENT_STEP_REQUEST_PATH.read_text(encoding="utf-8"))
+
+    validated = IncidentAgentStepRequest.model_validate(payload)
+
+    assert validated.analysis.incident_id == "INC-AGENT-20260801-0001"
+    assert validated.memory is None
+    assert validated.max_actions == 6
 
 
 def test_shared_unconfirmed_response_is_safe_dashboard_fixture() -> None:

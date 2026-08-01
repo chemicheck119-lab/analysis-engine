@@ -41,12 +41,13 @@
 flowchart LR
     FE["태블릿 UI"] --> BE["서비스 백엔드"]
     BE --> API["케미체크119 모델 API"]
-    API --> PARSER["신고문 파서"]
-    API --> RESOLVER["물질 Resolver"]
-    API --> DISCOVERY["관찰 기반 Discovery"]
-    API --> RETRIEVER["근거 Retriever"]
-    API --> FACILITY["시설 이력 검색"]
-    API --> RULES["CAMEO Rule Engine"]
+    API --> AGENT["Incident Agent Loop"]
+    AGENT --> PARSER["신고문 파서"]
+    AGENT --> RESOLVER["물질 Resolver"]
+    AGENT --> DISCOVERY["관찰 기반 Discovery"]
+    AGENT --> RETRIEVER["근거 Retriever"]
+    AGENT --> FACILITY["시설 이력 검색"]
+    AGENT --> RULES["CAMEO Rule Engine"]
     RETRIEVER --> RAG["Grounded RAG"]
     RULES --> RAG
     RAG --> API
@@ -61,9 +62,11 @@ flowchart LR
     RULES --> POLICY["conflict policy + crosswalk"]
 ```
 
-백엔드는 모델마다 별도 HTTP 호출을 할 필요가 없습니다. 사고 분석에는
-`POST /api/v1/incidents/analyze`를 호출하고, API 내부 오케스트레이터가 필요한 단계를
-순서대로 실행합니다. 검색 화면처럼 독립 기능이 필요한 경우에만 보조 엔드포인트를 사용합니다.
+단발 분석은 `POST /api/v1/incidents/analyze`를 사용합니다. 현장 확인을 기다렸다가 같은 사고를
+이어가는 에이전트 흐름은 `POST /api/v1/agents/incidents/step`을 사용합니다. 이 API는 현재
+요청과 BE가 돌려준 외부 `memory`를 보고 필요한 도구만 선택하고 재계획합니다. 모델 서버는
+사고 세션을 메모리에 보관하지 않으므로 Cloud Run 다중 인스턴스에서도 특정 인스턴스에
+종속되지 않습니다.
 
 ## 4. 런타임 구성요소
 
@@ -73,7 +76,8 @@ flowchart LR
 | 운영 관측 | `src/chemiguard119/observability.py` | 민감정보를 제외한 JSON 요청 완료 로그 | 없음 |
 | API 스키마 | `src/chemiguard119/api_models.py` | Pydantic 요청·응답 계약 | 없음 |
 | 사고 오케스트레이터 | `src/chemiguard119/pipeline.py` | 각 단계를 순서대로 실행 | 게이트 통과 시 Rule 호출만 허용 |
-| 현장대응 에이전트 | `src/chemiguard119/operations.py` | 도구 실행 상태·다음 행동·지도 이동 계약 조립 | 없음 |
+| 실행 에이전트 | `src/chemiguard119/agent_loop.py` | 외부 memory 기반 PLAN·ACT·OBSERVE·REPLAN, 동적 도구 선택 | 없음 |
+| 대시보드 projection | `src/chemiguard119/operations.py` | 10단계 workflow·8개 도구 상태·지도 이동 계약 조립 | 없음 |
 | 전국 범위 감사 | `src/chemiguard119/coverage.py` | 시설 과거 이력의 시·도·시설·CAS 범위 계산 | 없음 |
 | 신고문 파서 | `src/chemiguard119/incident.py` | 물질 표현·역할·상황 구조화 | 없음 |
 | Resolver | `src/chemiguard119/resolver.py` | 물질·CAS 후보 검색과 공유 exact span 경계 검사 | 없음 |

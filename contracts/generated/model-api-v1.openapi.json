@@ -1,6 +1,95 @@
 {
   "components": {
     "schemas": {
+      "AgentLoopEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "decision_code": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Decision Code",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "output_reference": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Reference"
+          },
+          "phase": {
+            "enum": [
+              "PLAN",
+              "ACT",
+              "OBSERVE",
+              "REPLAN"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "sequence": {
+            "maximum": 128.0,
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "PLANNED",
+              "COMPLETED",
+              "WAITING",
+              "FAILED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          },
+          "tool_id": {
+            "anyOf": [
+              {
+                "enum": [
+                  "RUN_INCIDENT_ANALYSIS",
+                  "REQUEST_INCIDENT_CONFIRMATION",
+                  "REQUEST_FACILITY_CONFIRMATION",
+                  "VERIFY_SAFETY_CONTRACT",
+                  "REQUEST_OFFICIAL_EVIDENCE_REVIEW",
+                  "PRESENT_DECISION_SUPPORT"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Id"
+          }
+        },
+        "required": [
+          "sequence",
+          "phase",
+          "status",
+          "decision_code",
+          "summary",
+          "occurred_at"
+        ],
+        "title": "AgentLoopEvent",
+        "type": "object"
+      },
       "AgentMapContext": {
         "additionalProperties": false,
         "properties": {
@@ -157,6 +246,64 @@
           }
         },
         "title": "AgentMapRenderingContract",
+        "type": "object"
+      },
+      "AgentMemoryEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "observation_code": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Observation Code",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "COMPLETED",
+              "WAITING",
+              "FAILED"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "run_id": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Run Id",
+            "type": "string"
+          },
+          "tool_id": {
+            "enum": [
+              "RUN_INCIDENT_ANALYSIS",
+              "REQUEST_INCIDENT_CONFIRMATION",
+              "REQUEST_FACILITY_CONFIRMATION",
+              "VERIFY_SAFETY_CONTRACT",
+              "REQUEST_OFFICIAL_EVIDENCE_REVIEW",
+              "PRESENT_DECISION_SUPPORT"
+            ],
+            "title": "Tool Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision",
+          "run_id",
+          "tool_id",
+          "outcome",
+          "observation_code",
+          "occurred_at"
+        ],
+        "title": "AgentMemoryEvent",
         "type": "object"
       },
       "AgentRouteState": {
@@ -1129,6 +1276,361 @@
           "source_ids"
         ],
         "title": "GroundedRagStatement",
+        "type": "object"
+      },
+      "IncidentAgentMemory": {
+        "additionalProperties": false,
+        "properties": {
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/AgentMemoryEvent"
+            },
+            "maxItems": 64,
+            "title": "History",
+            "type": "array"
+          },
+          "incident_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "last_analysis_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Analysis Id"
+          },
+          "last_analysis_state": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Analysis State"
+          },
+          "last_run_id": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Last Run Id",
+            "type": "string"
+          },
+          "memory_can_trigger_rule": {
+            "const": false,
+            "default": false,
+            "title": "Memory Can Trigger Rule",
+            "type": "boolean"
+          },
+          "memory_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Memory Sha256",
+            "type": "string"
+          },
+          "memory_trust_scope": {
+            "const": "ORCHESTRATION_ONLY",
+            "default": "ORCHESTRATION_ONLY",
+            "title": "Memory Trust Scope",
+            "type": "string"
+          },
+          "parent_memory_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Memory Sha256"
+          },
+          "pending_inputs": {
+            "items": {
+              "enum": [
+                "INCIDENT_SUBSTANCE_CONFIRMATION",
+                "FACILITY_SUBSTANCE_CONFIRMATION",
+                "OFFICIAL_EVIDENCE_REVIEW"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "title": "Pending Inputs",
+            "type": "array"
+          },
+          "request_state_fingerprint": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Request State Fingerprint",
+            "type": "string"
+          },
+          "revision": {
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "runtime_state_fingerprint": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Runtime State Fingerprint",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "chemicheck119-incident-agent-memory-v1",
+            "default": "chemicheck119-incident-agent-memory-v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "GOAL_COMPLETED",
+              "WAITING_FOR_HUMAN",
+              "PARTIAL_MAX_ACTIONS",
+              "FAILED_RETRYABLE",
+              "FAILED_SAFETY"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "incident_id",
+          "revision",
+          "request_state_fingerprint",
+          "runtime_state_fingerprint",
+          "status",
+          "last_run_id",
+          "memory_sha256"
+        ],
+        "title": "IncidentAgentMemory",
+        "type": "object"
+      },
+      "IncidentAgentStepRequest": {
+        "additionalProperties": false,
+        "example": {
+          "analysis": {
+            "evidence_top_k": 5,
+            "incident_id": "INC-AGENT-0001",
+            "input": {
+              "text": "차아염소산나트륨 저장탱크 누출 신고",
+              "type": "DISPATCH_TEXT"
+            },
+            "location": {
+              "facility_name": "OO전자 공장",
+              "province": "경기도"
+            },
+            "request_id": "REQ-AGENT-0001"
+          },
+          "max_actions": 6
+        },
+        "properties": {
+          "analysis": {
+            "$ref": "#/components/schemas/IncidentAnalyzeRequest"
+          },
+          "max_actions": {
+            "default": 6,
+            "maximum": 8.0,
+            "minimum": 4.0,
+            "title": "Max Actions",
+            "type": "integer"
+          },
+          "memory": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IncidentAgentMemory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "analysis"
+        ],
+        "title": "IncidentAgentStepRequest",
+        "type": "object"
+      },
+      "IncidentAgentStepResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnalysisResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "autonomous_risk_decision_allowed": {
+            "const": false,
+            "default": false,
+            "title": "Autonomous Risk Decision Allowed",
+            "type": "boolean"
+          },
+          "decision_support_only": {
+            "const": true,
+            "default": true,
+            "title": "Decision Support Only",
+            "type": "boolean"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/AgentLoopEvent"
+            },
+            "maxItems": 40,
+            "minItems": 1,
+            "title": "Events",
+            "type": "array"
+          },
+          "final_decision_authority": {
+            "const": "현장 지휘관",
+            "default": "현장 지휘관",
+            "title": "Final Decision Authority",
+            "type": "string"
+          },
+          "incident_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "memory": {
+            "$ref": "#/components/schemas/IncidentAgentMemory"
+          },
+          "memory_can_trigger_rule": {
+            "const": false,
+            "default": false,
+            "title": "Memory Can Trigger Rule",
+            "type": "boolean"
+          },
+          "memory_mode": {
+            "const": "BE_PERSISTED_EXTERNAL_MEMORY",
+            "default": "BE_PERSISTED_EXTERNAL_MEMORY",
+            "title": "Memory Mode",
+            "type": "string"
+          },
+          "next_actions": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Next Actions",
+            "type": "array"
+          },
+          "objective": {
+            "const": "공식근거 기반 화학사고 충돌 검토 준비",
+            "default": "공식근거 기반 화학사고 충돌 검토 준비",
+            "title": "Objective",
+            "type": "string"
+          },
+          "pending_inputs": {
+            "items": {
+              "enum": [
+                "INCIDENT_SUBSTANCE_CONFIRMATION",
+                "FACILITY_SUBSTANCE_CONFIRMATION",
+                "OFFICIAL_EVIDENCE_REVIEW"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "title": "Pending Inputs",
+            "type": "array"
+          },
+          "planning_mode": {
+            "const": "DETERMINISTIC_POLICY_PLANNER",
+            "default": "DETERMINISTIC_POLICY_PLANNER",
+            "title": "Planning Mode",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "retryable": {
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "run_id": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Run Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "chemicheck119-incident-agent-v1",
+            "default": "chemicheck119-incident-agent-v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "selected_tool_count": {
+            "maximum": 8.0,
+            "minimum": 0.0,
+            "title": "Selected Tool Count",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "GOAL_COMPLETED",
+              "WAITING_FOR_HUMAN",
+              "PARTIAL_MAX_ACTIONS",
+              "FAILED_RETRYABLE",
+              "FAILED_SAFETY"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tool_registry": {
+            "items": {
+              "enum": [
+                "RUN_INCIDENT_ANALYSIS",
+                "REQUEST_INCIDENT_CONFIRMATION",
+                "REQUEST_FACILITY_CONFIRMATION",
+                "VERIFY_SAFETY_CONTRACT",
+                "REQUEST_OFFICIAL_EVIDENCE_REVIEW",
+                "PRESENT_DECISION_SUPPORT"
+              ],
+              "type": "string"
+            },
+            "maxItems": 6,
+            "minItems": 6,
+            "title": "Tool Registry",
+            "type": "array"
+          },
+          "trace_is_chain_of_thought": {
+            "const": false,
+            "default": false,
+            "title": "Trace Is Chain Of Thought",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "run_id",
+          "request_id",
+          "incident_id",
+          "status",
+          "selected_tool_count",
+          "events",
+          "memory",
+          "next_actions",
+          "retryable",
+          "tool_registry"
+        ],
+        "title": "IncidentAgentStepResponse",
         "type": "object"
       },
       "IncidentAnalyzeRequest": {
@@ -2268,6 +2770,95 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/agents/incidents/step": {
+      "post": {
+        "operationId": "run_incident_agent_step_api_v1_agents_incidents_step_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncidentAgentStepRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncidentAgentStepResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "백엔드 인증 실패"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청 계약 위반"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "출력 안전 검증 또는 내부 오류"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "인증 또는 모델 artifact 준비 실패"
+          }
+        },
+        "summary": "사고 상태를 관찰해 필요한 도구를 선택하고 재계획",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
     "/api/v1/conflicts/review": {
       "post": {
         "operationId": "conflict_review_api_v1_conflicts_review_post",

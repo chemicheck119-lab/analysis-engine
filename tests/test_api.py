@@ -1167,6 +1167,58 @@ def test_unconfirmed_text_awaits_confirmation_does_not_run_rule_and_hides_source
     assert source_text not in json.dumps(body, ensure_ascii=False)
 
 
+def test_incident_agent_step_selects_confirmation_tools_and_resumes_from_memory(
+    runtime: ModelRuntime,
+    stub_pipeline_boundaries: list[dict[str, Any]],
+) -> None:
+    application = create_app(runtime=runtime, allow_anonymous=True)
+    payload = {"analysis": _analyze_payload("미상 물질 냄새 신고"), "max_actions": 6}
+
+    with TestClient(application) as client:
+        metadata_response = client.get("/api/v1/meta")
+        first_response = client.post(
+            "/api/v1/agents/incidents/step",
+            json=payload,
+        )
+        first = first_response.json()
+        second_response = client.post(
+            "/api/v1/agents/incidents/step",
+            json={**payload, "memory": first["memory"]},
+        )
+
+    assert metadata_response.status_code == 200
+    capability = metadata_response.json()["incident_agent_capability"]
+    assert capability == {
+        "schema_version": "chemicheck119-incident-agent-v1",
+        "memory_schema_version": "chemicheck119-incident-agent-memory-v1",
+        "endpoint": "/api/v1/agents/incidents/step",
+        "planning_mode": "DETERMINISTIC_POLICY_PLANNER",
+        "memory_mode": "BE_PERSISTED_EXTERNAL_MEMORY",
+        "server_side_session_storage": False,
+        "memory_can_trigger_rule": False,
+        "autonomous_risk_decision_allowed": False,
+        "tool_count": 6,
+    }
+    assert first_response.status_code == 200
+    assert first["status"] == "WAITING_FOR_HUMAN"
+    assert first["selected_tool_count"] == 4
+    assert [item["tool_id"] for item in first["memory"]["history"]] == [
+        "RUN_INCIDENT_ANALYSIS",
+        "VERIFY_SAFETY_CONTRACT",
+        "REQUEST_INCIDENT_CONFIRMATION",
+        "REQUEST_FACILITY_CONFIRMATION",
+    ]
+    assert first["analysis"]["conflict_review"]["executed"] is False
+    assert first["memory_can_trigger_rule"] is False
+    assert first["trace_is_chain_of_thought"] is False
+    assert second_response.status_code == 200
+    assert second_response.json()["selected_tool_count"] == 0
+    assert second_response.json()["events"][0]["decision_code"] == (
+        "NO_NEW_OBSERVATION"
+    )
+    assert stub_pipeline_boundaries == []
+
+
 def test_incident_analysis_returns_nationwide_operations_agent_and_route_contract(
     runtime: ModelRuntime,
     stub_pipeline_boundaries: list[dict[str, Any]],
@@ -1682,6 +1734,45 @@ def test_completed_analysis_exposes_grounded_rag_without_new_endpoint(
         "RULE_RESULT"
     }
     assert body["conflict_review"]["result"]["risk_level_ko"] == "높음"
+
+
+def test_incident_agent_step_completes_only_after_confirmed_safe_analysis(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    result = _public_source_completed_rule_result()
+    pipeline_result = _safe_confirmed_pipeline_result()
+    pipeline_result["status"] = "SCREENING_COMPLETED"
+    pipeline_result["rule_review"] = {
+        "executed": True,
+        "status": "SCREENING_COMPLETED",
+        "gate": "BOTH_CAS_RESPONDER_CONFIRMED",
+        "policy_mode": PUBLIC_SOURCE_PILOT_POLICY,
+        "result": result,
+    }
+    monkeypatch.setattr(
+        api, "analyze_incident", lambda *_args, **_kwargs: pipeline_result
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/agents/incidents/step",
+            json={"analysis": _analyze_payload_with_confirmed_pair()},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "GOAL_COMPLETED"
+    assert body["selected_tool_count"] == 3
+    assert [item["tool_id"] for item in body["memory"]["history"]] == [
+        "RUN_INCIDENT_ANALYSIS",
+        "VERIFY_SAFETY_CONTRACT",
+        "PRESENT_DECISION_SUPPORT",
+    ]
+    assert body["analysis"]["state"] == "SCREENING_COMPLETED"
+    assert body["analysis"]["conflict_review"]["result"]["risk_level_ko"] == "높음"
+    assert body["autonomous_risk_decision_allowed"] is False
 
 
 @pytest.mark.parametrize(
@@ -2495,6 +2586,7 @@ def test_openapi_exposes_only_documented_v1_and_health_paths(
         "/health/ready",
         "/api/v1/meta",
         "/api/v1/incidents/analyze",
+        "/api/v1/agents/incidents/step",
         "/api/v1/substances/discover",
         "/api/v1/substances/resolve",
         "/api/v1/evidence/search",
@@ -2502,6 +2594,7 @@ def test_openapi_exposes_only_documented_v1_and_health_paths(
         "/api/v1/conflicts/review",
     }
     assert "post" in paths["/api/v1/incidents/analyze"]
+    assert "post" in paths["/api/v1/agents/incidents/step"]
     assert "post" in paths["/api/v1/substances/discover"]
     assert "post" in paths["/api/v1/conflicts/review"]
     assert (

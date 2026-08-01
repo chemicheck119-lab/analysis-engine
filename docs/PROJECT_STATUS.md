@@ -23,8 +23,9 @@
 | 공식근거 보증 | 구현 | 2쌍은 독립 공식기관 3곳 이상 교차증빙, 나머지 13쌍 단일 공식체계 표시·주간 링크 drift 검사 |
 | 유사 사고사례 검색 | 미완료 | 출처와 대응 라벨이 검증된 corpus 없음; 공식 근거 RAG와 별도 범위 |
 | 파인튜닝 | 보류 | 준비도 검사만 존재, 기준선 대비 필요성이 입증되지 않음 |
-| FastAPI | 구현 | 통합 분석과 보조 API, 인증·오류 계약·확인 게이트 구현 |
-| 현장대응 에이전트 | 구현 | 10단계 workflow·8개 도구 상태·다음 행동·전국 지도 컨텍스트 반환 |
+| FastAPI | 구현 | 통합 분석·agent step·보조 API, 인증·오류 계약·확인 게이트 구현 |
+| 실행 에이전트 | 구현·배포 대기 | 외부 memory, 6개 도구, PLAN·ACT·OBSERVE·REPLAN, 안전 재검증 |
+| 대시보드 agent projection | 구현 | 10단계 workflow·8개 도구 상태·다음 행동·전국 지도 컨텍스트 반환 |
 | 현재 위치·도로 경로 | 모델 계약 구현 | 사고/MDT 좌표·GeoJSON·ETA·simulation/stale/missing 상태; 실제 사업자 호출은 BE 필요 |
 | 대시보드 표시 계약 | 구현 | BFF OpenAPI·TypeScript 타입·fixture, 확인 전 위험 결과 금지, 15쌍별 정확한 값 고정 |
 | 운영 로그 | 구현 | 안전 JSON 로그, Uvicorn 원 URL access log와 traceback 비활성화 |
@@ -41,7 +42,7 @@
 Python 3.11.15 환경에서 다음을 확인했습니다.
 
 ```text
-전체 테스트: 376 passed
+전체 테스트: 395 passed
 Ruff: 통과
 형식 검사: 통과
 compileall: 통과
@@ -57,6 +58,23 @@ workflow: 10단계
 tool execution trace: 8개
 agent snapshot 조립 2,000회: 평균 0.0412ms / p95 0.0420ms
 ```
+
+실제 상태 기반 agent loop 추가 검증:
+
+```text
+agent loop 단위 테스트: 9건
+agent step API·연동 계약 통합 테스트: 3건
+도구 registry: 6개
+phase: PLAN / ACT / OBSERVE / REPLAN
+미확인 요청: 분석 → 안전 재검증 → 사고물질 확인 요청 → 시설물질 확인 요청
+확인 완료 요청: 분석 → 안전 재검증 → 의사결정 보조 결과 제시
+동일 관찰 재호출: 도구 실행 0건
+동시 분기: 16/16 checksum 유효, 동일 parent hash 반환
+```
+
+이 trace는 숨겨진 chain-of-thought가 아니라 도구 ID와 구조화 상태 코드입니다. agent memory는
+BE가 저장하며 Rule 실행 권한으로 사용할 수 없습니다. 현재 서울 Cloud Run preview는 이전
+main 코드이므로 이 신규 endpoint는 병합 후 새 리비전을 배포해야 외부에서 사용할 수 있습니다.
 
 snapshot 수치는 DB 검색·네트워크·전체 API를 제외한 내부 micro-benchmark입니다. 실제 artifact
 통합 smoke는 1회 약 252ms 관찰값일 뿐 운영 SLO나 성능 보장이 아닙니다. 길찾기 결과가 없는
