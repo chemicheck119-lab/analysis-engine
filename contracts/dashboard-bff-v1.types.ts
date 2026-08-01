@@ -91,6 +91,22 @@ export interface MaterialCandidate {
   evidenceNotice?: string | null;
   casLinkWarning?: string | null;
   evidenceCards: EvidenceCard[];
+  /** 0~1 후보 정렬값이며 물질 정답 확률이나 위험 확률이 아니다. */
+  rankingScore: number;
+  rankingScoreIsProbability: false;
+  rankingFeatures: Array<{
+    name:
+      | 'retrieval_prior'
+      | 'identity_similarity'
+      | 'exact_identity'
+      | 'source_authority'
+      | 'property_coverage'
+      | 'official_evidence_available';
+    value: number;
+    weight: number;
+    contribution: number;
+    evidence: string;
+  }>;
   requiresResponderConfirmation: true;
   ruleEligible: false;
   riskDeterminationAllowed: false;
@@ -113,6 +129,31 @@ export interface MaterialDiscoveryResponse {
   candidates: MaterialCandidate[];
   requiresResponderConfirmation: true;
   candidateScoreIsProbability: false;
+  rankingModel: {
+    modelVersion: 'material-evidence-ranker-v1';
+    modelType: 'EXPLAINABLE_EVIDENCE_WEIGHTED_RANKER';
+    trainingStatus: 'NOT_SUPERVISED_INSUFFICIENT_REVIEWED_LABELS';
+    scoreSemantics: 'CANDIDATE_ORDERING_NOT_PROBABILITY';
+    scoreIsProbability: false;
+    featureWeights: Record<string, number>;
+    checkPolicyVersion: 'material-next-best-check-v1';
+    fallback: 'PRESERVE_RETRIEVAL_ORDER_ON_EQUAL_SCORE';
+  };
+  /** 모델이 후보를 확정하는 대신 대원에게 제시하는 다음 확인 행동이다. */
+  nextBestChecks: Array<{
+    priority: number;
+    checkId: string;
+    field?: 'physical_state' | 'color' | 'odor' | 'use_description' | null;
+    prompt: string;
+    reason: string;
+    discriminationScore: number;
+    scoreIsProbability: false;
+    candidateValues: Array<{
+      casNumber: string;
+      displayName: string;
+      value: string;
+    }>;
+  }>;
   riskDisplayAllowed: false;
   noReliableCandidateMeansAbsent: false;
   noReliableCandidateMeansSafe: false;

@@ -1,0 +1,40 @@
+{
+  "metrics_version": "material-ranker-self-retrieval-v1",
+  "created_at_utc": "2026-08-01T12:05:13.896694+00:00",
+  "model_version": "material-evidence-ranker-v1",
+  "evaluation_scope": "PROFILE_SELF_RETRIEVAL_REGRESSION_ONLY",
+  "is_independent_field_accuracy": false,
+  "data_source": "substance_profile derived from NFA Ulsan chemical information",
+  "case_generation": "up to three non-empty property fields from each distinct CAS profile",
+  "case_count": 300,
+  "baseline": {
+    "case_count": 300,
+    "top1_accuracy": 0.693333,
+    "top3_recall": 0.8,
+    "mrr": 0.745222
+  },
+  "ranker": {
+    "case_count": 300,
+    "top1_accuracy": 0.693333,
+    "top3_recall": 0.8,
+    "mrr": 0.745222
+  },
+  "top1_delta": 0.0,
+  "top3_delta": 0.0,
+  "discriminating_check_coverage": 0.773333,
+  "latency_ms": {
+    "mean": 0.69381,
+    "p95": 0.963625,
+    "max": 2.337042
+  },
+  "safety": {
+    "candidate_score_is_probability": false,
+    "auto_confirmation_allowed": false,
+    "rule_execution_allowed": false
+  },
+  "limitations": [
+    "질의가 동일 프로필의 필드에서 생성되어 독립 보류셋이 아닙니다.",
+    "현장 표현·제품명·오인 신고에 대한 정확도를 의미하지 않습니다.",
+    "지도학습 모델 채택은 검수된 현장 질의-CAS 라벨 확보 후 재평가합니다."
+  ]
+}

@@ -959,6 +959,10 @@ def test_auth_is_fail_closed_when_key_is_not_configured(runtime: ModelRuntime) -
     assert response.headers["x-request-id"] == "REQ-AUTH-CONFIG-001"
     assert metadata["service_name"] == "케미체크119"
     assert metadata["internal_package_name"] == "chemiguard119"
+    assert metadata["material_ranking_capability"]["model_version"] == (
+        "material-evidence-ranker-v1"
+    )
+    assert metadata["material_ranking_capability"]["score_is_probability"] is False
     assert metadata["authentication"] == {
         "mode": "MISCONFIGURED_FAIL_CLOSED",
         "required": True,
@@ -2442,6 +2446,52 @@ def test_material_discovery_exposes_safe_dashboard_contract(
                             "cas_link_status": "SOURCE_EXACT",
                         }
                     ],
+                    "ranking_score": 0.48,
+                    "ranking_score_is_probability": False,
+                    "ranking_features": [
+                        {
+                            "name": "retrieval_prior",
+                            "value": 1.0,
+                            "weight": 0.35,
+                            "contribution": 0.35,
+                            "evidence": "기존 검색 순위 보존",
+                        },
+                        {
+                            "name": "identity_similarity",
+                            "value": 0.0,
+                            "weight": 0.27,
+                            "contribution": 0.0,
+                            "evidence": "이름 식별 근거 없음",
+                        },
+                        {
+                            "name": "exact_identity",
+                            "value": 0.0,
+                            "weight": 0.17,
+                            "contribution": 0.0,
+                            "evidence": "정확 식별 표현 없음",
+                        },
+                        {
+                            "name": "source_authority",
+                            "value": 0.0,
+                            "weight": 0.08,
+                            "contribution": 0.0,
+                            "evidence": "별칭 출처 없음",
+                        },
+                        {
+                            "name": "property_coverage",
+                            "value": 1.0,
+                            "weight": 0.1,
+                            "contribution": 0.1,
+                            "evidence": "공개 물성 일치",
+                        },
+                        {
+                            "name": "official_evidence_available",
+                            "value": 1.0,
+                            "weight": 0.03,
+                            "contribution": 0.03,
+                            "evidence": "동일 CAS 공식 근거 적재",
+                        },
+                    ],
                     "requires_responder_confirmation": True,
                     "rule_eligible": False,
                     "risk_determination_allowed": False,
@@ -2451,6 +2501,35 @@ def test_material_discovery_exposes_safe_dashboard_contract(
             "rule_eligible": False,
             "risk_determination_allowed": False,
             "candidate_score_is_probability": False,
+            "ranking_model": {
+                "model_version": "material-evidence-ranker-v1",
+                "model_type": "EXPLAINABLE_EVIDENCE_WEIGHTED_RANKER",
+                "training_status": "NOT_SUPERVISED_INSUFFICIENT_REVIEWED_LABELS",
+                "score_semantics": "CANDIDATE_ORDERING_NOT_PROBABILITY",
+                "score_is_probability": False,
+                "feature_weights": {
+                    "retrieval_prior": 0.35,
+                    "identity_similarity": 0.27,
+                    "exact_identity": 0.17,
+                    "source_authority": 0.08,
+                    "property_coverage": 0.1,
+                    "official_evidence_available": 0.03,
+                },
+                "check_policy_version": "material-next-best-check-v1",
+                "fallback": "PRESERVE_RETRIEVAL_ORDER_ON_EQUAL_SCORE",
+            },
+            "next_best_checks": [
+                {
+                    "priority": 1,
+                    "check_id": "VERIFY_CONTAINER_LABEL_CAS",
+                    "field": None,
+                    "prompt": "용기 라벨의 CAS를 확인하세요.",
+                    "reason": "검색 후보는 물질 확정이 아닙니다.",
+                    "discrimination_score": 1.0,
+                    "score_is_probability": False,
+                    "candidate_values": [],
+                }
+            ],
             "notice": "용기 라벨·현장 MSDS로 확인해야 합니다.",
         },
     )
@@ -2477,6 +2556,9 @@ def test_material_discovery_exposes_safe_dashboard_contract(
     assert "위험등급이 아니며" in body["candidates"][0]["evidence_warning"]
     assert body["candidates"][0]["evidence"][0]["cas_link_status"] == "SOURCE_EXACT"
     assert body["candidate_score_is_probability"] is False
+    assert body["candidates"][0]["ranking_score_is_probability"] is False
+    assert body["ranking_model"]["training_status"].startswith("NOT_SUPERVISED")
+    assert body["next_best_checks"][0]["check_id"] == "VERIFY_CONTAINER_LABEL_CAS"
     assert "현장 지휘관" in body["safety_notice"]
 
 
@@ -2518,6 +2600,25 @@ def test_material_discovery_candidate_rejects_mismatched_evidence_cas() -> None:
                         "document_version": "2026-01-01",
                         "cas_link_status": "SOURCE_EXACT",
                     }
+                ],
+                "ranking_score": 0.5,
+                "ranking_score_is_probability": False,
+                "ranking_features": [
+                    {
+                        "name": name,
+                        "value": 0.0,
+                        "weight": weight,
+                        "contribution": 0.0,
+                        "evidence": "테스트 순위 특징",
+                    }
+                    for name, weight in (
+                        ("retrieval_prior", 0.35),
+                        ("identity_similarity", 0.27),
+                        ("exact_identity", 0.17),
+                        ("source_authority", 0.08),
+                        ("property_coverage", 0.1),
+                        ("official_evidence_available", 0.03),
+                    )
                 ],
                 "requires_responder_confirmation": True,
                 "rule_eligible": False,

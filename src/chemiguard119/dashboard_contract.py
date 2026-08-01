@@ -152,6 +152,52 @@ class DashboardEvidenceCard(DashboardModel):
         return normalized
 
 
+class DashboardRankingFeature(DashboardModel):
+    name: Literal[
+        "retrieval_prior",
+        "identity_similarity",
+        "exact_identity",
+        "source_authority",
+        "property_coverage",
+        "official_evidence_available",
+    ]
+    value: float = Field(ge=0, le=1)
+    weight: float = Field(ge=0, le=1)
+    contribution: float = Field(ge=0, le=1)
+    evidence: str = Field(min_length=1, max_length=500)
+
+
+class DashboardRankingModel(DashboardModel):
+    model_version: Literal["material-evidence-ranker-v1"]
+    model_type: Literal["EXPLAINABLE_EVIDENCE_WEIGHTED_RANKER"]
+    training_status: Literal["NOT_SUPERVISED_INSUFFICIENT_REVIEWED_LABELS"]
+    score_semantics: Literal["CANDIDATE_ORDERING_NOT_PROBABILITY"]
+    score_is_probability: Literal[False]
+    feature_weights: dict[str, float]
+    check_policy_version: Literal["material-next-best-check-v1"]
+    fallback: Literal["PRESERVE_RETRIEVAL_ORDER_ON_EQUAL_SCORE"]
+
+
+class DashboardNextBestCheckCandidateValue(DashboardModel):
+    cas_number: str = Field(min_length=5, max_length=12)
+    display_name: str = Field(min_length=1, max_length=500)
+    value: str = Field(min_length=1, max_length=8_000)
+
+
+class DashboardNextBestCheck(DashboardModel):
+    priority: int = Field(ge=1, le=4)
+    check_id: str = Field(min_length=1, max_length=120)
+    field: Literal["physical_state", "color", "odor", "use_description"] | None
+    prompt: str = Field(min_length=1, max_length=1_000)
+    reason: str = Field(min_length=1, max_length=1_000)
+    discrimination_score: float = Field(ge=0, le=1)
+    score_is_probability: Literal[False]
+    candidate_values: list[DashboardNextBestCheckCandidateValue] = Field(
+        default_factory=list,
+        max_length=5,
+    )
+
+
 class DashboardMaterialCandidate(DashboardModel):
     rank: int = Field(ge=1, le=5)
     cas_number: str = Field(min_length=5, max_length=12)
@@ -174,6 +220,12 @@ class DashboardMaterialCandidate(DashboardModel):
     evidence_cards: list[DashboardEvidenceCard] = Field(
         default_factory=list,
         max_length=5,
+    )
+    ranking_score: float = Field(ge=0, le=1)
+    ranking_score_is_probability: Literal[False]
+    ranking_features: list[DashboardRankingFeature] = Field(
+        min_length=6,
+        max_length=6,
     )
     requires_responder_confirmation: Literal[True] = True
     rule_eligible: Literal[False] = False
@@ -222,6 +274,8 @@ class DashboardMaterialDiscoveryResponse(DashboardModel):
     )
     requires_responder_confirmation: Literal[True] = True
     candidate_score_is_probability: Literal[False] = False
+    ranking_model: DashboardRankingModel
+    next_best_checks: list[DashboardNextBestCheck] = Field(min_length=1, max_length=4)
     risk_display_allowed: Literal[False] = False
     no_reliable_candidate_means_absent: Literal[False] = False
     no_reliable_candidate_means_safe: Literal[False] = False

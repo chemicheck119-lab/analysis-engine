@@ -165,6 +165,7 @@ python scripts/evaluation/evaluate_verified_pairs.py \
 | `retrieval_regression_queries.csv` | 10 | KOSHA·CAMEO 근거 검색 회귀 검사 | 내부 초안 |
 | `retrieval_section_regression.jsonl` | 12 | 질문별 핵심·보조 MSDS 절 순위 검사 | 내부 초안 |
 | `incident_parser_seed.jsonl` | 6 | 신고문 구조화 데이터 형식 시드 | 학습·성능평가 불가 |
+| `material_ranker_self_retrieval_2026-08-01.json` | 300 | 공개 물성 프로필 검색·재순위화 회귀 | 자기검색, 현장 정확도 아님 |
 
 세 파일은 표본설계로 정한 규모가 아니라 2026-07-23 커밋 `6246c49`에서 함께 추가된
 정적 fixture입니다. 원본 표본추출 기록, 외부 검증자와 현장 대표성 근거가 없습니다.
@@ -177,6 +178,17 @@ python scripts/evaluation/evaluate_verified_pairs.py \
 - 화학사고 발생 또는 피해 확률
 
 현장 성능을 주장하려면 실제 신고 표현을 비식별화한 별도 보류 테스트셋이 필요합니다.
+
+### 2.1 물질 Ranker 회귀 감사
+
+749개 공개 물성 프로필 중 서로 다른 CAS 300개에서 최대 세 물성 필드로 질의를 만들어 같은
+FTS5 인덱스를 다시 찾았습니다. 첫 재순위화 설계는 Top-1을 0.0067 낮춰 채택하지 않았고,
+기존 BM25 순위를 강한 사전값으로 보존하도록 수정했습니다. 최종 결과는 Top-1 0.6933,
+Top-3 0.8000, MRR 0.7452로 기준선과 같았으며 77.33%의 사례에서 후보를 구분할 다음 확인
+항목을 생성했습니다. 평균 추가 처리시간은 약 0.69ms, p95 약 0.96ms였습니다.
+
+이 평가는 같은 프로필에서 질의를 만든 자기검색 일관성 감사입니다. 실제 신고문·제품명·오인
+관찰에 대한 독립 성능이 아니며, 지도학습·파인튜닝 근거로 사용하지 않습니다.
 
 ## 3. 재현 명령
 
@@ -202,6 +214,15 @@ outputs/modeling/resolver_evaluation.json
 outputs/modeling/resolver_hint_safety_evaluation.json
 outputs/modeling/retriever_evaluation.json
 outputs/modeling/retriever_section_evaluation.json
+```
+
+물질 Ranker 회귀 감사:
+
+```bash
+python scripts/evaluation/evaluate_material_ranker.py \
+  --db artifacts/chemiguard119.sqlite \
+  --max-cases 300 \
+  --output data/evaluation/material_ranker_self_retrieval_2026-08-01.json
 ```
 
 ## 4. Resolver 지표

@@ -7,6 +7,10 @@
 
 ### Added
 
+- 기존 BM25 순위를 보존하면서 정확 식별·출처·물성·공식근거를 설명 가능한 특징으로 결합하는
+  `material-evidence-ranker-v1`과 정보이득 기반 다음 현장 확인 정책
+- 공개 물성 프로필 300건 자기검색에서 기준선 Top-1·Top-3 무회귀와 다음 구분 확인 77.33%를
+  기록하고 독립 현장 정확도가 아님을 고정한 평가 스냅샷
 - 현재 사고 입력과 BE 저장 외부 memory를 바탕으로 6개 도구 중 필요한 것만 선택하는
   `PLAN → ACT → OBSERVE → REPLAN` 사고대응 에이전트 루프
 - 상태 기반 agent step이 포함된 main commit의 서울 Cloud Run preview Blue/Green 배포와

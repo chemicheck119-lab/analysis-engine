@@ -40,6 +40,52 @@
       "evidenceNotice": "상세 근거 미적재 — 다른 물질의 근거로 대체하지 않습니다. 외부 공식 MSDS 확인이 필요합니다.",
       "casLinkWarning": null,
       "evidenceCards": [],
+      "rankingScore": 0.425,
+      "rankingScoreIsProbability": false,
+      "rankingFeatures": [
+        {
+          "name": "retrieval_prior",
+          "value": 1.0,
+          "weight": 0.35,
+          "contribution": 0.35,
+          "evidence": "기존 정확검색·FTS5 BM25 순위를 강한 사전값으로 보존했습니다."
+        },
+        {
+          "name": "identity_similarity",
+          "value": 0.0,
+          "weight": 0.27,
+          "contribution": 0.0,
+          "evidence": "이름 식별 근거가 없어 이 특징은 반영하지 않았습니다."
+        },
+        {
+          "name": "exact_identity",
+          "value": 0.0,
+          "weight": 0.17,
+          "contribution": 0.0,
+          "evidence": "정확 식별 표현이 없어 이 특징은 반영하지 않았습니다."
+        },
+        {
+          "name": "source_authority",
+          "value": 0.0,
+          "weight": 0.08,
+          "contribution": 0.0,
+          "evidence": "별칭을 제공한 공개기관·검증 상태를 단계형 값으로 반영했습니다."
+        },
+        {
+          "name": "property_coverage",
+          "value": 0.75,
+          "weight": 0.1,
+          "contribution": 0.075,
+          "evidence": "신고·관찰 표현과 일치한 공개 물성 필드 3개를 반영했습니다."
+        },
+        {
+          "name": "official_evidence_available",
+          "value": 0.0,
+          "weight": 0.03,
+          "contribution": 0.0,
+          "evidence": "동일 CAS의 KOSHA·CAMEO 근거 카드 적재 여부만 반영했습니다."
+        }
+      ],
       "requiresResponderConfirmation": true,
       "ruleEligible": false,
       "riskDeterminationAllowed": false
@@ -47,6 +93,45 @@
   ],
   "requiresResponderConfirmation": true,
   "candidateScoreIsProbability": false,
+  "rankingModel": {
+    "modelVersion": "material-evidence-ranker-v1",
+    "modelType": "EXPLAINABLE_EVIDENCE_WEIGHTED_RANKER",
+    "trainingStatus": "NOT_SUPERVISED_INSUFFICIENT_REVIEWED_LABELS",
+    "scoreSemantics": "CANDIDATE_ORDERING_NOT_PROBABILITY",
+    "scoreIsProbability": false,
+    "featureWeights": {
+      "retrieval_prior": 0.35,
+      "identity_similarity": 0.27,
+      "exact_identity": 0.17,
+      "source_authority": 0.08,
+      "property_coverage": 0.1,
+      "official_evidence_available": 0.03
+    },
+    "checkPolicyVersion": "material-next-best-check-v1",
+    "fallback": "PRESERVE_RETRIEVAL_ORDER_ON_EQUAL_SCORE"
+  },
+  "nextBestChecks": [
+    {
+      "priority": 1,
+      "checkId": "VERIFY_CONTAINER_LABEL_CAS",
+      "field": null,
+      "prompt": "용기·배관 라벨에서 물질명과 CAS 번호를 확인하세요.",
+      "reason": "이름·성상 후보는 물질 정체와 현장 존재를 확정하지 않습니다.",
+      "discriminationScore": 1.0,
+      "scoreIsProbability": false,
+      "candidateValues": []
+    },
+    {
+      "priority": 2,
+      "checkId": "VERIFY_ON_SITE_MSDS",
+      "field": null,
+      "prompt": "현장 MSDS 또는 운송 문서의 제품명·성분·CAS를 교차 확인하세요.",
+      "reason": "제품명은 여러 성분을 포함하거나 통칭과 다를 수 있습니다.",
+      "discriminationScore": 1.0,
+      "scoreIsProbability": false,
+      "candidateValues": []
+    }
+  ],
   "riskDisplayAllowed": false,
   "noReliableCandidateMeansAbsent": false,
   "noReliableCandidateMeansSafe": false,

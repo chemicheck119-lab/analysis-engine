@@ -13,6 +13,11 @@ from pathlib import Path
 from typing import Any
 
 from chemiguard119.database import connect_readonly
+from chemiguard119.material_ranker import (
+    next_best_checks,
+    rank_material_candidates,
+    ranking_model_metadata,
+)
 from chemiguard119.resolver import resolve_substance
 from chemiguard119.retrieval import search_evidence
 
@@ -356,6 +361,11 @@ def discover_substances(
             }
         )
 
+    candidates = rank_material_candidates(
+        candidates,
+        direct_by_cas=direct_by_cas,
+        resolution_status=str(resolution.get("status") or ""),
+    )
     status = (
         "CANDIDATES_FOUND"
         if candidates
@@ -400,6 +410,8 @@ def discover_substances(
         "rule_eligible": False,
         "risk_determination_allowed": False,
         "candidate_score_is_probability": False,
+        "ranking_model": ranking_model_metadata(),
+        "next_best_checks": next_best_checks(candidates),
         "notice": notice,
     }
 

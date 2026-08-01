@@ -172,7 +172,9 @@
       "STANDARD_NAME",
       "ALIAS",
       "MULTI_FIELD_PROPERTY_PROFILE_RETRIEVAL",
-      "CANDIDATE_SPECIFIC_OFFICIAL_EVIDENCE"
+      "CANDIDATE_SPECIFIC_OFFICIAL_EVIDENCE",
+      "EXPLAINABLE_CANDIDATE_RANKING",
+      "NEXT_BEST_FIELD_CHECK"
     ],
     "material_search_not_yet_supported": [
       "PROPERTY_ONLY_AUTO_CONFIRMATION",
@@ -191,6 +193,10 @@
       "no_reliable_candidate_next_action": "관찰 정보 보강 및 외부 공식 MSDS 확인",
       "property_source_label": "소방청 울산 화학물질 정보 기반 관찰 후보",
       "evidence_card_body_label": "공식 문서 발췌",
+      "ranking_model_version": "material-evidence-ranker-v1",
+      "ranking_training_status": "NOT_SUPERVISED_INSUFFICIENT_REVIEWED_LABELS",
+      "ranking_score_semantics": "CANDIDATE_ORDERING_NOT_PROBABILITY",
+      "next_best_check_policy_version": "material-next-best-check-v1",
       "ranking_score_must_not_be_displayed_as_confidence": true,
       "warning_fields_must_be_preserved": [
         "evidence_warning",
@@ -254,7 +260,7 @@
   "dashboard_workflow": {
     "material_discovery": [
       "관찰 내용 또는 물질 표현 입력",
-      "후보와 출처 카드 표시",
+      "설명 가능한 후보 순위·출처·다음 확인 행동 표시",
       "용기 라벨·현장 MSDS 등으로 현장 물질 확인",
       "BE가 confirmation_id 발급",
       "두 CAS가 모두 확인된 뒤 충돌 검토"

@@ -1953,6 +1953,112 @@
         "title": "MatchedProperty",
         "type": "object"
       },
+      "NextBestCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "candidate_values": {
+            "items": {
+              "$ref": "#/components/schemas/NextBestCheckCandidateValue"
+            },
+            "maxItems": 5,
+            "title": "Candidate Values",
+            "type": "array"
+          },
+          "check_id": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Check Id",
+            "type": "string"
+          },
+          "discrimination_score": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Discrimination Score",
+            "type": "number"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "enum": [
+                  "physical_state",
+                  "color",
+                  "odor",
+                  "use_description"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "priority": {
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Priority",
+            "type": "integer"
+          },
+          "prompt": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Prompt",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "score_is_probability": {
+            "const": false,
+            "title": "Score Is Probability",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "priority",
+          "check_id",
+          "field",
+          "prompt",
+          "reason",
+          "discrimination_score",
+          "score_is_probability"
+        ],
+        "title": "NextBestCheck",
+        "type": "object"
+      },
+      "NextBestCheckCandidateValue": {
+        "additionalProperties": false,
+        "properties": {
+          "cas_number": {
+            "maxLength": 12,
+            "minLength": 5,
+            "title": "Cas Number",
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "value": {
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cas_number",
+          "display_name",
+          "value"
+        ],
+        "title": "NextBestCheckCandidateValue",
+        "type": "object"
+      },
       "OperationsAgentSnapshot": {
         "additionalProperties": false,
         "properties": {
@@ -2429,6 +2535,26 @@
             "title": "Rank",
             "type": "integer"
           },
+          "ranking_features": {
+            "items": {
+              "$ref": "#/components/schemas/SubstanceRankingFeature"
+            },
+            "maxItems": 6,
+            "minItems": 6,
+            "title": "Ranking Features",
+            "type": "array"
+          },
+          "ranking_score": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Ranking Score",
+            "type": "number"
+          },
+          "ranking_score_is_probability": {
+            "const": false,
+            "title": "Ranking Score Is Probability",
+            "type": "boolean"
+          },
           "requires_responder_confirmation": {
             "const": true,
             "title": "Requires Responder Confirmation",
@@ -2451,6 +2577,9 @@
           "display_name",
           "match_basis",
           "evidence_status",
+          "ranking_score",
+          "ranking_score_is_probability",
+          "ranking_features",
           "requires_responder_confirmation",
           "rule_eligible",
           "risk_determination_allowed"
@@ -2511,6 +2640,15 @@
             "title": "Method",
             "type": "string"
           },
+          "next_best_checks": {
+            "items": {
+              "$ref": "#/components/schemas/NextBestCheck"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Next Best Checks",
+            "type": "array"
+          },
           "notice": {
             "maxLength": 2000,
             "minLength": 1,
@@ -2526,6 +2664,9 @@
             "minLength": 2,
             "title": "Query",
             "type": "string"
+          },
+          "ranking_model": {
+            "$ref": "#/components/schemas/SubstanceRankingModel"
           },
           "requires_responder_confirmation": {
             "const": true,
@@ -2584,6 +2725,8 @@
           "rule_eligible",
           "risk_determination_allowed",
           "candidate_score_is_probability",
+          "ranking_model",
+          "next_best_checks",
           "notice",
           "safety_notice"
         ],
@@ -2710,6 +2853,125 @@
           "document_version"
         ],
         "title": "SubstancePropertyProfile",
+        "type": "object"
+      },
+      "SubstanceRankingFeature": {
+        "additionalProperties": false,
+        "properties": {
+          "contribution": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Contribution",
+            "type": "number"
+          },
+          "evidence": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Evidence",
+            "type": "string"
+          },
+          "name": {
+            "enum": [
+              "retrieval_prior",
+              "identity_similarity",
+              "exact_identity",
+              "source_authority",
+              "property_coverage",
+              "official_evidence_available"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "value": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Value",
+            "type": "number"
+          },
+          "weight": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "value",
+          "weight",
+          "contribution",
+          "evidence"
+        ],
+        "title": "SubstanceRankingFeature",
+        "type": "object"
+      },
+      "SubstanceRankingModel": {
+        "additionalProperties": false,
+        "properties": {
+          "check_policy_version": {
+            "const": "material-next-best-check-v1",
+            "title": "Check Policy Version",
+            "type": "string"
+          },
+          "fallback": {
+            "const": "PRESERVE_RETRIEVAL_ORDER_ON_EQUAL_SCORE",
+            "title": "Fallback",
+            "type": "string"
+          },
+          "feature_weights": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "propertyNames": {
+              "enum": [
+                "retrieval_prior",
+                "identity_similarity",
+                "exact_identity",
+                "source_authority",
+                "property_coverage",
+                "official_evidence_available"
+              ]
+            },
+            "title": "Feature Weights",
+            "type": "object"
+          },
+          "model_type": {
+            "const": "EXPLAINABLE_EVIDENCE_WEIGHTED_RANKER",
+            "title": "Model Type",
+            "type": "string"
+          },
+          "model_version": {
+            "const": "material-evidence-ranker-v1",
+            "title": "Model Version",
+            "type": "string"
+          },
+          "score_is_probability": {
+            "const": false,
+            "title": "Score Is Probability",
+            "type": "boolean"
+          },
+          "score_semantics": {
+            "const": "CANDIDATE_ORDERING_NOT_PROBABILITY",
+            "title": "Score Semantics",
+            "type": "string"
+          },
+          "training_status": {
+            "const": "NOT_SUPERVISED_INSUFFICIENT_REVIEWED_LABELS",
+            "title": "Training Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model_version",
+          "model_type",
+          "training_status",
+          "score_semantics",
+          "score_is_probability",
+          "feature_weights",
+          "check_policy_version",
+          "fallback"
+        ],
+        "title": "SubstanceRankingModel",
         "type": "object"
       },
       "UnconfirmedConflictReview": {

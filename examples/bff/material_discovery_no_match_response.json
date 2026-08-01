@@ -8,6 +8,35 @@
   "candidates": [],
   "requiresResponderConfirmation": true,
   "candidateScoreIsProbability": false,
+  "rankingModel": {
+    "modelVersion": "material-evidence-ranker-v1",
+    "modelType": "EXPLAINABLE_EVIDENCE_WEIGHTED_RANKER",
+    "trainingStatus": "NOT_SUPERVISED_INSUFFICIENT_REVIEWED_LABELS",
+    "scoreSemantics": "CANDIDATE_ORDERING_NOT_PROBABILITY",
+    "scoreIsProbability": false,
+    "featureWeights": {
+      "retrieval_prior": 0.35,
+      "identity_similarity": 0.27,
+      "exact_identity": 0.17,
+      "source_authority": 0.08,
+      "property_coverage": 0.1,
+      "official_evidence_available": 0.03
+    },
+    "checkPolicyVersion": "material-next-best-check-v1",
+    "fallback": "PRESERVE_RETRIEVAL_ORDER_ON_EQUAL_SCORE"
+  },
+  "nextBestChecks": [
+    {
+      "priority": 1,
+      "checkId": "COLLECT_AUTHORITATIVE_IDENTITY_SOURCE",
+      "field": null,
+      "prompt": "용기 라벨·운송 문서·현장 MSDS에서 물질명 또는 CAS를 확보하세요.",
+      "reason": "현재 검색 근거만으로 신뢰할 후보를 만들 수 없습니다.",
+      "discriminationScore": 0.0,
+      "scoreIsProbability": false,
+      "candidateValues": []
+    }
+  ],
   "riskDisplayAllowed": false,
   "noReliableCandidateMeansAbsent": false,
   "noReliableCandidateMeansSafe": false,

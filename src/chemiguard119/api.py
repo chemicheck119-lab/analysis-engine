@@ -63,6 +63,7 @@ from chemiguard119.paths import (
 )
 from chemiguard119.discovery import discover_substances
 from chemiguard119.database import connect_readonly
+from chemiguard119.material_ranker import ranking_model_metadata
 from chemiguard119.observability import configure_json_logging, emit_json_event
 from chemiguard119.operations import build_operations_agent_snapshot
 from chemiguard119.facility import search_facility_history
@@ -1444,6 +1445,7 @@ def create_app(
             "responder_confirmation_required": True,
             "conflict_review_capability": capability,
             "grounded_rag_capability": request.app.state.rag_service.metadata(),
+            "material_ranking_capability": ranking_model_metadata(),
             "incident_agent_capability": {
                 "schema_version": AGENT_SCHEMA_VERSION,
                 "memory_schema_version": AGENT_MEMORY_SCHEMA_VERSION,

@@ -2284,6 +2284,26 @@
             "title": "Rank",
             "type": "integer"
           },
+          "rankingFeatures": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardRankingFeature"
+            },
+            "maxItems": 6,
+            "minItems": 6,
+            "title": "Rankingfeatures",
+            "type": "array"
+          },
+          "rankingScore": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Rankingscore",
+            "type": "number"
+          },
+          "rankingScoreIsProbability": {
+            "const": false,
+            "title": "Rankingscoreisprobability",
+            "type": "boolean"
+          },
           "requiresResponderConfirmation": {
             "const": true,
             "default": true,
@@ -2308,7 +2328,10 @@
           "casNumber",
           "displayName",
           "matchBasis",
-          "evidenceStatus"
+          "evidenceStatus",
+          "rankingScore",
+          "rankingScoreIsProbability",
+          "rankingFeatures"
         ],
         "title": "DashboardMaterialCandidate",
         "type": "object"
@@ -2360,6 +2383,15 @@
             "title": "Candidates",
             "type": "array"
           },
+          "nextBestChecks": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardNextBestCheck"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Nextbestchecks",
+            "type": "array"
+          },
           "noReliableCandidateMeansAbsent": {
             "const": false,
             "default": false,
@@ -2383,6 +2415,9 @@
             "minLength": 2,
             "title": "Query",
             "type": "string"
+          },
+          "rankingModel": {
+            "$ref": "#/components/schemas/DashboardRankingModel"
           },
           "requestId": {
             "maxLength": 128,
@@ -2445,6 +2480,8 @@
           "query",
           "status",
           "searchMode",
+          "rankingModel",
+          "nextBestChecks",
           "notice",
           "safetyNotice"
         ],
@@ -2537,6 +2574,112 @@
           "routeRecalculated"
         ],
         "title": "DashboardMovementUpdateResponse",
+        "type": "object"
+      },
+      "DashboardNextBestCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "candidateValues": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardNextBestCheckCandidateValue"
+            },
+            "maxItems": 5,
+            "title": "Candidatevalues",
+            "type": "array"
+          },
+          "checkId": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Checkid",
+            "type": "string"
+          },
+          "discriminationScore": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Discriminationscore",
+            "type": "number"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "enum": [
+                  "physical_state",
+                  "color",
+                  "odor",
+                  "use_description"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "priority": {
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Priority",
+            "type": "integer"
+          },
+          "prompt": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Prompt",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "scoreIsProbability": {
+            "const": false,
+            "title": "Scoreisprobability",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "priority",
+          "checkId",
+          "field",
+          "prompt",
+          "reason",
+          "discriminationScore",
+          "scoreIsProbability"
+        ],
+        "title": "DashboardNextBestCheck",
+        "type": "object"
+      },
+      "DashboardNextBestCheckCandidateValue": {
+        "additionalProperties": false,
+        "properties": {
+          "casNumber": {
+            "maxLength": 12,
+            "minLength": 5,
+            "title": "Casnumber",
+            "type": "string"
+          },
+          "displayName": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Displayname",
+            "type": "string"
+          },
+          "value": {
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "casNumber",
+          "displayName",
+          "value"
+        ],
+        "title": "DashboardNextBestCheckCandidateValue",
         "type": "object"
       },
       "DashboardOperationsAgentSnapshot": {
@@ -2885,6 +3028,115 @@
           "finalDecisionAuthority"
         ],
         "title": "DashboardProvenance",
+        "type": "object"
+      },
+      "DashboardRankingFeature": {
+        "additionalProperties": false,
+        "properties": {
+          "contribution": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Contribution",
+            "type": "number"
+          },
+          "evidence": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Evidence",
+            "type": "string"
+          },
+          "name": {
+            "enum": [
+              "retrieval_prior",
+              "identity_similarity",
+              "exact_identity",
+              "source_authority",
+              "property_coverage",
+              "official_evidence_available"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "value": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Value",
+            "type": "number"
+          },
+          "weight": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "value",
+          "weight",
+          "contribution",
+          "evidence"
+        ],
+        "title": "DashboardRankingFeature",
+        "type": "object"
+      },
+      "DashboardRankingModel": {
+        "additionalProperties": false,
+        "properties": {
+          "checkPolicyVersion": {
+            "const": "material-next-best-check-v1",
+            "title": "Checkpolicyversion",
+            "type": "string"
+          },
+          "fallback": {
+            "const": "PRESERVE_RETRIEVAL_ORDER_ON_EQUAL_SCORE",
+            "title": "Fallback",
+            "type": "string"
+          },
+          "featureWeights": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Featureweights",
+            "type": "object"
+          },
+          "modelType": {
+            "const": "EXPLAINABLE_EVIDENCE_WEIGHTED_RANKER",
+            "title": "Modeltype",
+            "type": "string"
+          },
+          "modelVersion": {
+            "const": "material-evidence-ranker-v1",
+            "title": "Modelversion",
+            "type": "string"
+          },
+          "scoreIsProbability": {
+            "const": false,
+            "title": "Scoreisprobability",
+            "type": "boolean"
+          },
+          "scoreSemantics": {
+            "const": "CANDIDATE_ORDERING_NOT_PROBABILITY",
+            "title": "Scoresemantics",
+            "type": "string"
+          },
+          "trainingStatus": {
+            "const": "NOT_SUPERVISED_INSUFFICIENT_REVIEWED_LABELS",
+            "title": "Trainingstatus",
+            "type": "string"
+          }
+        },
+        "required": [
+          "modelVersion",
+          "modelType",
+          "trainingStatus",
+          "scoreSemantics",
+          "scoreIsProbability",
+          "featureWeights",
+          "checkPolicyVersion",
+          "fallback"
+        ],
+        "title": "DashboardRankingModel",
         "type": "object"
       },
       "DashboardRecordSaveRequest": {

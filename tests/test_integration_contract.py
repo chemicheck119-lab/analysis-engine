@@ -130,6 +130,10 @@ def test_dashboard_contract_does_not_overpromise_v1_capabilities() -> None:
         "no_reliable_candidate_next_action": "관찰 정보 보강 및 외부 공식 MSDS 확인",
         "property_source_label": "소방청 울산 화학물질 정보 기반 관찰 후보",
         "evidence_card_body_label": "공식 문서 발췌",
+        "ranking_model_version": "material-evidence-ranker-v1",
+        "ranking_training_status": ("NOT_SUPERVISED_INSUFFICIENT_REVIEWED_LABELS"),
+        "ranking_score_semantics": "CANDIDATE_ORDERING_NOT_PROBABILITY",
+        "next_best_check_policy_version": "material-next-best-check-v1",
         "ranking_score_must_not_be_displayed_as_confidence": True,
         "warning_fields_must_be_preserved": [
             "evidence_warning",

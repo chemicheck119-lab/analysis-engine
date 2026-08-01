@@ -710,6 +710,78 @@ class SubstanceEvidenceCard(StrictModel):
         return normalized
 
 
+RankingFeatureName = Literal[
+    "retrieval_prior",
+    "identity_similarity",
+    "exact_identity",
+    "source_authority",
+    "property_coverage",
+    "official_evidence_available",
+]
+
+
+class SubstanceRankingFeature(StrictModel):
+    name: RankingFeatureName
+    value: float = Field(ge=0, le=1)
+    weight: float = Field(ge=0, le=1)
+    contribution: float = Field(ge=0, le=1)
+    evidence: str = Field(min_length=1, max_length=500)
+
+
+class SubstanceRankingModel(StrictModel):
+    model_version: Literal["material-evidence-ranker-v1"]
+    model_type: Literal["EXPLAINABLE_EVIDENCE_WEIGHTED_RANKER"]
+    training_status: Literal["NOT_SUPERVISED_INSUFFICIENT_REVIEWED_LABELS"]
+    score_semantics: Literal["CANDIDATE_ORDERING_NOT_PROBABILITY"]
+    score_is_probability: Literal[False]
+    feature_weights: dict[RankingFeatureName, float]
+    check_policy_version: Literal["material-next-best-check-v1"]
+    fallback: Literal["PRESERVE_RETRIEVAL_ORDER_ON_EQUAL_SCORE"]
+
+    @model_validator(mode="after")
+    def feature_weights_must_form_one_score(self) -> "SubstanceRankingModel":
+        if set(self.feature_weights) != {
+            "retrieval_prior",
+            "identity_similarity",
+            "exact_identity",
+            "source_authority",
+            "property_coverage",
+            "official_evidence_available",
+        }:
+            raise ValueError("후보 재순위화 특징 집합이 모델 계약과 다릅니다.")
+        if abs(sum(self.feature_weights.values()) - 1.0) > 1e-9:
+            raise ValueError("후보 재순위화 특징 가중치 합은 1이어야 합니다.")
+        return self
+
+
+class NextBestCheckCandidateValue(StrictModel):
+    cas_number: str = Field(min_length=5, max_length=12)
+    display_name: str = Field(min_length=1, max_length=500)
+    value: str = Field(min_length=1, max_length=8_000)
+
+    @field_validator("cas_number")
+    @classmethod
+    def validate_check_candidate_cas(cls, value: str) -> str:
+        normalized = normalize_cas(value)
+        if not valid_cas_checksum(normalized):
+            raise ValueError("현장 확인 후보의 CAS가 올바르지 않습니다.")
+        return normalized
+
+
+class NextBestCheck(StrictModel):
+    priority: int = Field(ge=1, le=4)
+    check_id: str = Field(min_length=1, max_length=120)
+    field: Literal["physical_state", "color", "odor", "use_description"] | None
+    prompt: str = Field(min_length=1, max_length=1_000)
+    reason: str = Field(min_length=1, max_length=1_000)
+    discrimination_score: float = Field(ge=0, le=1)
+    score_is_probability: Literal[False]
+    candidate_values: list[NextBestCheckCandidateValue] = Field(
+        default_factory=list,
+        max_length=5,
+    )
+
+
 class SubstanceDiscoveryCandidate(StrictModel):
     rank: int = Field(ge=1, le=5)
     cas_number: str = Field(min_length=5, max_length=12)
@@ -727,6 +799,12 @@ class SubstanceDiscoveryCandidate(StrictModel):
     evidence_notice: str | None = Field(default=None, max_length=2_000)
     cas_link_warning: str | None = Field(default=None, max_length=2_000)
     evidence: list[SubstanceEvidenceCard] = Field(default_factory=list, max_length=5)
+    ranking_score: float = Field(ge=0, le=1)
+    ranking_score_is_probability: Literal[False]
+    ranking_features: list[SubstanceRankingFeature] = Field(
+        min_length=6,
+        max_length=6,
+    )
     requires_responder_confirmation: Literal[True]
     rule_eligible: Literal[False]
     risk_determination_allowed: Literal[False]
@@ -770,6 +848,8 @@ class SubstanceDiscoveryResponse(StrictModel):
     rule_eligible: Literal[False]
     risk_determination_allowed: Literal[False]
     candidate_score_is_probability: Literal[False]
+    ranking_model: SubstanceRankingModel
+    next_best_checks: list[NextBestCheck] = Field(min_length=1, max_length=4)
     notice: str = Field(min_length=1, max_length=2_000)
     safety_notice: str = Field(min_length=1, max_length=2_000)
 

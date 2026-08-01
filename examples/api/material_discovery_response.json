@@ -43,6 +43,52 @@
       "evidence_notice": "상세 근거 미적재 — 다른 물질의 근거로 대체하지 않습니다. 외부 공식 MSDS 확인이 필요합니다.",
       "cas_link_warning": null,
       "evidence": [],
+      "ranking_score": 0.425,
+      "ranking_score_is_probability": false,
+      "ranking_features": [
+        {
+          "name": "retrieval_prior",
+          "value": 1.0,
+          "weight": 0.35,
+          "contribution": 0.35,
+          "evidence": "기존 정확검색·FTS5 BM25 순위를 강한 사전값으로 보존했습니다."
+        },
+        {
+          "name": "identity_similarity",
+          "value": 0.0,
+          "weight": 0.27,
+          "contribution": 0.0,
+          "evidence": "이름 식별 근거가 없어 이 특징은 반영하지 않았습니다."
+        },
+        {
+          "name": "exact_identity",
+          "value": 0.0,
+          "weight": 0.17,
+          "contribution": 0.0,
+          "evidence": "정확 식별 표현이 없어 이 특징은 반영하지 않았습니다."
+        },
+        {
+          "name": "source_authority",
+          "value": 0.0,
+          "weight": 0.08,
+          "contribution": 0.0,
+          "evidence": "별칭을 제공한 공개기관·검증 상태를 단계형 값으로 반영했습니다."
+        },
+        {
+          "name": "property_coverage",
+          "value": 0.75,
+          "weight": 0.1,
+          "contribution": 0.075,
+          "evidence": "신고·관찰 표현과 일치한 공개 물성 필드 3개를 반영했습니다."
+        },
+        {
+          "name": "official_evidence_available",
+          "value": 0.0,
+          "weight": 0.03,
+          "contribution": 0.0,
+          "evidence": "동일 CAS의 KOSHA·CAMEO 근거 카드 적재 여부만 반영했습니다."
+        }
+      ],
       "requires_responder_confirmation": true,
       "rule_eligible": false,
       "risk_determination_allowed": false
@@ -52,6 +98,45 @@
   "rule_eligible": false,
   "risk_determination_allowed": false,
   "candidate_score_is_probability": false,
+  "ranking_model": {
+    "model_version": "material-evidence-ranker-v1",
+    "model_type": "EXPLAINABLE_EVIDENCE_WEIGHTED_RANKER",
+    "training_status": "NOT_SUPERVISED_INSUFFICIENT_REVIEWED_LABELS",
+    "score_semantics": "CANDIDATE_ORDERING_NOT_PROBABILITY",
+    "score_is_probability": false,
+    "feature_weights": {
+      "retrieval_prior": 0.35,
+      "identity_similarity": 0.27,
+      "exact_identity": 0.17,
+      "source_authority": 0.08,
+      "property_coverage": 0.1,
+      "official_evidence_available": 0.03
+    },
+    "check_policy_version": "material-next-best-check-v1",
+    "fallback": "PRESERVE_RETRIEVAL_ORDER_ON_EQUAL_SCORE"
+  },
+  "next_best_checks": [
+    {
+      "priority": 1,
+      "check_id": "VERIFY_CONTAINER_LABEL_CAS",
+      "field": null,
+      "prompt": "용기·배관 라벨에서 물질명과 CAS 번호를 확인하세요.",
+      "reason": "이름·성상 후보는 물질 정체와 현장 존재를 확정하지 않습니다.",
+      "discrimination_score": 1.0,
+      "score_is_probability": false,
+      "candidate_values": []
+    },
+    {
+      "priority": 2,
+      "check_id": "VERIFY_ON_SITE_MSDS",
+      "field": null,
+      "prompt": "현장 MSDS 또는 운송 문서의 제품명·성분·CAS를 교차 확인하세요.",
+      "reason": "제품명은 여러 성분을 포함하거나 통칭과 다를 수 있습니다.",
+      "discrimination_score": 1.0,
+      "score_is_probability": false,
+      "candidate_values": []
+    }
+  ],
   "notice": "색상·냄새·상태는 여러 물질이 공유하므로 후보를 하나로 확정하지 않습니다. 용기 라벨·현장 MSDS 등으로 CAS와 현장 존재를 확인해야 합니다.",
   "safety_notice": "이 결과는 케미체크119의 의사결정 보조 정보이며 현장 명령이 아닙니다. 물질과 시설 상태를 대원이 확인하고 최종 결정은 현장 지휘관이 수행합니다."
 }

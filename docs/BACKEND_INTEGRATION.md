@@ -282,6 +282,11 @@ FE는 `schema_version`, `state`, `confirmation_gate`, `conflict_review`,
 후보입니다. 후보 카드의 `body_preview`는 “AI 판단 이유”가 아니라 “공식 문서 발췌”로
 표시합니다.
 
+신규 응답의 `rankingScore`는 퍼센트 UI로 표시하지 말고 “후보 순위 근거” 상세에서만
+사용합니다. 화면의 주 행동은 `nextBestChecks`를 우선순위대로 보여주는 것입니다. BE는
+`rankingModel`, `rankingFeatures`, `nextBestChecks`를 모델 API에서 BFF camelCase DTO로 1:1
+투영하며, 점수 임계값만으로 confirmation 레코드를 생성하면 안 됩니다.
+
 ### 7.2 v1의 물질쌍 제한
 
 v1 통합 요청은 사고물질 1개와 시설물질 1개, 응답은 충돌 검토 1개만 지원합니다. 화면에

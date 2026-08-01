@@ -157,6 +157,9 @@ def test_property_description_returns_candidate_and_same_cas_evidence(
     assert candidate["evidence_warning"] == "검색 순위는 위험등급이 아닙니다."
     assert candidate["evidence_notice"] == "원문을 확인하세요."
     assert candidate["cas_link_warning"] == "테스트 연결 경고"
+    assert 0 <= candidate["ranking_score"] <= 1
+    assert candidate["ranking_score_is_probability"] is False
+    assert len(candidate["ranking_features"]) == 6
     assert candidate["requires_responder_confirmation"] is True
     assert candidate["rule_eligible"] is False
     assert candidate["risk_determination_allowed"] is False
@@ -179,6 +182,9 @@ def test_discovery_abstains_when_no_identity_or_property_matches(
     assert result["status"] == "NO_RELIABLE_CANDIDATE"
     assert result["search_mode"] == "ABSTAINED"
     assert result["candidates"] == []
+    assert result["next_best_checks"][0]["check_id"] == (
+        "COLLECT_AUTHORITATIVE_IDENTITY_SOURCE"
+    )
     assert "없거나 안전하다는 뜻이 아니" in result["notice"]
 
 
@@ -322,3 +328,5 @@ def test_exact_identity_candidate_is_enriched_with_public_property_profile(
     assert result["search_mode"] == "IDENTITY_RETRIEVAL"
     assert candidate["match_basis"] == "IDENTITY_AND_PUBLIC_PROPERTY_PROFILE"
     assert candidate["property_profile"]["color"] == "무색 투명"
+    assert result["ranking_model"]["model_version"] == ("material-evidence-ranker-v1")
+    assert result["next_best_checks"][0]["check_id"] == "VERIFY_CONTAINER_LABEL_CAS"

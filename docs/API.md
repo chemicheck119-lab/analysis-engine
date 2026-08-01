@@ -467,6 +467,10 @@ curl -X POST http://127.0.0.1:8000/api/v1/substances/discover \
 | `evidence_notice` | 외부 원문 확인 등 후속 조치 안내 |
 | `cas_link_warning` | CAMEO–CAS 연결 검증 상태 경고 |
 | `evidence[].cas_link_status` | 개별 근거의 CAS 연결 검증 상태 |
+| `ranking_score` | 0~1 후보 정렬값. 정답·위험 확률이 아님 |
+| `ranking_features` | 검색 사전값·식별·출처·물성·공식근거별 값과 기여도 |
+| `ranking_model` | 모델·확인 정책 버전, 비지도학습 상태, 점수 의미 |
+| `next_best_checks` | 물질을 확정하는 대신 대원이 다음에 확인할 항목과 이유 |
 | `requires_responder_confirmation` | 항상 `true` |
 | `rule_eligible` | 항상 `false` |
 | `risk_determination_allowed` | 항상 `false` |
@@ -476,6 +480,11 @@ curl -X POST http://127.0.0.1:8000/api/v1/substances/discover \
 근거가 현재 artifact에 없다는 뜻입니다. 클라이언트는 `evidence_warning`,
 `evidence_notice`, `cas_link_warning`을 숨기지 않아야 합니다. 후보 순위만으로 현장 물질을
 확정하지 않습니다.
+
+`ranking_model.training_status`는 현재
+`NOT_SUPERVISED_INSUFFICIENT_REVIEWED_LABELS`입니다. BE·FE는 이를 “학습 정확도”로
+표현하면 안 됩니다. `next_best_checks`의 냄새 항목도 직접 냄새를 맡으라는 지시가 아니라 기존
+신고 기록·계측기·MSDS의 기술을 확인하라는 안전 안내입니다.
 
 `NO_RELIABLE_CANDIDATE`도 물질이 없거나 안전하다는 뜻이 아닙니다. 현재 749개 프로필 밖의
 물질이거나 관찰 표현이 부족할 수 있으므로, 화면은 “관찰 정보 보강 또는 외부 공식 MSDS
