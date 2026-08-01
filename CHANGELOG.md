@@ -11,6 +11,7 @@
   독립 공식기관으로 교차증빙
 - 공식근거 URL·최종 host·MIME·HTML 문서 위치를 주 1회 검사하고 보고서를 보관하는
   source drift 감사 workflow
+- 공식근거 교차확인 2쌍이 포함된 main preview의 서울 Cloud Run Blue/Green 배포 증빙
 - 전국 현장대응 에이전트가 포함된 main preview의 서울 Cloud Run 실제 배포 증빙
 - 운영 릴리스 gate와 분리된 공모전 preview 후보 smoke·Blue/Green·롤백 workflow
 

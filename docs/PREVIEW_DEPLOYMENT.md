@@ -17,15 +17,15 @@
 
 ## 2026-08-01 현재 배포 증빙
 
-전국 현장대응 에이전트가 병합된 main commit으로 artifact와 이미지를 다시 만들고 서울
-Cloud Run 외부 smoke를 완료했습니다.
+전국 현장대응 에이전트와 공식근거 교차검증 고도화가 병합된 main commit으로 artifact와
+이미지를 다시 만들고 서울 Cloud Run 외부 smoke를 완료했습니다.
 
 | 항목 | 값 |
 |---|---|
-| main commit | `e24fa93d538229844af4377976ee5a180c881fb3` |
-| runtime manifest SHA-256 | `4f7bb5d311f58c6b5687e1500dd6272479fe6fd9661e7b81c64832be8cd1f9d2` |
-| image digest | `model-api-preview@sha256:ff6194a8b31aec367fa4f42832733f375a0c233d16abdbe1a059beddbe887f8c` |
-| Cloud Run revision | `chemicheck119-model-api-staging-pe24fa935616331` |
+| main commit | `08021697fc9cd62ff01743bd755519147361de29` |
+| runtime manifest SHA-256 | `51a9920b18bdc3146e71d874e0b8b1d6c0beadeced743e54add381fa357e6c19` |
+| image digest | `model-api-preview@sha256:c54b8bbdd5d5a8be757e643dc860a12ab7f34f1423ad8b01636c8589b0314add` |
+| Cloud Run revision | `chemicheck119-model-api-staging-p08021699623511` |
 | 서울 service URL | `https://chemicheck119-model-api-staging-w6s6lwanpa-du.a.run.app` |
 
 확인 결과는 readiness `200`, runtime integrity `VERIFIED`, API Key 없는 분석 `401`, 정상
@@ -34,9 +34,19 @@ Key 분석 `200`, 전국 17개 시·도 범위와 `EN_ROUTE_TRIAGE` 에이전트
 상태입니다. 이 증빙은 공모전 통합 preview가 실행된다는 뜻이며 운영 승인이나 현장 정확도
 증빙이 아닙니다.
 
+공식근거 registry는 SHA-256
+`6a02bc11210907dbf4bd22858deeb51d4d12c4744a06e479c2b87e1ff25b567c`로 확인됐고,
+API는 교차확인 2쌍·등록 공식기관 5곳을 반환합니다. 금속 나트륨–염산 실제 smoke는 서수
+위험등급 높음, 예상 생성물 `H2`, 공식근거 3건·독립기관 3곳,
+`expert_reviewed=false`를 반환했습니다.
+
 같은 image digest로 preview 전용 자동화도 실제 실행해 이전 리비전 100% 상태에서 새 후보를
 0%로 배포하고, 후보 URL smoke 통과 후 새 리비전으로 100% 전환한 뒤 서비스 URL 재검사까지
 통과했습니다. 따라서 두 번째 배포부터의 Blue/Green 경로도 실행 결과로 검증됐습니다.
+
+- [main CI와 Docker build](https://github.com/chemicheck119/llm/actions/runs/30686844983)
+- [공식근거 URL·문서 위치 검사](https://github.com/chemicheck119/llm/actions/runs/30686453645)
+- [후보 smoke·Blue/Green 배포](https://github.com/chemicheck119/llm/actions/runs/30686962351)
 
 ## 2026-08-01 초기 실제 데이터 기술 검수
 
