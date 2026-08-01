@@ -24,13 +24,13 @@
 | 유사 사고사례 검색 | 미완료 | 출처와 대응 라벨이 검증된 corpus 없음; 공식 근거 RAG와 별도 범위 |
 | 파인튜닝 | 보류 | 준비도 검사만 존재, 기준선 대비 필요성이 입증되지 않음 |
 | FastAPI | 구현 | 통합 분석·agent step·보조 API, 인증·오류 계약·확인 게이트 구현 |
-| 실행 에이전트 | 구현·배포 대기 | 외부 memory, 6개 도구, PLAN·ACT·OBSERVE·REPLAN, 안전 재검증 |
+| 실행 에이전트 | 구현·preview 배포 | 외부 memory, 6개 도구, PLAN·ACT·OBSERVE·REPLAN, 안전 재검증 |
 | 대시보드 agent projection | 구현 | 10단계 workflow·8개 도구 상태·다음 행동·전국 지도 컨텍스트 반환 |
 | 현재 위치·도로 경로 | 모델 계약 구현 | 사고/MDT 좌표·GeoJSON·ETA·simulation/stale/missing 상태; 실제 사업자 호출은 BE 필요 |
 | 대시보드 표시 계약 | 구현 | BFF OpenAPI·TypeScript 타입·fixture, 확인 전 위험 결과 금지, 15쌍별 정확한 값 고정 |
 | 운영 로그 | 구현 | 안전 JSON 로그, Uvicorn 원 URL access log와 traceback 비활성화 |
 | Docker | 부분 완료 | 일반·bundle Dockerfile과 CI 구성 존재, 로컬 Docker CLI 없음 |
-| 실제 배포 | development preview | main `0802169` preview를 서울 Cloud Run에 배포하고 후보 0% smoke·100% 전환·서비스 재검사 통과; reviewed staging·production은 차단 |
+| 실제 배포 | development preview | main `32736a6` agent preview를 서울 Cloud Run에 Blue/Green 배포하고 agent step 외부 smoke 통과; reviewed staging·production은 차단 |
 | FE·BE 연동 자료 | 완료 | 모델·BFF OpenAPI, TypeScript 타입, 성공·실패 fixture와 체크리스트 |
 | FE·BE 실제 연동 | 미완료 | 현재 FE는 물질검색 mock·legacy DTO, BE는 BFF 구현 필요 |
 
@@ -73,8 +73,9 @@ phase: PLAN / ACT / OBSERVE / REPLAN
 ```
 
 이 trace는 숨겨진 chain-of-thought가 아니라 도구 ID와 구조화 상태 코드입니다. agent memory는
-BE가 저장하며 Rule 실행 권한으로 사용할 수 없습니다. 현재 서울 Cloud Run preview는 이전
-main 코드이므로 이 신규 endpoint는 병합 후 새 리비전을 배포해야 외부에서 사용할 수 있습니다.
+BE가 저장하며 Rule 실행 권한으로 사용할 수 없습니다. 서울 Cloud Run preview 리비전
+`chemicheck119-model-api-staging-p32736a63903281`에서도 인증된 agent step `200`, 미인증
+`401`, runtime commit·manifest 무결성 `VERIFIED`를 확인했습니다.
 
 snapshot 수치는 DB 검색·네트워크·전체 API를 제외한 내부 micro-benchmark입니다. 실제 artifact
 통합 smoke는 1회 약 252ms 관찰값일 뿐 운영 SLO나 성능 보장이 아닙니다. 길찾기 결과가 없는

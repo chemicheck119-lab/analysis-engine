@@ -22,15 +22,18 @@
 
 | 항목 | 값 |
 |---|---|
-| main commit | `08021697fc9cd62ff01743bd755519147361de29` |
-| runtime manifest SHA-256 | `51a9920b18bdc3146e71d874e0b8b1d6c0beadeced743e54add381fa357e6c19` |
-| image digest | `model-api-preview@sha256:c54b8bbdd5d5a8be757e643dc860a12ab7f34f1423ad8b01636c8589b0314add` |
-| Cloud Run revision | `chemicheck119-model-api-staging-p08021699623511` |
+| main commit | `32736a680d445acea158da42efebd87651ce11b2` |
+| runtime manifest SHA-256 | `92d2baff9697bc3cbc7d8a774a04b37f257d6d47a76b8f5344e32d82373c6c53` |
+| image digest | `model-api-preview@sha256:e01d79c630d6f6381ce08bb3ff289c6e9e5c2116982cee8da7bb3983669a0fda` |
+| Cloud Run revision | `chemicheck119-model-api-staging-p32736a63903281` |
 | 서울 service URL | `https://chemicheck119-model-api-staging-w6s6lwanpa-du.a.run.app` |
 
 확인 결과는 readiness `200`, runtime integrity `VERIFIED`, API Key 없는 분석 `401`, 정상
-Key 분석 `200`, 전국 17개 시·도 범위와 `EN_ROUTE_TRIAGE` 에이전트 응답입니다. 길찾기
-사업자는 BE가 아직 연결하지 않았으므로 `ROUTE_UNAVAILABLE`은 정상적인 fail-closed
+Key 분석 `200`, 전국 17개 시·도 범위와 `EN_ROUTE_TRIAGE` 대시보드 projection입니다.
+추가로 상태 기반 agent step은 무인증 `401`, 인증 요청 `200`, 미확인 사고에서
+`WAITING_FOR_HUMAN`과 분석·안전 재검증·두 확인 요청의 도구 4개를 반환했습니다. agent
+memory는 `ORCHESTRATION_ONLY`, `memory_can_trigger_rule=false`, 충돌 실행은 `false`였습니다.
+길찾기 사업자는 BE가 아직 연결하지 않았으므로 `ROUTE_UNAVAILABLE`은 정상적인 fail-closed
 상태입니다. 이 증빙은 공모전 통합 preview가 실행된다는 뜻이며 운영 승인이나 현장 정확도
 증빙이 아닙니다.
 
@@ -44,9 +47,10 @@ API는 교차확인 2쌍·등록 공식기관 5곳을 반환합니다. 금속 �
 0%로 배포하고, 후보 URL smoke 통과 후 새 리비전으로 100% 전환한 뒤 서비스 URL 재검사까지
 통과했습니다. 따라서 두 번째 배포부터의 Blue/Green 경로도 실행 결과로 검증됐습니다.
 
-- [main CI와 Docker build](https://github.com/chemicheck119/llm/actions/runs/30686844983)
+- [main CI와 Docker build](https://github.com/chemicheck119/llm/actions/runs/30690209090)
+- [Cloud Build 이미지 생성](https://console.cloud.google.com/cloud-build/builds;region=asia-northeast3/91048cc6-8da6-407e-b4b1-90d7455cea51?project=181872008704)
 - [공식근거 URL·문서 위치 검사](https://github.com/chemicheck119/llm/actions/runs/30686453645)
-- [후보 smoke·Blue/Green 배포](https://github.com/chemicheck119/llm/actions/runs/30686962351)
+- [후보 smoke·Blue/Green 배포](https://github.com/chemicheck119/llm/actions/runs/30690390328)
 
 ## 2026-08-01 초기 실제 데이터 기술 검수
 
@@ -129,4 +133,5 @@ Content-Type: application/json
 ```
 
 통합 분석은 `POST /api/v1/incidents/analyze`, 근거 기반 물질 검색은
-`POST /api/v1/substances/discover`를 사용합니다.
+`POST /api/v1/substances/discover`, 상태를 이어가는 사고 에이전트는
+`POST /api/v1/agents/incidents/step`을 사용합니다.

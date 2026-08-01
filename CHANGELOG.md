@@ -9,6 +9,8 @@
 
 - 현재 사고 입력과 BE 저장 외부 memory를 바탕으로 6개 도구 중 필요한 것만 선택하는
   `PLAN → ACT → OBSERVE → REPLAN` 사고대응 에이전트 루프
+- 상태 기반 agent step이 포함된 main commit의 서울 Cloud Run preview Blue/Green 배포와
+  인증·무결성·실제 도구 선택 외부 smoke 증빙
 - 에이전트 상태·도구 trace·대기 입력·checksum 연결 memory를 반환하는
   `POST /api/v1/agents/incidents/step`
 - 분석 직후 안전 계약 재검증, 새 관찰 없는 중복 호출 생략, 도구 장애의 구조화 실패,
