@@ -78,6 +78,8 @@
 
 ### Fixed
 
+- GitHub Runner의 안정 채널 `gcloud run deploy`가 지원하지 않는 readiness probe 옵션 때문에
+  후보 리비전 생성 전에 preview·staging 배포가 실패하던 문제
 - 단일 CAMEO 체계 결과와 다기관 교차증빙 결과가 화면에서 같은 근거 수준으로 보이던 문제
 - AI 자동 감사가 사람 화학 전문가 승인으로 오해될 수 있던 응답 계약 공백
 - 확인 전 `hasIncompatible=false`가 `낮음/없음`으로 보이거나 과거 시설 이력이 현재 보유로

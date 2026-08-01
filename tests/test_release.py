@@ -886,6 +886,10 @@ def test_cloud_run_script_smokes_before_traffic_and_rolls_back() -> None:
     assert "GCP_MODEL_API_KEY_SECRET_VERSION" in script
     assert "CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY" not in script
     assert "CHEMIGUARD119_RAG_MODE=extractive" in script
+    assert "--readiness-probe" not in script
+    assert '--startup-probe="httpGet.path=/health/ready' in script
+    assert 'smoke "$candidate_url"' in script
+    assert 'smoke "$service_url"' in script
 
 
 def test_competition_preview_is_explicitly_non_production_and_keyless() -> None:
@@ -938,3 +942,5 @@ def test_competition_preview_deploy_is_separate_and_fail_closed() -> None:
     assert "NATIONWIDE_KOREA_HISTORICAL_CANDIDATES" in script
     assert 'candidate_tag="p${RELEASE_GIT_COMMIT:0:7}${run_attempt}"' in script
     assert "CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY" not in script
+    assert "--readiness-probe" not in script
+    assert "--startup-probe=httpGet.path=/health/ready" in script

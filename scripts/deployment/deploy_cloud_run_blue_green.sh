@@ -85,7 +85,6 @@ gcloud run deploy "$GCP_CLOUD_RUN_SERVICE" \
   --deploy-health-check \
   --startup-probe="httpGet.path=/health/ready,httpGet.port=8000,timeoutSeconds=3,periodSeconds=5,failureThreshold=24" \
   --liveness-probe="httpGet.path=/health/live,httpGet.port=8000,timeoutSeconds=3,periodSeconds=30,failureThreshold=3" \
-  --readiness-probe="httpGet.path=/health/ready,httpGet.port=8000,timeoutSeconds=3,periodSeconds=5,failureThreshold=3" \
   --set-env-vars="CHEMIGUARD119_ENVIRONMENT=staging,CHEMIGUARD119_RUNTIME_MANIFEST_SHA256=$RUNTIME_MANIFEST_SHA256,CHEMIGUARD119_GIT_COMMIT=$RELEASE_GIT_COMMIT,CHEMIGUARD119_RULE_POLICY=PUBLIC_SOURCE_PILOT_V1,CHEMIGUARD119_RAG_MODE=extractive,CHEMIGUARD119_LOG_LEVEL=INFO,CHEMIGUARD119_API_HOST=0.0.0.0,CHEMIGUARD119_API_PORT=8000" \
   --set-secrets="CHEMIGUARD119_API_KEY=$GCP_MODEL_API_KEY_SECRET:$GCP_MODEL_API_KEY_SECRET_VERSION" \
   --quiet
