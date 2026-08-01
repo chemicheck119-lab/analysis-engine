@@ -17,7 +17,11 @@
 - 업체명·주소로 공개된 과거 취급 이력 후보 검색
 - 현장에서 확인된 두 물질의 CAMEO 충돌 스크리닝
 - 완료된 Rule 결과와 공식 근거만 인용하는 짧은 RAG 요약
+- 전국 지도·출동 상태와 실제 도구 실행 단계를 관리하는 결정론적 현장대응 에이전트
 - 사고 분석 결과를 통합 응답으로 조립하고 각 API의 안전 불변조건 검증
+
+지도·이동·에이전트 계약의 쉬운 설명과 FE·BE 적용 순서는
+[전국 현장대응 에이전트와 지도 연동](OPERATIONS_AGENT_AND_MAP.md)에 정리했습니다.
 
 이 저장소가 담당하지 않는 일은 다음과 같습니다.
 
@@ -69,6 +73,8 @@ flowchart LR
 | 운영 관측 | `src/chemiguard119/observability.py` | 민감정보를 제외한 JSON 요청 완료 로그 | 없음 |
 | API 스키마 | `src/chemiguard119/api_models.py` | Pydantic 요청·응답 계약 | 없음 |
 | 사고 오케스트레이터 | `src/chemiguard119/pipeline.py` | 각 단계를 순서대로 실행 | 게이트 통과 시 Rule 호출만 허용 |
+| 현장대응 에이전트 | `src/chemiguard119/operations.py` | 도구 실행 상태·다음 행동·지도 이동 계약 조립 | 없음 |
+| 전국 범위 감사 | `src/chemiguard119/coverage.py` | 시설 과거 이력의 시·도·시설·CAS 범위 계산 | 없음 |
 | 신고문 파서 | `src/chemiguard119/incident.py` | 물질 표현·역할·상황 구조화 | 없음 |
 | Resolver | `src/chemiguard119/resolver.py` | 물질·CAS 후보 검색과 공유 exact span 경계 검사 | 없음 |
 | Discovery | `src/chemiguard119/discovery.py` | 정확 식별과 성상 FTS를 합쳐 후보별 출처 검색 | 없음 |

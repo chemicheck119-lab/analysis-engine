@@ -1,0 +1,179 @@
+{
+  "schemaVersion": "chemicheck119-operations-agent-v1",
+  "agentType": "DETERMINISTIC_FIELD_RESPONSE_ORCHESTRATOR",
+  "phase": "EN_ROUTE_TRIAGE",
+  "currentObjective": "이동 중 신고·시설 이력·공식 근거를 미리 정리합니다.",
+  "nextActions": [
+    "용기 라벨·현장 MSDS 등으로 사고물질 CAS를 확인하세요.",
+    "시설물질은 과거 이력과 구분해 현장에서 CAS를 확인하세요.",
+    "대응 종료 전 전체 대화와 확인 기록을 저장하세요."
+  ],
+  "workflow": [
+    {
+      "stepId": "INCIDENT_INGESTION",
+      "label": "신고 접수",
+      "status": "COMPLETED",
+      "detail": "인증된 API 요청의 신고문을 접수했습니다."
+    },
+    {
+      "stepId": "INCIDENT_PARSING",
+      "label": "신고문 구조화",
+      "status": "COMPLETED",
+      "detail": "규칙 기반 파서로 신고 필드를 구조화했습니다."
+    },
+    {
+      "stepId": "INCIDENT_LOCATION",
+      "label": "사고 위치 확인",
+      "status": "COMPLETED",
+      "detail": "디스패치 출처가 표시된 사고 좌표를 연결했습니다."
+    },
+    {
+      "stepId": "SUBSTANCE_RESOLUTION",
+      "label": "사고물질 후보 검색",
+      "status": "COMPLETED",
+      "detail": "후보를 반환하고 자동 확정하지 않았습니다."
+    },
+    {
+      "stepId": "FACILITY_HISTORY",
+      "label": "시설 과거 이력 검색",
+      "status": "COMPLETED",
+      "detail": "전국 ICIS·PRTR 과거 이력 후보를 조회했습니다."
+    },
+    {
+      "stepId": "EVIDENCE_RETRIEVAL",
+      "label": "공식 근거 검색",
+      "status": "COMPLETED",
+      "detail": "공식 근거 검색을 실행했습니다."
+    },
+    {
+      "stepId": "ON_SITE_CONFIRMATION",
+      "label": "현장 물질 확인",
+      "status": "IN_PROGRESS",
+      "detail": "확인된 CAS 두 개가 모두 모일 때까지 충돌 규칙을 차단합니다."
+    },
+    {
+      "stepId": "CONFLICT_SCREENING",
+      "label": "충돌 규칙 검토",
+      "status": "BLOCKED",
+      "detail": "두 CAS의 현장 확인 전에는 실행하지 않습니다."
+    },
+    {
+      "stepId": "GROUNDED_EXPLANATION",
+      "label": "근거 제한 설명",
+      "status": "BLOCKED",
+      "detail": "충돌 규칙 완료 전에는 대응 설명을 생성하지 않습니다."
+    },
+    {
+      "stepId": "RESPONSE_RECORD",
+      "label": "대응 기록 저장",
+      "status": "WAITING",
+      "detail": "BE가 대화·분석·현장 확인 ID를 하나의 대응 기록으로 저장해야 합니다."
+    }
+  ],
+  "toolExecutions": [
+    {
+      "toolId": "RULE_PARSER",
+      "status": "COMPLETED",
+      "outputReference": "model_outputs.parser",
+      "summary": "규칙 기반 파서 실행 완료"
+    },
+    {
+      "toolId": "SUBSTANCE_RESOLVER",
+      "status": "COMPLETED",
+      "outputReference": "model_outputs.substance_candidates",
+      "summary": "물질 후보 검색 완료; 자동 확정 금지"
+    },
+    {
+      "toolId": "FACILITY_HISTORY_SEARCH",
+      "status": "COMPLETED",
+      "outputReference": "model_outputs.facility_history_candidates",
+      "summary": "전국 과거 공개 이력 후보 검색"
+    },
+    {
+      "toolId": "HYBRID_EVIDENCE_RETRIEVER",
+      "status": "COMPLETED",
+      "outputReference": "evidence",
+      "summary": "정확 검색·BM25·TF-IDF·RRF 근거 검색"
+    },
+    {
+      "toolId": "CONFIRMATION_GATE",
+      "status": "WAITING",
+      "outputReference": "confirmation_gate",
+      "summary": "확인된 CAS 두 개가 있어야 규칙 실행 가능"
+    },
+    {
+      "toolId": "CAMEO_RULE_ENGINE",
+      "status": "BLOCKED",
+      "outputReference": "conflict_review",
+      "summary": "LLM이 아닌 공개 근거 기반 결정론적 충돌 스크리닝"
+    },
+    {
+      "toolId": "GROUNDED_RAG",
+      "status": "BLOCKED",
+      "outputReference": "grounded_rag",
+      "summary": "검색된 근거 범위 안에서만 대응 설명"
+    },
+    {
+      "toolId": "SERVER_ROUTE_PROVIDER",
+      "status": "FALLBACK",
+      "outputReference": "agent.map_context.route",
+      "summary": "발표용 시뮬레이션 경로이며 실제 길찾기 결과가 아닙니다."
+    }
+  ],
+  "mapContext": {
+    "coverageScope": "NATIONWIDE_KOREA",
+    "incidentPosition": {
+      "latitude": 37.2181,
+      "longitude": 126.9417,
+      "label": "예시 사업장",
+      "source": "DISPATCH_SYSTEM",
+      "observedAt": "2026-07-31T14:20:00+09:00",
+      "accuracyM": null,
+      "isSimulation": false
+    },
+    "responderPosition": {
+      "latitude": 37.2065,
+      "longitude": 126.8311,
+      "label": "화성소방서",
+      "source": "MDT_DEVICE_GPS",
+      "observedAt": "2026-07-31T14:22:00+09:00",
+      "accuracyM": 12.0,
+      "isSimulation": false
+    },
+    "route": {
+      "status": "DEMO_SIMULATION",
+      "provider": "DEMO_ROUTE_FIXTURE",
+      "providerMode": "DEMO_SIMULATION",
+      "routeId": "ROUTE-DEMO-001",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [126.8311, 37.2065],
+          [126.9000, 37.2100],
+          [126.9417, 37.2181]
+        ]
+      },
+      "totalDistanceM": 10000,
+      "remainingDistanceM": 4000,
+      "etaSeconds": 480,
+      "progressRatio": 0.6,
+      "progressRatioIsProbability": false,
+      "trafficApplied": false,
+      "generatedAt": "2026-07-31T14:22:00+09:00",
+      "attribution": "발표용 경로 fixture — 실제 길찾기 결과 아님",
+      "message": "실제 길찾기 결과가 아닌 발표용 시뮬레이션 경로입니다."
+    },
+    "rendering": {
+      "geometryFormat": "GEOJSON_RFC7946",
+      "recommendedRenderer": "MAPLIBRE_GL_JS",
+      "tileProviderRequired": true,
+      "attributionRequired": true,
+      "publicOsmStandardTilesForProduction": false,
+      "routeAnimationSupported": true
+    },
+    "hazardOverlayStatus": "NOT_COMPUTED_NO_VALIDATED_DISPERSION_MODEL"
+  },
+  "autonomousRiskDecisionAllowed": false,
+  "finalDecisionAuthority": "현장 지휘관",
+  "traceIsChainOfThought": false
+}

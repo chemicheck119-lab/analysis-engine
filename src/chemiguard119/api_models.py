@@ -21,6 +21,7 @@ from pydantic import (
 )
 
 from chemiguard119.rules import validate_review_output
+from chemiguard119.operations import OperationsAgentSnapshot, OperationsContext
 from chemiguard119.utils import normalize_cas, valid_cas_checksum
 
 
@@ -497,11 +498,36 @@ class IncidentLocation(StrictModel):
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
     facility_name: str | None = Field(default=None, max_length=200)
+    coordinate_source: (
+        Literal[
+            "DISPATCH_SYSTEM",
+            "GEOCODING_PROVIDER",
+            "RESPONDER_OBSERVATION",
+            "MANUAL_ENTRY",
+            "DEMO_FIXTURE",
+        ]
+        | None
+    ) = None
+    geocoding_provider: str | None = Field(default=None, max_length=80)
+    resolved_at: datetime | None = None
 
     @model_validator(mode="after")
     def coordinates_must_be_a_pair(self) -> "IncidentLocation":
         if (self.latitude is None) != (self.longitude is None):
             raise ValueError("latitude와 longitude는 함께 입력해야 합니다.")
+        if self.coordinate_source is not None and self.latitude is None:
+            raise ValueError("coordinate_source에는 위도·경도가 필요합니다.")
+        if self.geocoding_provider is not None and self.coordinate_source != (
+            "GEOCODING_PROVIDER"
+        ):
+            raise ValueError(
+                "geocoding_provider는 GEOCODING_PROVIDER 좌표에만 사용할 수 있습니다."
+            )
+        if self.resolved_at is not None:
+            if self.latitude is None:
+                raise ValueError("resolved_at에는 위도·경도가 필요합니다.")
+            if self.resolved_at.tzinfo is None or self.resolved_at.utcoffset() is None:
+                raise ValueError("resolved_at에는 시간대가 필요합니다.")
         return self
 
 
@@ -570,6 +596,7 @@ class IncidentAnalyzeRequest(StrictModel):
     confirmed_incident_substance: ConfirmedSubstanceInput | None = None
     confirmed_facility_substance: ConfirmedSubstanceInput | None = None
     evidence_top_k: int = Field(default=5, ge=1, le=10)
+    operations_context: OperationsContext | None = None
 
     @model_validator(mode="after")
     def confirmed_roles_must_match_slots(self) -> "IncidentAnalyzeRequest":
@@ -613,6 +640,19 @@ class IncidentAnalyzeRequest(StrictModel):
                         "latitude": 37.2181,
                         "longitude": 126.9417,
                         "facility_name": "OO전자 공장",
+                        "coordinate_source": "DISPATCH_SYSTEM",
+                        "resolved_at": "2026-07-21T19:20:00+09:00",
+                    },
+                    "operations_context": {
+                        "dispatch_station_name": "화성소방서",
+                        "journey_state": "EN_ROUTE",
+                        "responder_position": {
+                            "latitude": 37.2065,
+                            "longitude": 126.8311,
+                            "observed_at": "2026-07-21T19:22:00+09:00",
+                            "source": "MDT_DEVICE_GPS",
+                            "accuracy_m": 12.0,
+                        },
                     },
                     "planned_actions": [{"raw_text": "누출구역 통제"}],
                     "evidence_top_k": 5,
@@ -889,6 +929,9 @@ class AnalysisResponse(StrictModel):
     model_outputs: dict[str, Any]
     evidence: list[dict[str, Any]]
     grounded_rag: GroundedRagAnswer | None = None
+    # 기존 v1 저장 응답도 검증할 수 있도록 계약상 선택 필드로 유지한다.
+    # 현재 FastAPI 구현은 모든 신규 분석에 snapshot을 항상 채운다.
+    agent: OperationsAgentSnapshot | None = None
     conflict_review: ConflictReviewContract
     confirmation_gate: ConfirmationGateState
     required_next_steps: list[str]

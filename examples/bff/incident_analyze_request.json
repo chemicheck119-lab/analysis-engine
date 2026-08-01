@@ -8,7 +8,40 @@
     "address": "경기 화성시 팔탄면",
     "province": "경기도",
     "latitude": 37.2181,
-    "longitude": 126.9417
+    "longitude": 126.9417,
+    "coordinateSource": "DISPATCH_SYSTEM",
+    "resolvedAt": "2026-07-31T14:20:00+09:00"
+  },
+  "operationsContext": {
+    "dispatchStationName": "화성소방서",
+    "journeyState": "EN_ROUTE",
+    "responderPosition": {
+      "latitude": 37.2065,
+      "longitude": 126.8311,
+      "observedAt": "2026-07-31T14:22:00+09:00",
+      "source": "MDT_DEVICE_GPS",
+      "accuracyM": 12.0
+    },
+    "route": {
+      "provider": "DEMO_ROUTE_FIXTURE",
+      "mode": "DEMO_SIMULATION",
+      "routeId": "ROUTE-DEMO-001",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [126.8311, 37.2065],
+          [126.9000, 37.2100],
+          [126.9417, 37.2181]
+        ]
+      },
+      "distanceM": 10000,
+      "durationSeconds": 1200,
+      "remainingDistanceM": 4000,
+      "remainingDurationSeconds": 480,
+      "generatedAt": "2026-07-31T14:22:00+09:00",
+      "trafficApplied": false,
+      "attribution": "발표용 경로 fixture — 실제 길찾기 결과 아님"
+    }
   },
   "plannedActions": [
     "누출구역 통제 검토"

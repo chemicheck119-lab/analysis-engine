@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "chemicheck119-dashboard-bff-v1",
+  "requestId": "REQ-MOVE-0017",
+  "incidentId": "INC-EXAMPLE-0001",
+  "acceptedAt": "2026-07-31T14:22:01+09:00",
+  "clientSequence": 17,
+  "mapContext": {
+    "coverageScope": "NATIONWIDE_KOREA",
+    "incidentPosition": {
+      "latitude": 37.2181,
+      "longitude": 126.9417,
+      "label": "예시 사업장",
+      "source": "DISPATCH_SYSTEM",
+      "observedAt": "2026-07-31T14:20:00+09:00",
+      "accuracyM": null,
+      "isSimulation": false
+    },
+    "responderPosition": {
+      "latitude": 37.2065,
+      "longitude": 126.8311,
+      "label": "화성소방서",
+      "source": "MDT_DEVICE_GPS",
+      "observedAt": "2026-07-31T14:22:00+09:00",
+      "accuracyM": 12.0,
+      "isSimulation": false
+    },
+    "route": {
+      "status": "DEMO_SIMULATION",
+      "provider": "DEMO_ROUTE_FIXTURE",
+      "providerMode": "DEMO_SIMULATION",
+      "routeId": "ROUTE-DEMO-001",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [126.8311, 37.2065],
+          [126.9000, 37.2100],
+          [126.9417, 37.2181]
+        ]
+      },
+      "totalDistanceM": 10000,
+      "remainingDistanceM": 4000,
+      "etaSeconds": 480,
+      "progressRatio": 0.6,
+      "progressRatioIsProbability": false,
+      "trafficApplied": false,
+      "generatedAt": "2026-07-31T14:22:00+09:00",
+      "attribution": "발표용 경로 fixture — 실제 길찾기 결과 아님",
+      "message": "실제 길찾기 결과가 아닌 발표용 시뮬레이션 경로입니다."
+    },
+    "rendering": {
+      "geometryFormat": "GEOJSON_RFC7946",
+      "recommendedRenderer": "MAPLIBRE_GL_JS",
+      "tileProviderRequired": true,
+      "attributionRequired": true,
+      "publicOsmStandardTilesForProduction": false,
+      "routeAnimationSupported": true
+    },
+    "hazardOverlayStatus": "NOT_COMPUTED_NO_VALIDATED_DISPERSION_MODEL"
+  },
+  "nextRefreshSeconds": 5,
+  "routeRecalculated": false
+}

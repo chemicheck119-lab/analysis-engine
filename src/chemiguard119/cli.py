@@ -94,6 +94,7 @@ def _print_candidates(payload: dict[str, Any]) -> None:
 def _print_human(command: str, payload: dict[str, Any]) -> None:
     titles = {
         "doctor": "환경 진단",
+        "coverage": "전국 시설 이력 범위",
         "audit": "데이터 점검",
         "prepare": "데이터 전처리",
         "train": "기준선 모델 학습",
@@ -133,6 +134,13 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
             print(
                 f"LM Studio: {lmstudio.get('status')} / 모델 {lmstudio.get('model_count', 0)}개"
             )
+    elif command == "coverage":
+        print(f"범위: {_short(payload.get('scope'))}")
+        print(f"시·도: {payload.get('covered_province_count', 0)}개")
+        print(f"시설: {payload.get('distinct_facility_count', 0):,}개")
+        print(f"후보 행: {payload.get('candidate_row_count', 0):,}개")
+        print(f"CAS: {payload.get('distinct_cas_count', 0):,}개")
+        print("의미: 과거 공개 이력 후보이며 현재 재고 확정 정보가 아닙니다.")
     elif command == "audit":
         print(f"파일: {payload.get('file_count', 0)}개")
         print(f"행: {payload.get('total_rows', 0):,}개")
@@ -513,6 +521,12 @@ def _doctor(args: argparse.Namespace) -> dict[str, Any]:
                 "error": str(exc),
             }
     return payload
+
+
+def _coverage(args: argparse.Namespace) -> dict[str, Any]:
+    from chemiguard119.coverage import facility_history_coverage
+
+    return facility_history_coverage(args.db)
 
 
 def _audit(args: argparse.Namespace) -> dict[str, Any]:
@@ -1107,6 +1121,7 @@ def _interactive(args: argparse.Namespace) -> dict[str, Any]:
             continue
         if tokens and tokens[0] not in {
             "doctor",
+            "coverage",
             "audit",
             "prepare",
             "train",
@@ -1188,6 +1203,15 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.add_argument("--timeout", type=int, default=3)
     _add_json_option(doctor)
     doctor.set_defaults(handler=_doctor)
+
+    coverage = subparsers.add_parser(
+        "coverage", help="시설 과거 이력의 전국 시·도·시설·CAS 범위 확인"
+    )
+    coverage.add_argument(
+        "--db", type=_path, default=DEFAULT_DB_PATH, help="SQLite DB 경로"
+    )
+    _add_json_option(coverage)
+    coverage.set_defaults(handler=_coverage)
 
     audit = subparsers.add_parser("audit", help="필수 원천 CSV 8개 구조·결측·의미 점검")
     audit.add_argument("--data-dir", type=_path, default=FINAL_DATA_DIR)

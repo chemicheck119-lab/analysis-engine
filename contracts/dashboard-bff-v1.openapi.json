@@ -1,9 +1,452 @@
 {
   "components": {
     "schemas": {
+      "DashboardAgentMapContext": {
+        "additionalProperties": false,
+        "properties": {
+          "coverageScope": {
+            "const": "NATIONWIDE_KOREA",
+            "default": "NATIONWIDE_KOREA",
+            "title": "Coveragescope",
+            "type": "string"
+          },
+          "hazardOverlayStatus": {
+            "const": "NOT_COMPUTED_NO_VALIDATED_DISPERSION_MODEL",
+            "title": "Hazardoverlaystatus",
+            "type": "string"
+          },
+          "incidentPosition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardAgentMapPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rendering": {
+            "$ref": "#/components/schemas/DashboardAgentMapRenderingContract"
+          },
+          "responderPosition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardAgentMapPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "route": {
+            "$ref": "#/components/schemas/DashboardAgentRouteState"
+          }
+        },
+        "required": [
+          "route",
+          "rendering",
+          "hazardOverlayStatus"
+        ],
+        "title": "DashboardAgentMapContext",
+        "type": "object"
+      },
+      "DashboardAgentMapPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "accuracyM": {
+            "anyOf": [
+              {
+                "maximum": 5000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accuracym"
+          },
+          "isSimulation": {
+            "default": false,
+            "title": "Issimulation",
+            "type": "boolean"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "latitude": {
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude",
+            "type": "number"
+          },
+          "observedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observedat"
+          },
+          "source": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude",
+          "label",
+          "source"
+        ],
+        "title": "DashboardAgentMapPoint",
+        "type": "object"
+      },
+      "DashboardAgentMapRenderingContract": {
+        "additionalProperties": false,
+        "properties": {
+          "attributionRequired": {
+            "const": true,
+            "default": true,
+            "title": "Attributionrequired",
+            "type": "boolean"
+          },
+          "geometryFormat": {
+            "const": "GEOJSON_RFC7946",
+            "default": "GEOJSON_RFC7946",
+            "title": "Geometryformat",
+            "type": "string"
+          },
+          "publicOsmStandardTilesForProduction": {
+            "const": false,
+            "default": false,
+            "title": "Publicosmstandardtilesforproduction",
+            "type": "boolean"
+          },
+          "recommendedRenderer": {
+            "const": "MAPLIBRE_GL_JS",
+            "default": "MAPLIBRE_GL_JS",
+            "title": "Recommendedrenderer",
+            "type": "string"
+          },
+          "routeAnimationSupported": {
+            "const": true,
+            "default": true,
+            "title": "Routeanimationsupported",
+            "type": "boolean"
+          },
+          "tileProviderRequired": {
+            "const": true,
+            "default": true,
+            "title": "Tileproviderrequired",
+            "type": "boolean"
+          }
+        },
+        "title": "DashboardAgentMapRenderingContract",
+        "type": "object"
+      },
+      "DashboardAgentRouteState": {
+        "additionalProperties": false,
+        "properties": {
+          "attribution": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attribution"
+          },
+          "etaSeconds": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etaseconds"
+          },
+          "generatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generatedat"
+          },
+          "geometry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardRouteGeometry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "progressRatio": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progressratio"
+          },
+          "progressRatioIsProbability": {
+            "const": false,
+            "default": false,
+            "title": "Progressratioisprobability",
+            "type": "boolean"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "providerMode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "LIVE_API",
+                  "CACHED_API",
+                  "DEMO_SIMULATION"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Providermode"
+          },
+          "remainingDistanceM": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remainingdistancem"
+          },
+          "routeId": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routeid"
+          },
+          "status": {
+            "enum": [
+              "AVAILABLE",
+              "DEMO_SIMULATION",
+              "ROUTE_UNAVAILABLE",
+              "INCIDENT_LOCATION_REQUIRED",
+              "RESPONDER_POSITION_REQUIRED",
+              "POSITION_STALE",
+              "ROUTE_ENDPOINT_MISMATCH",
+              "ARRIVED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "totalDistanceM": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Totaldistancem"
+          },
+          "trafficApplied": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trafficapplied"
+          }
+        },
+        "required": [
+          "status",
+          "message"
+        ],
+        "title": "DashboardAgentRouteState",
+        "type": "object"
+      },
+      "DashboardAgentToolExecution": {
+        "additionalProperties": false,
+        "properties": {
+          "outputReference": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Outputreference",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "COMPLETED",
+              "WAITING",
+              "BLOCKED",
+              "FALLBACK",
+              "NOT_RUN",
+              "UNAVAILABLE"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          },
+          "toolId": {
+            "enum": [
+              "RULE_PARSER",
+              "SUBSTANCE_RESOLVER",
+              "FACILITY_HISTORY_SEARCH",
+              "HYBRID_EVIDENCE_RETRIEVER",
+              "CONFIRMATION_GATE",
+              "CAMEO_RULE_ENGINE",
+              "GROUNDED_RAG",
+              "SERVER_ROUTE_PROVIDER"
+            ],
+            "title": "Toolid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "toolId",
+          "status",
+          "outputReference",
+          "summary"
+        ],
+        "title": "DashboardAgentToolExecution",
+        "type": "object"
+      },
+      "DashboardAgentWorkflowStep": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Detail",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "COMPLETED",
+              "IN_PROGRESS",
+              "WAITING",
+              "BLOCKED",
+              "NOT_APPLICABLE"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "stepId": {
+            "enum": [
+              "INCIDENT_INGESTION",
+              "INCIDENT_PARSING",
+              "INCIDENT_LOCATION",
+              "SUBSTANCE_RESOLUTION",
+              "FACILITY_HISTORY",
+              "EVIDENCE_RETRIEVAL",
+              "ON_SITE_CONFIRMATION",
+              "CONFLICT_SCREENING",
+              "GROUNDED_EXPLANATION",
+              "RESPONSE_RECORD"
+            ],
+            "title": "Stepid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stepId",
+          "label",
+          "status",
+          "detail"
+        ],
+        "title": "DashboardAgentWorkflowStep",
+        "type": "object"
+      },
       "DashboardAwaitingAnalysisResponse": {
         "additionalProperties": false,
         "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardOperationsAgentSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "analysisId": {
             "maxLength": 128,
             "minLength": 1,
@@ -121,6 +564,16 @@
       "DashboardCompletedAnalysisResponse": {
         "additionalProperties": false,
         "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardOperationsAgentSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "analysisId": {
             "maxLength": 128,
             "minLength": 1,
@@ -1269,6 +1722,16 @@
             ],
             "title": "Occurredat"
           },
+          "operationsContext": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardOperationsContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "plannedActions": {
             "items": {
               "type": "string"
@@ -1305,6 +1768,24 @@
             ],
             "title": "Address"
           },
+          "coordinateSource": {
+            "anyOf": [
+              {
+                "enum": [
+                  "DISPATCH_SYSTEM",
+                  "GEOCODING_PROVIDER",
+                  "RESPONDER_OBSERVATION",
+                  "MANUAL_ENTRY",
+                  "DEMO_FIXTURE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coordinatesource"
+          },
           "facilityName": {
             "anyOf": [
               {
@@ -1316,6 +1797,18 @@
               }
             ],
             "title": "Facilityname"
+          },
+          "geocodingProvider": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geocodingprovider"
           },
           "latitude": {
             "anyOf": [
@@ -1354,6 +1847,18 @@
               }
             ],
             "title": "Province"
+          },
+          "resolvedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolvedat"
           }
         },
         "title": "DashboardIncidentLocation",
@@ -1362,6 +1867,16 @@
       "DashboardInconclusiveAnalysisResponse": {
         "additionalProperties": false,
         "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardOperationsAgentSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "analysisId": {
             "maxLength": 128,
             "minLength": 1,
@@ -1934,6 +2449,236 @@
           "safetyNotice"
         ],
         "title": "DashboardMaterialDiscoveryResponse",
+        "type": "object"
+      },
+      "DashboardMovementUpdateRequest": {
+        "additionalProperties": false,
+        "description": "FE가 새 GPS 관측값만 BE에 전달하는 경량 이동 갱신 계약.",
+        "properties": {
+          "clientSequence": {
+            "minimum": 1.0,
+            "title": "Clientsequence",
+            "type": "integer"
+          },
+          "journeyState": {
+            "enum": [
+              "DISPATCHED",
+              "EN_ROUTE",
+              "ARRIVED",
+              "ON_SCENE"
+            ],
+            "title": "Journeystate",
+            "type": "string"
+          },
+          "responderPosition": {
+            "$ref": "#/components/schemas/DashboardResponderPosition"
+          }
+        },
+        "required": [
+          "responderPosition",
+          "journeyState",
+          "clientSequence"
+        ],
+        "title": "DashboardMovementUpdateRequest",
+        "type": "object"
+      },
+      "DashboardMovementUpdateResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "acceptedAt": {
+            "format": "date-time",
+            "title": "Acceptedat",
+            "type": "string"
+          },
+          "clientSequence": {
+            "minimum": 1.0,
+            "title": "Clientsequence",
+            "type": "integer"
+          },
+          "incidentId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Incidentid",
+            "type": "string"
+          },
+          "mapContext": {
+            "$ref": "#/components/schemas/DashboardAgentMapContext"
+          },
+          "nextRefreshSeconds": {
+            "maximum": 60.0,
+            "minimum": 3.0,
+            "title": "Nextrefreshseconds",
+            "type": "integer"
+          },
+          "requestId": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Requestid",
+            "type": "string"
+          },
+          "routeRecalculated": {
+            "title": "Routerecalculated",
+            "type": "boolean"
+          },
+          "schemaVersion": {
+            "const": "chemicheck119-dashboard-bff-v1",
+            "default": "chemicheck119-dashboard-bff-v1",
+            "title": "Schemaversion",
+            "type": "string"
+          }
+        },
+        "required": [
+          "requestId",
+          "incidentId",
+          "acceptedAt",
+          "clientSequence",
+          "mapContext",
+          "nextRefreshSeconds",
+          "routeRecalculated"
+        ],
+        "title": "DashboardMovementUpdateResponse",
+        "type": "object"
+      },
+      "DashboardOperationsAgentSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "agentType": {
+            "const": "DETERMINISTIC_FIELD_RESPONSE_ORCHESTRATOR",
+            "title": "Agenttype",
+            "type": "string"
+          },
+          "autonomousRiskDecisionAllowed": {
+            "const": false,
+            "title": "Autonomousriskdecisionallowed",
+            "type": "boolean"
+          },
+          "currentObjective": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Currentobjective",
+            "type": "string"
+          },
+          "finalDecisionAuthority": {
+            "const": "현장 지휘관",
+            "title": "Finaldecisionauthority",
+            "type": "string"
+          },
+          "mapContext": {
+            "$ref": "#/components/schemas/DashboardAgentMapContext"
+          },
+          "nextActions": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Nextactions",
+            "type": "array"
+          },
+          "phase": {
+            "enum": [
+              "INCIDENT_INTAKE",
+              "EN_ROUTE_TRIAGE",
+              "ON_SCENE_CONFIRMATION",
+              "CONFLICT_SCREENING_COMPLETE",
+              "EVIDENCE_REVIEW_REQUIRED"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "const": "chemicheck119-operations-agent-v1",
+            "title": "Schemaversion",
+            "type": "string"
+          },
+          "toolExecutions": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardAgentToolExecution"
+            },
+            "maxItems": 8,
+            "minItems": 8,
+            "title": "Toolexecutions",
+            "type": "array"
+          },
+          "traceIsChainOfThought": {
+            "const": false,
+            "title": "Traceischainofthought",
+            "type": "boolean"
+          },
+          "workflow": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardAgentWorkflowStep"
+            },
+            "maxItems": 10,
+            "minItems": 10,
+            "title": "Workflow",
+            "type": "array"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "agentType",
+          "phase",
+          "currentObjective",
+          "nextActions",
+          "workflow",
+          "toolExecutions",
+          "mapContext",
+          "autonomousRiskDecisionAllowed",
+          "finalDecisionAuthority",
+          "traceIsChainOfThought"
+        ],
+        "title": "DashboardOperationsAgentSnapshot",
+        "type": "object"
+      },
+      "DashboardOperationsContext": {
+        "additionalProperties": false,
+        "properties": {
+          "dispatchStationName": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispatchstationname"
+          },
+          "journeyState": {
+            "default": "DISPATCHED",
+            "enum": [
+              "DISPATCHED",
+              "EN_ROUTE",
+              "ARRIVED",
+              "ON_SCENE"
+            ],
+            "title": "Journeystate",
+            "type": "string"
+          },
+          "responderPosition": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardResponderPosition"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "route": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardServerRoute"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "DashboardOperationsContext",
         "type": "object"
       },
       "DashboardOrdinalRiskScale": {
@@ -2604,6 +3349,191 @@
         "title": "DashboardResolverCandidate",
         "type": "object"
       },
+      "DashboardResponderPosition": {
+        "additionalProperties": false,
+        "properties": {
+          "accuracyM": {
+            "anyOf": [
+              {
+                "maximum": 5000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accuracym"
+          },
+          "latitude": {
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude",
+            "type": "number"
+          },
+          "observedAt": {
+            "format": "date-time",
+            "title": "Observedat",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "VEHICLE_GPS",
+              "MDT_DEVICE_GPS",
+              "MANUAL_DISPATCH",
+              "DEMO_SIMULATION"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude",
+          "observedAt",
+          "source"
+        ],
+        "title": "DashboardResponderPosition",
+        "type": "object"
+      },
+      "DashboardRouteGeometry": {
+        "additionalProperties": false,
+        "properties": {
+          "coordinates": {
+            "items": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            "maxItems": 10000,
+            "minItems": 2,
+            "title": "Coordinates",
+            "type": "array"
+          },
+          "type": {
+            "const": "LineString",
+            "default": "LineString",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "coordinates"
+        ],
+        "title": "DashboardRouteGeometry",
+        "type": "object"
+      },
+      "DashboardServerRoute": {
+        "additionalProperties": false,
+        "properties": {
+          "attribution": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Attribution",
+            "type": "string"
+          },
+          "distanceM": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 5000000.0,
+            "title": "Distancem",
+            "type": "integer"
+          },
+          "durationSeconds": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 604800.0,
+            "title": "Durationseconds",
+            "type": "integer"
+          },
+          "generatedAt": {
+            "format": "date-time",
+            "title": "Generatedat",
+            "type": "string"
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/DashboardRouteGeometry"
+          },
+          "mode": {
+            "enum": [
+              "LIVE_API",
+              "CACHED_API",
+              "DEMO_SIMULATION"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "provider": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Provider",
+            "type": "string"
+          },
+          "providerReference": {
+            "anyOf": [
+              {
+                "format": "uri",
+                "maxLength": 2083,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Providerreference"
+          },
+          "remainingDistanceM": {
+            "maximum": 5000000.0,
+            "minimum": 0.0,
+            "title": "Remainingdistancem",
+            "type": "integer"
+          },
+          "remainingDurationSeconds": {
+            "maximum": 604800.0,
+            "minimum": 0.0,
+            "title": "Remainingdurationseconds",
+            "type": "integer"
+          },
+          "routeId": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Routeid",
+            "type": "string"
+          },
+          "trafficApplied": {
+            "title": "Trafficapplied",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "provider",
+          "mode",
+          "routeId",
+          "geometry",
+          "distanceM",
+          "durationSeconds",
+          "remainingDistanceM",
+          "remainingDurationSeconds",
+          "generatedAt",
+          "trafficApplied",
+          "attribution"
+        ],
+        "title": "DashboardServerRoute",
+        "type": "object"
+      },
       "DashboardSubstanceCandidateGroup": {
         "additionalProperties": false,
         "properties": {
@@ -2937,6 +3867,132 @@
         "summary": "인증 사용자 기준 현장 물질 확인 레코드 생성",
         "tags": [
           "dashboard-bff"
+        ],
+        "x-implementation-owner": "BE_Repository",
+        "x-model-api-direct-browser-call-allowed": false
+      }
+    },
+    "/api/c2guard/v1/incidents/{incidentId}/movement": {
+      "post": {
+        "operationId": "update_movement_api_c2guard_v1_incidents__incidentId__movement_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incidentId",
+            "required": true,
+            "schema": {
+              "title": "Incidentid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardMovementUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardMovementUpdateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "ServiceSession": []
+          }
+        ],
+        "summary": "차량·단말 현재 위치 갱신과 서버 길찾기 상태 조회",
+        "tags": [
+          "dashboard-bff"
+        ],
+        "x-backend-required-checks": [
+          "GPS 관측 시각·좌표 범위·clientSequence 단조 증가 검증",
+          "길찾기 API Key는 BE Secret에서만 로드하고 브라우저에 반환하지 않음",
+          "재탐색은 provider rate limit과 이동 거리 임계값으로 제한",
+          "길찾기 실패 시 직선 경로·가짜 ETA 대신 ROUTE_UNAVAILABLE 반환",
+          "DEMO_SIMULATION 경로는 실제 경로와 명확히 구분"
         ],
         "x-implementation-owner": "BE_Repository",
         "x-model-api-direct-browser-call-allowed": false

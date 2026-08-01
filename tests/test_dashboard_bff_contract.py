@@ -25,10 +25,14 @@ from chemiguard119.dashboard_contract import (
     DashboardInconclusiveAnalysisResponse,
     DashboardMaterialDiscoveryRequest,
     DashboardMaterialDiscoveryResponse,
+    DashboardMovementUpdateRequest,
+    DashboardMovementUpdateResponse,
+    DashboardOperationsAgentSnapshot,
     DashboardRecordSaveRequest,
     DashboardRecordSaveResponse,
     build_dashboard_bff_openapi,
     project_completed_model_result,
+    project_operations_agent,
 )
 
 
@@ -86,6 +90,7 @@ def test_dashboard_openapi_is_backend_owned_and_never_exposes_model_key() -> Non
         "/api/c2guard/v1/substances/discover",
         "/api/c2guard/v1/incidents/analyze",
         "/api/c2guard/v1/incidents/{incidentId}/confirmations",
+        "/api/c2guard/v1/incidents/{incidentId}/movement",
         "/api/c2guard/v1/incidents/{incidentId}/record",
     }
 
@@ -136,6 +141,11 @@ def test_dashboard_openapi_is_backend_owned_and_never_exposes_model_key() -> Non
     ]["x-backend-required-checks"]
     assert any("incidentId" in item for item in record_checks)
     assert any("409" in item for item in record_checks)
+    movement_checks = schema["paths"][
+        "/api/c2guard/v1/incidents/{incidentId}/movement"
+    ]["post"]["x-backend-required-checks"]
+    assert any("API Key" in item for item in movement_checks)
+    assert any("ROUTE_UNAVAILABLE" in item for item in movement_checks)
 
     for path_item in schema["paths"].values():
         operation = path_item["post"]
@@ -254,6 +264,9 @@ def test_awaiting_analysis_fixture_has_no_risk_or_reaction_payload() -> None:
     )
 
     assert request.text.startswith("차아염소산나트륨")
+    assert request.operations_context is not None
+    assert request.operations_context.route is not None
+    assert request.operations_context.route.mode == "DEMO_SIMULATION"
     assert isinstance(union_response, DashboardAwaitingAnalysisResponse)
     assert response.confirmation_gate.all_required_confirmed is False
     assert response.confirmation_gate.rule_execution_allowed is False
@@ -272,6 +285,39 @@ def test_awaiting_analysis_fixture_has_no_risk_or_reaction_payload() -> None:
             "recommendedResponse",
             "probabilityPercent",
         },
+    )
+
+
+def test_operations_agent_fixture_exposes_nationwide_route_without_fake_risk() -> None:
+    payload = _load_json(BFF_EXAMPLES / "operations_agent_en_route.json")
+    agent = DashboardOperationsAgentSnapshot.model_validate(payload)
+    projected = project_operations_agent(
+        agent.model_dump(mode="python", by_alias=False)
+    )
+
+    assert agent.phase == "EN_ROUTE_TRIAGE"
+    assert agent.map_context.coverage_scope == "NATIONWIDE_KOREA"
+    assert agent.map_context.route.status == "DEMO_SIMULATION"
+    assert agent.map_context.route.progress_ratio_is_probability is False
+    assert agent.map_context.rendering.recommended_renderer == "MAPLIBRE_GL_JS"
+    assert agent.autonomous_risk_decision_allowed is False
+    assert projected == agent
+
+
+def test_movement_fixtures_keep_gps_and_route_provenance() -> None:
+    request = DashboardMovementUpdateRequest.model_validate(
+        _load_json(BFF_EXAMPLES / "movement_update_request.json")
+    )
+    response = DashboardMovementUpdateResponse.model_validate(
+        _load_json(BFF_EXAMPLES / "movement_update_response.json")
+    )
+
+    assert request.responder_position.source == "MDT_DEVICE_GPS"
+    assert request.client_sequence == response.client_sequence
+    assert response.map_context.route.status == "DEMO_SIMULATION"
+    assert response.map_context.route.progress_ratio_is_probability is False
+    assert response.map_context.hazard_overlay_status == (
+        "NOT_COMPUTED_NO_VALIDATED_DISPERSION_MODEL"
     )
 
 

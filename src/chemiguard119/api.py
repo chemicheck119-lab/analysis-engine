@@ -46,6 +46,7 @@ from chemiguard119.api_models import (
     contains_unconfirmed_risk_output,
     validate_evidence_confirmation_gate,
 )
+from chemiguard119.coverage import facility_history_coverage
 from chemiguard119.paths import (
     CONFIG_DIR,
     DEFAULT_DB_PATH,
@@ -55,6 +56,7 @@ from chemiguard119.paths import (
 from chemiguard119.discovery import discover_substances
 from chemiguard119.database import connect_readonly
 from chemiguard119.observability import configure_json_logging, emit_json_event
+from chemiguard119.operations import build_operations_agent_snapshot
 from chemiguard119.facility import search_facility_history
 from chemiguard119.evidence_assurance import (
     reference_assurance_configuration_status,
@@ -341,6 +343,7 @@ class ModelRuntime:
     loaded_at_utc: str
     integrity: dict[str, Any] | None = None
     conflict_capabilities: dict[str, dict[str, Any]] | None = None
+    facility_coverage: dict[str, Any] | None = None
 
     @classmethod
     def load(
@@ -373,6 +376,7 @@ class ModelRuntime:
             loaded_at_utc=datetime.now(timezone.utc).isoformat(),
             integrity=integrity,
             conflict_capabilities=conflict_capabilities,
+            facility_coverage=facility_history_coverage(db_path),
         )
 
     def conflict_review_capability(self, policy_mode: str) -> dict[str, Any]:
@@ -450,6 +454,27 @@ class ModelRuntime:
             "resolver_schema": self.resolver_artifact.get("schema_version"),
             "retriever_schema": self.retriever_artifact.get("schema_version"),
             "material_discovery_capability": material_discovery,
+            "facility_history_coverage": (
+                self.facility_coverage
+                if self.facility_coverage is not None
+                else facility_history_coverage(self.db_path)
+            ),
+            "data_scope_semantics": {
+                "substance_identity_search": "NATIONAL_CATALOG_NO_REGION_FILTER",
+                "facility_history": "NATIONWIDE_HISTORICAL_CANDIDATES_WHEN_READY",
+                "property_profile": "ULSAN_PUBLIC_PROPERTY_PROFILE_SUPPLEMENT",
+                "property_profile_is_nationwide": False,
+            },
+            "operations_agent_capability": {
+                "ready": True,
+                "schema_version": "chemicheck119-operations-agent-v1",
+                "coverage_scope": "NATIONWIDE_KOREA",
+                "map_contract": "PROVIDER_NEUTRAL_GEOJSON",
+                "recommended_renderer": "MAPLIBRE_GL_JS",
+                "route_provider_owner": "BACKEND_SERVER_SIDE",
+                "route_or_eta_inference_allowed": False,
+                "hazard_dispersion_model_available": False,
+            },
             "conflict_review_capability": conflict_review_capability,
             "integrity": {
                 "status": integrity.get("status"),
@@ -931,6 +956,22 @@ def _public_analysis_response(
     rule_wrapper = pipeline_result.get("rule_review") or {}
     rule_result = rule_wrapper.get("result") or {}
     grounded_rag = rag_service.answer(public_evidence, rule_wrapper)
+    processed_at = datetime.now(timezone.utc)
+    agent = build_operations_agent_snapshot(
+        analysis_state=state_value,
+        location=(
+            payload.location.model_dump(mode="python") if payload.location else None
+        ),
+        operations=payload.operations_context,
+        parser_output=parsed,
+        substance_candidates=pipeline_result.get("substance_candidates", []),
+        facility_history=facility_history,
+        evidence=public_evidence,
+        incident_confirmed=confirmation_gate["incident_confirmed"],
+        facility_confirmed=confirmation_gate["facility_confirmed"],
+        grounded_rag=grounded_rag,
+        processed_at=processed_at,
+    )
     elapsed_ms = (time.perf_counter() - started_at) * 1_000
     expert_reviewed = bool(
         rule_wrapper.get("executed") is True
@@ -946,6 +987,7 @@ def _public_analysis_response(
         model_outputs=model_outputs,
         evidence=public_evidence,
         grounded_rag=grounded_rag,
+        agent=agent,
         conflict_review=pipeline_result.get("rule_review", {}),
         confirmation_gate=confirmation_gate,
         required_next_steps=_required_next_steps(state_value),
@@ -960,7 +1002,7 @@ def _public_analysis_response(
             "grounded_rag_schema_version": RAG_SCHEMA_VERSION,
             "grounded_rag_mode": grounded_rag["mode"],
             "runtime_loaded_at_utc": runtime.loaded_at_utc,
-            "processed_at_utc": datetime.now(timezone.utc).isoformat(),
+            "processed_at_utc": processed_at.isoformat(),
             "latency_ms": round(elapsed_ms, 3),
             "input_type": payload.input.type.value,
             "confirmations": confirmation_trace,

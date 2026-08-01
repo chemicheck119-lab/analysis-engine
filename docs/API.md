@@ -171,10 +171,14 @@ curl -X POST http://127.0.0.1:8000/api/v1/incidents/analyze \
 | `input.text` | 예 | 1~4,000자 신고 원문 |
 | `input.occurred_at` | 아니요 | 시간대가 포함된 ISO 8601 권장 |
 | `location` | 아니요 | 주소·시도·좌표·시설명 |
+| `operations_context` | 아니요 | 출동 상태·현재 위치·BE가 조회한 도로 경로 |
 | `planned_actions` | 아니요 | 검토 중인 대응, 최대 20개 |
 | `evidence_top_k` | 아니요 | 1~10, 기본 5 |
 
 `latitude`와 `longitude`는 함께 보내거나 모두 생략해야 합니다.
+경로와 ETA는 모델이 추측하지 않습니다. `operations_context.route`는 BE가 서버 측 길찾기
+사업자에서 받은 값만 전달하며, 없으면 `agent.map_context.route.status`가
+`ROUTE_UNAVAILABLE`입니다.
 
 현장 확인 전 응답의 핵심 형태는 다음과 같습니다. 아래는 구조를 설명하기 위해 일부 필드만
 표시한 예입니다.
@@ -191,6 +195,24 @@ curl -X POST http://127.0.0.1:8000/api/v1/incidents/analyze \
     "status": "NOT_RUN_REQUIRES_CONFIRMED_PAIR",
     "statements": [],
     "citations": []
+  },
+  "agent": {
+    "phase": "INCIDENT_INTAKE",
+    "current_objective": "신고 내용과 위치를 구조화해 출동 준비 정보를 만듭니다.",
+    "next_actions": [],
+    "workflow": [],
+    "tool_executions": [],
+    "map_context": {
+      "coverage_scope": "NATIONWIDE_KOREA",
+      "route": {
+        "status": "RESPONDER_POSITION_REQUIRED",
+        "eta_seconds": null,
+        "progress_ratio_is_probability": false
+      },
+      "hazard_overlay_status": "NOT_COMPUTED_NO_VALIDATED_DISPERSION_MODEL"
+    },
+    "autonomous_risk_decision_allowed": false,
+    "final_decision_authority": "현장 지휘관"
   },
   "conflict_review": {
     "executed": false,
@@ -210,6 +232,10 @@ curl -X POST http://127.0.0.1:8000/api/v1/incidents/analyze \
 
 후보가 한 개여도 API가 물질 존재를 확정한 것은 아닙니다. 서비스 백엔드는 대원의 확인 행위를
 별도 레코드로 보관해야 합니다.
+
+`agent.workflow`는 숨겨진 추론 과정이 아니라 실제 파서·검색·확인 게이트·CAMEO·RAG의
+실행 상태입니다. 전국 지도와 이동 갱신의 전체 설명은
+[전국 현장대응 에이전트와 지도 연동](OPERATIONS_AGENT_AND_MAP.md)을 참고합니다.
 
 ### 6.3 현장 확인 입력
 

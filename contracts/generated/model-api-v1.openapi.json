@@ -1,9 +1,451 @@
 {
   "components": {
     "schemas": {
+      "AgentMapContext": {
+        "additionalProperties": false,
+        "properties": {
+          "coverage_scope": {
+            "const": "NATIONWIDE_KOREA",
+            "default": "NATIONWIDE_KOREA",
+            "title": "Coverage Scope",
+            "type": "string"
+          },
+          "hazard_overlay_status": {
+            "const": "NOT_COMPUTED_NO_VALIDATED_DISPERSION_MODEL",
+            "default": "NOT_COMPUTED_NO_VALIDATED_DISPERSION_MODEL",
+            "title": "Hazard Overlay Status",
+            "type": "string"
+          },
+          "incident_position": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentMapPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rendering": {
+            "$ref": "#/components/schemas/AgentMapRenderingContract"
+          },
+          "responder_position": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentMapPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "route": {
+            "$ref": "#/components/schemas/AgentRouteState"
+          }
+        },
+        "required": [
+          "route"
+        ],
+        "title": "AgentMapContext",
+        "type": "object"
+      },
+      "AgentMapPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "accuracy_m": {
+            "anyOf": [
+              {
+                "maximum": 5000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accuracy M"
+          },
+          "is_simulation": {
+            "default": false,
+            "title": "Is Simulation",
+            "type": "boolean"
+          },
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "latitude": {
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude",
+            "type": "number"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "source": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude",
+          "label",
+          "source"
+        ],
+        "title": "AgentMapPoint",
+        "type": "object"
+      },
+      "AgentMapRenderingContract": {
+        "additionalProperties": false,
+        "properties": {
+          "attribution_required": {
+            "const": true,
+            "default": true,
+            "title": "Attribution Required",
+            "type": "boolean"
+          },
+          "geometry_format": {
+            "const": "GEOJSON_RFC7946",
+            "default": "GEOJSON_RFC7946",
+            "title": "Geometry Format",
+            "type": "string"
+          },
+          "public_osm_standard_tiles_for_production": {
+            "const": false,
+            "default": false,
+            "title": "Public Osm Standard Tiles For Production",
+            "type": "boolean"
+          },
+          "recommended_renderer": {
+            "const": "MAPLIBRE_GL_JS",
+            "default": "MAPLIBRE_GL_JS",
+            "title": "Recommended Renderer",
+            "type": "string"
+          },
+          "route_animation_supported": {
+            "const": true,
+            "default": true,
+            "title": "Route Animation Supported",
+            "type": "boolean"
+          },
+          "tile_provider_required": {
+            "const": true,
+            "default": true,
+            "title": "Tile Provider Required",
+            "type": "boolean"
+          }
+        },
+        "title": "AgentMapRenderingContract",
+        "type": "object"
+      },
+      "AgentRouteState": {
+        "additionalProperties": false,
+        "properties": {
+          "attribution": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attribution"
+          },
+          "eta_seconds": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eta Seconds"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "geometry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RouteGeometry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "progress_ratio": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress Ratio"
+          },
+          "progress_ratio_is_probability": {
+            "const": false,
+            "default": false,
+            "title": "Progress Ratio Is Probability",
+            "type": "boolean"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "provider_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "LIVE_API",
+                  "CACHED_API",
+                  "DEMO_SIMULATION"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Mode"
+          },
+          "remaining_distance_m": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining Distance M"
+          },
+          "route_id": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Id"
+          },
+          "status": {
+            "enum": [
+              "AVAILABLE",
+              "DEMO_SIMULATION",
+              "ROUTE_UNAVAILABLE",
+              "INCIDENT_LOCATION_REQUIRED",
+              "RESPONDER_POSITION_REQUIRED",
+              "POSITION_STALE",
+              "ROUTE_ENDPOINT_MISMATCH",
+              "ARRIVED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "total_distance_m": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Distance M"
+          },
+          "traffic_applied": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Traffic Applied"
+          }
+        },
+        "required": [
+          "status",
+          "message"
+        ],
+        "title": "AgentRouteState",
+        "type": "object"
+      },
+      "AgentToolExecution": {
+        "additionalProperties": false,
+        "properties": {
+          "output_reference": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Output Reference",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "COMPLETED",
+              "WAITING",
+              "BLOCKED",
+              "FALLBACK",
+              "NOT_RUN",
+              "UNAVAILABLE"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          },
+          "tool_id": {
+            "enum": [
+              "RULE_PARSER",
+              "SUBSTANCE_RESOLVER",
+              "FACILITY_HISTORY_SEARCH",
+              "HYBRID_EVIDENCE_RETRIEVER",
+              "CONFIRMATION_GATE",
+              "CAMEO_RULE_ENGINE",
+              "GROUNDED_RAG",
+              "SERVER_ROUTE_PROVIDER"
+            ],
+            "title": "Tool Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_id",
+          "status",
+          "output_reference",
+          "summary"
+        ],
+        "title": "AgentToolExecution",
+        "type": "object"
+      },
+      "AgentWorkflowStep": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Detail",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "COMPLETED",
+              "IN_PROGRESS",
+              "WAITING",
+              "BLOCKED",
+              "NOT_APPLICABLE"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "step_id": {
+            "enum": [
+              "INCIDENT_INGESTION",
+              "INCIDENT_PARSING",
+              "INCIDENT_LOCATION",
+              "SUBSTANCE_RESOLUTION",
+              "FACILITY_HISTORY",
+              "EVIDENCE_RETRIEVAL",
+              "ON_SITE_CONFIRMATION",
+              "CONFLICT_SCREENING",
+              "GROUNDED_EXPLANATION",
+              "RESPONSE_RECORD"
+            ],
+            "title": "Step Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "label",
+          "status",
+          "detail"
+        ],
+        "title": "AgentWorkflowStep",
+        "type": "object"
+      },
       "AnalysisResponse": {
         "additionalProperties": false,
         "properties": {
+          "agent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OperationsAgentSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "analysis_id": {
             "title": "Analysis Id",
             "type": "string"
@@ -702,10 +1144,23 @@
             },
             "location": {
               "address": "경기 화성시 팔탄면",
+              "coordinate_source": "DISPATCH_SYSTEM",
               "facility_name": "OO전자 공장",
               "latitude": 37.2181,
               "longitude": 126.9417,
-              "province": "경기도"
+              "province": "경기도",
+              "resolved_at": "2026-07-21T19:20:00+09:00"
+            },
+            "operations_context": {
+              "dispatch_station_name": "화성소방서",
+              "journey_state": "EN_ROUTE",
+              "responder_position": {
+                "accuracy_m": 12.0,
+                "latitude": 37.2065,
+                "longitude": 126.8311,
+                "observed_at": "2026-07-21T19:22:00+09:00",
+                "source": "MDT_DEVICE_GPS"
+              }
             },
             "planned_actions": [
               {
@@ -764,6 +1219,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/IncidentLocation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "operations_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OperationsContext"
               },
               {
                 "type": "null"
@@ -856,6 +1321,24 @@
             ],
             "title": "Address"
           },
+          "coordinate_source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "DISPATCH_SYSTEM",
+                  "GEOCODING_PROVIDER",
+                  "RESPONDER_OBSERVATION",
+                  "MANUAL_ENTRY",
+                  "DEMO_FIXTURE"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coordinate Source"
+          },
           "facility_name": {
             "anyOf": [
               {
@@ -867,6 +1350,18 @@
               }
             ],
             "title": "Facility Name"
+          },
+          "geocoding_provider": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geocoding Provider"
           },
           "latitude": {
             "anyOf": [
@@ -905,6 +1400,18 @@
               }
             ],
             "title": "Province"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
           }
         },
         "title": "IncidentLocation",
@@ -944,6 +1451,148 @@
         "title": "MatchedProperty",
         "type": "object"
       },
+      "OperationsAgentSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_type": {
+            "const": "DETERMINISTIC_FIELD_RESPONSE_ORCHESTRATOR",
+            "default": "DETERMINISTIC_FIELD_RESPONSE_ORCHESTRATOR",
+            "title": "Agent Type",
+            "type": "string"
+          },
+          "autonomous_risk_decision_allowed": {
+            "const": false,
+            "default": false,
+            "title": "Autonomous Risk Decision Allowed",
+            "type": "boolean"
+          },
+          "current_objective": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Current Objective",
+            "type": "string"
+          },
+          "final_decision_authority": {
+            "const": "현장 지휘관",
+            "default": "현장 지휘관",
+            "title": "Final Decision Authority",
+            "type": "string"
+          },
+          "map_context": {
+            "$ref": "#/components/schemas/AgentMapContext"
+          },
+          "next_actions": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Next Actions",
+            "type": "array"
+          },
+          "phase": {
+            "enum": [
+              "INCIDENT_INTAKE",
+              "EN_ROUTE_TRIAGE",
+              "ON_SCENE_CONFIRMATION",
+              "CONFLICT_SCREENING_COMPLETE",
+              "EVIDENCE_REVIEW_REQUIRED"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "chemicheck119-operations-agent-v1",
+            "default": "chemicheck119-operations-agent-v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "tool_executions": {
+            "items": {
+              "$ref": "#/components/schemas/AgentToolExecution"
+            },
+            "maxItems": 8,
+            "minItems": 8,
+            "title": "Tool Executions",
+            "type": "array"
+          },
+          "trace_is_chain_of_thought": {
+            "const": false,
+            "default": false,
+            "title": "Trace Is Chain Of Thought",
+            "type": "boolean"
+          },
+          "workflow": {
+            "items": {
+              "$ref": "#/components/schemas/AgentWorkflowStep"
+            },
+            "maxItems": 10,
+            "minItems": 10,
+            "title": "Workflow",
+            "type": "array"
+          }
+        },
+        "required": [
+          "phase",
+          "current_objective",
+          "next_actions",
+          "workflow",
+          "tool_executions",
+          "map_context"
+        ],
+        "title": "OperationsAgentSnapshot",
+        "type": "object"
+      },
+      "OperationsContext": {
+        "additionalProperties": false,
+        "properties": {
+          "dispatch_station_name": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispatch Station Name"
+          },
+          "journey_state": {
+            "default": "DISPATCHED",
+            "enum": [
+              "DISPATCHED",
+              "EN_ROUTE",
+              "ARRIVED",
+              "ON_SCENE"
+            ],
+            "title": "Journey State",
+            "type": "string"
+          },
+          "responder_position": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponderPosition"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "route": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ServerRoute"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "OperationsContext",
+        "type": "object"
+      },
       "PlannedActionInput": {
         "additionalProperties": false,
         "properties": {
@@ -981,6 +1630,192 @@
           "query"
         ],
         "title": "ResolveRequest",
+        "type": "object"
+      },
+      "ResponderPosition": {
+        "additionalProperties": false,
+        "properties": {
+          "accuracy_m": {
+            "anyOf": [
+              {
+                "maximum": 5000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accuracy M"
+          },
+          "latitude": {
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude",
+            "type": "number"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "VEHICLE_GPS",
+              "MDT_DEVICE_GPS",
+              "MANUAL_DISPATCH",
+              "DEMO_SIMULATION"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude",
+          "observed_at",
+          "source"
+        ],
+        "title": "ResponderPosition",
+        "type": "object"
+      },
+      "RouteGeometry": {
+        "additionalProperties": false,
+        "properties": {
+          "coordinates": {
+            "items": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            "maxItems": 10000,
+            "minItems": 2,
+            "title": "Coordinates",
+            "type": "array"
+          },
+          "type": {
+            "const": "LineString",
+            "default": "LineString",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "coordinates"
+        ],
+        "title": "RouteGeometry",
+        "type": "object"
+      },
+      "ServerRoute": {
+        "additionalProperties": false,
+        "description": "BE가 비밀키로 호출한 길찾기 사업자의 결과.\n\n모델 API는 이 값을 재계산하거나 보정하지 않는다. 데모 경로는 반드시\n``DEMO_SIMULATION``으로 표시해 실제 길찾기 결과와 혼동되지 않게 한다.",
+        "properties": {
+          "attribution": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Attribution",
+            "type": "string"
+          },
+          "distance_m": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 5000000.0,
+            "title": "Distance M",
+            "type": "integer"
+          },
+          "duration_seconds": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 604800.0,
+            "title": "Duration Seconds",
+            "type": "integer"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/RouteGeometry"
+          },
+          "mode": {
+            "enum": [
+              "LIVE_API",
+              "CACHED_API",
+              "DEMO_SIMULATION"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "provider": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Provider",
+            "type": "string"
+          },
+          "provider_reference": {
+            "anyOf": [
+              {
+                "format": "uri",
+                "maxLength": 2083,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Reference"
+          },
+          "remaining_distance_m": {
+            "maximum": 5000000.0,
+            "minimum": 0.0,
+            "title": "Remaining Distance M",
+            "type": "integer"
+          },
+          "remaining_duration_seconds": {
+            "maximum": 604800.0,
+            "minimum": 0.0,
+            "title": "Remaining Duration Seconds",
+            "type": "integer"
+          },
+          "route_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Route Id",
+            "type": "string"
+          },
+          "traffic_applied": {
+            "title": "Traffic Applied",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "provider",
+          "mode",
+          "route_id",
+          "geometry",
+          "distance_m",
+          "duration_seconds",
+          "remaining_distance_m",
+          "remaining_duration_seconds",
+          "generated_at",
+          "traffic_applied",
+          "attribution"
+        ],
+        "title": "ServerRoute",
         "type": "object"
       },
       "SubstanceDiscoveryCandidate": {

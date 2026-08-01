@@ -120,6 +120,41 @@ export interface MaterialDiscoveryResponse {
   safetyNotice: string;
 }
 
+export interface OperationsContext {
+  dispatchStationName?: string | null;
+  responderPosition?: {
+    latitude: number;
+    longitude: number;
+    observedAt: string;
+    source:
+      | 'VEHICLE_GPS'
+      | 'MDT_DEVICE_GPS'
+      | 'MANUAL_DISPATCH'
+      | 'DEMO_SIMULATION';
+    accuracyM?: number | null;
+  } | null;
+  /** 길찾기 Secret은 브라우저가 아니라 BE만 보유한다. */
+  route?: {
+    provider: string;
+    mode: 'LIVE_API' | 'CACHED_API' | 'DEMO_SIMULATION';
+    routeId: string;
+    geometry: {
+      type: 'LineString';
+      /** GeoJSON 순서: [longitude, latitude] */
+      coordinates: Array<[number, number]>;
+    };
+    distanceM: number;
+    durationSeconds: number;
+    remainingDistanceM: number;
+    remainingDurationSeconds: number;
+    generatedAt: string;
+    trafficApplied: boolean;
+    attribution: string;
+    providerReference?: string | null;
+  } | null;
+  journeyState?: 'DISPATCHED' | 'EN_ROUTE' | 'ARRIVED' | 'ON_SCENE';
+}
+
 export interface IncidentAnalyzeRequest {
   incidentId?: string | null;
   text: string;
@@ -135,7 +170,17 @@ export interface IncidentAnalyzeRequest {
     province?: string | null;
     latitude?: number | null;
     longitude?: number | null;
+    coordinateSource?:
+      | 'DISPATCH_SYSTEM'
+      | 'GEOCODING_PROVIDER'
+      | 'RESPONDER_OBSERVATION'
+      | 'MANUAL_ENTRY'
+      | 'DEMO_FIXTURE'
+      | null;
+    geocodingProvider?: string | null;
+    resolvedAt?: string | null;
   } | null;
+  operationsContext?: OperationsContext | null;
   plannedActions?: string[];
   evidenceTopK?: number;
 }
@@ -148,6 +193,138 @@ export type AnalysisState =
   | 'VERIFY_REQUIRED'
   | 'UNCLASSIFIED'
   | 'CAMEO_GROUP_SCREENING_ONLY';
+
+export interface OperationsAgentSnapshot {
+  schemaVersion: 'chemicheck119-operations-agent-v1';
+  agentType: 'DETERMINISTIC_FIELD_RESPONSE_ORCHESTRATOR';
+  phase:
+    | 'INCIDENT_INTAKE'
+    | 'EN_ROUTE_TRIAGE'
+    | 'ON_SCENE_CONFIRMATION'
+    | 'CONFLICT_SCREENING_COMPLETE'
+    | 'EVIDENCE_REVIEW_REQUIRED';
+  currentObjective: string;
+  nextActions: string[];
+  workflow: Array<{
+    stepId:
+      | 'INCIDENT_INGESTION'
+      | 'INCIDENT_PARSING'
+      | 'INCIDENT_LOCATION'
+      | 'SUBSTANCE_RESOLUTION'
+      | 'FACILITY_HISTORY'
+      | 'EVIDENCE_RETRIEVAL'
+      | 'ON_SITE_CONFIRMATION'
+      | 'CONFLICT_SCREENING'
+      | 'GROUNDED_EXPLANATION'
+      | 'RESPONSE_RECORD';
+    label: string;
+    status:
+      | 'COMPLETED'
+      | 'IN_PROGRESS'
+      | 'WAITING'
+      | 'BLOCKED'
+      | 'NOT_APPLICABLE';
+    detail: string;
+  }>;
+  toolExecutions: Array<{
+    toolId:
+      | 'RULE_PARSER'
+      | 'SUBSTANCE_RESOLVER'
+      | 'FACILITY_HISTORY_SEARCH'
+      | 'HYBRID_EVIDENCE_RETRIEVER'
+      | 'CONFIRMATION_GATE'
+      | 'CAMEO_RULE_ENGINE'
+      | 'GROUNDED_RAG'
+      | 'SERVER_ROUTE_PROVIDER';
+    status:
+      | 'COMPLETED'
+      | 'WAITING'
+      | 'BLOCKED'
+      | 'FALLBACK'
+      | 'NOT_RUN'
+      | 'UNAVAILABLE';
+    outputReference: string;
+    summary: string;
+  }>;
+  mapContext: {
+    coverageScope: 'NATIONWIDE_KOREA';
+    incidentPosition?: {
+      latitude: number;
+      longitude: number;
+      label: string;
+      source: string;
+      observedAt?: string | null;
+      accuracyM?: number | null;
+      isSimulation: boolean;
+    } | null;
+    responderPosition?: {
+      latitude: number;
+      longitude: number;
+      label: string;
+      source: string;
+      observedAt?: string | null;
+      accuracyM?: number | null;
+      isSimulation: boolean;
+    } | null;
+    route: {
+      status:
+        | 'AVAILABLE'
+        | 'DEMO_SIMULATION'
+        | 'ROUTE_UNAVAILABLE'
+        | 'INCIDENT_LOCATION_REQUIRED'
+        | 'RESPONDER_POSITION_REQUIRED'
+        | 'POSITION_STALE'
+        | 'ROUTE_ENDPOINT_MISMATCH'
+        | 'ARRIVED';
+      provider?: string | null;
+      providerMode?: 'LIVE_API' | 'CACHED_API' | 'DEMO_SIMULATION' | null;
+      routeId?: string | null;
+      geometry?: {
+        type: 'LineString';
+        coordinates: Array<[number, number]>;
+      } | null;
+      totalDistanceM?: number | null;
+      remainingDistanceM?: number | null;
+      etaSeconds?: number | null;
+      /** 이동 진행률이며 사고·위험 확률이 아니다. */
+      progressRatio?: number | null;
+      progressRatioIsProbability: false;
+      trafficApplied?: boolean | null;
+      generatedAt?: string | null;
+      attribution?: string | null;
+      message: string;
+    };
+    rendering: {
+      geometryFormat: 'GEOJSON_RFC7946';
+      recommendedRenderer: 'MAPLIBRE_GL_JS';
+      tileProviderRequired: true;
+      attributionRequired: true;
+      publicOsmStandardTilesForProduction: false;
+      routeAnimationSupported: true;
+    };
+    hazardOverlayStatus: 'NOT_COMPUTED_NO_VALIDATED_DISPERSION_MODEL';
+  };
+  autonomousRiskDecisionAllowed: false;
+  finalDecisionAuthority: '현장 지휘관';
+  traceIsChainOfThought: false;
+}
+
+export interface MovementUpdateRequest {
+  responderPosition: NonNullable<OperationsContext['responderPosition']>;
+  journeyState: 'DISPATCHED' | 'EN_ROUTE' | 'ARRIVED' | 'ON_SCENE';
+  clientSequence: number;
+}
+
+export interface MovementUpdateResponse {
+  schemaVersion: DashboardSchemaVersion;
+  requestId: string;
+  incidentId: string;
+  acceptedAt: string;
+  clientSequence: number;
+  mapContext: OperationsAgentSnapshot['mapContext'];
+  nextRefreshSeconds: number;
+  routeRecalculated: boolean;
+}
 
 export interface AnalysisCommon {
   schemaVersion: DashboardSchemaVersion;
@@ -200,6 +377,8 @@ export interface AnalysisCommon {
   evidenceCards: EvidenceCard[];
   /** 대응 근거 카드: statements와 citations만 화면에 표시하면 된다. */
   groundedRag?: GroundedRagSummary | null;
+  /** 전환 기간에는 optional이며 신규 BE는 모델 API 값을 그대로 투영한다. */
+  agent?: OperationsAgentSnapshot | null;
   confirmationGate: {
     policy: 'TWO_AUTHENTICATED_ON_SITE_CONFIRMATIONS_REQUIRED';
     incidentConfirmed: boolean;

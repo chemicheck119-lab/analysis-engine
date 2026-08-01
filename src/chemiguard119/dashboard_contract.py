@@ -24,6 +24,7 @@ from pydantic import (
 
 from chemiguard119.api_models import API_SCHEMA_VERSION, CompletedConflictResult
 from chemiguard119.evidence_assurance import build_reference_assurance
+from chemiguard119.operations import OperationsAgentSnapshot, OperationsContext
 from chemiguard119.paths import CONFIG_DIR
 from chemiguard119.rules import validate_review_output
 from chemiguard119.utils import normalize_cas, sha256_file, valid_cas_checksum
@@ -244,11 +245,83 @@ class DashboardIncidentLocation(DashboardModel):
     province: str | None = Field(default=None, max_length=80)
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
+    coordinate_source: (
+        Literal[
+            "DISPATCH_SYSTEM",
+            "GEOCODING_PROVIDER",
+            "RESPONDER_OBSERVATION",
+            "MANUAL_ENTRY",
+            "DEMO_FIXTURE",
+        ]
+        | None
+    ) = None
+    geocoding_provider: str | None = Field(default=None, max_length=80)
+    resolved_at: datetime | None = None
 
     @model_validator(mode="after")
     def coordinates_must_be_a_pair(self) -> "DashboardIncidentLocation":
         if (self.latitude is None) != (self.longitude is None):
             raise ValueError("latitude와 longitude는 함께 입력해야 합니다.")
+        if self.coordinate_source is not None and self.latitude is None:
+            raise ValueError("coordinateSource에는 위도·경도가 필요합니다.")
+        if self.geocoding_provider is not None and self.coordinate_source != (
+            "GEOCODING_PROVIDER"
+        ):
+            raise ValueError(
+                "geocodingProvider는 GEOCODING_PROVIDER 좌표에만 사용할 수 있습니다."
+            )
+        if self.resolved_at is not None:
+            if self.latitude is None:
+                raise ValueError("resolvedAt에는 위도·경도가 필요합니다.")
+            if self.resolved_at.tzinfo is None or self.resolved_at.utcoffset() is None:
+                raise ValueError("resolvedAt에는 시간대가 필요합니다.")
+        return self
+
+
+class DashboardResponderPosition(DashboardModel):
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    observed_at: datetime
+    source: Literal[
+        "VEHICLE_GPS",
+        "MDT_DEVICE_GPS",
+        "MANUAL_DISPATCH",
+        "DEMO_SIMULATION",
+    ]
+    accuracy_m: float | None = Field(default=None, ge=0, le=5_000)
+
+
+class DashboardRouteGeometry(DashboardModel):
+    type: Literal["LineString"] = "LineString"
+    coordinates: list[tuple[float, float]] = Field(min_length=2, max_length=10_000)
+
+
+class DashboardServerRoute(DashboardModel):
+    provider: str = Field(min_length=1, max_length=80)
+    mode: Literal["LIVE_API", "CACHED_API", "DEMO_SIMULATION"]
+    route_id: str = Field(min_length=1, max_length=200)
+    geometry: DashboardRouteGeometry
+    distance_m: int = Field(gt=0, le=5_000_000)
+    duration_seconds: int = Field(gt=0, le=604_800)
+    remaining_distance_m: int = Field(ge=0, le=5_000_000)
+    remaining_duration_seconds: int = Field(ge=0, le=604_800)
+    generated_at: datetime
+    traffic_applied: bool
+    attribution: str = Field(min_length=1, max_length=300)
+    provider_reference: HttpUrl | None = None
+
+
+class DashboardOperationsContext(DashboardModel):
+    dispatch_station_name: str | None = Field(default=None, max_length=160)
+    responder_position: DashboardResponderPosition | None = None
+    route: DashboardServerRoute | None = None
+    journey_state: Literal["DISPATCHED", "EN_ROUTE", "ARRIVED", "ON_SCENE"] = (
+        "DISPATCHED"
+    )
+
+    @model_validator(mode="after")
+    def must_match_model_api_operations_contract(self) -> "DashboardOperationsContext":
+        OperationsContext.model_validate(self.model_dump(mode="python"))
         return self
 
 
@@ -265,6 +338,7 @@ class DashboardIncidentAnalyzeRequest(DashboardModel):
     location: DashboardIncidentLocation | None = None
     planned_actions: list[str] = Field(default_factory=list, max_length=20)
     evidence_top_k: int = Field(default=5, ge=1, le=10)
+    operations_context: DashboardOperationsContext | None = None
 
     @field_validator("planned_actions")
     @classmethod
@@ -862,6 +936,136 @@ class DashboardGroundedRag(DashboardModel):
         return self
 
 
+class DashboardAgentMapPoint(DashboardModel):
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    label: str = Field(min_length=1, max_length=200)
+    source: str = Field(min_length=1, max_length=80)
+    observed_at: datetime | None = None
+    accuracy_m: float | None = Field(default=None, ge=0, le=5_000)
+    is_simulation: bool = False
+
+
+class DashboardAgentRouteState(DashboardModel):
+    status: Literal[
+        "AVAILABLE",
+        "DEMO_SIMULATION",
+        "ROUTE_UNAVAILABLE",
+        "INCIDENT_LOCATION_REQUIRED",
+        "RESPONDER_POSITION_REQUIRED",
+        "POSITION_STALE",
+        "ROUTE_ENDPOINT_MISMATCH",
+        "ARRIVED",
+    ]
+    provider: str | None = Field(default=None, max_length=80)
+    provider_mode: Literal["LIVE_API", "CACHED_API", "DEMO_SIMULATION"] | None = None
+    route_id: str | None = Field(default=None, max_length=200)
+    geometry: DashboardRouteGeometry | None = None
+    total_distance_m: int | None = Field(default=None, ge=0)
+    remaining_distance_m: int | None = Field(default=None, ge=0)
+    eta_seconds: int | None = Field(default=None, ge=0)
+    progress_ratio: float | None = Field(default=None, ge=0, le=1)
+    progress_ratio_is_probability: Literal[False] = False
+    traffic_applied: bool | None = None
+    generated_at: datetime | None = None
+    attribution: str | None = Field(default=None, max_length=300)
+    message: str = Field(min_length=1, max_length=500)
+
+
+class DashboardAgentMapRenderingContract(DashboardModel):
+    geometry_format: Literal["GEOJSON_RFC7946"] = "GEOJSON_RFC7946"
+    recommended_renderer: Literal["MAPLIBRE_GL_JS"] = "MAPLIBRE_GL_JS"
+    tile_provider_required: Literal[True] = True
+    attribution_required: Literal[True] = True
+    public_osm_standard_tiles_for_production: Literal[False] = False
+    route_animation_supported: Literal[True] = True
+
+
+class DashboardAgentMapContext(DashboardModel):
+    coverage_scope: Literal["NATIONWIDE_KOREA"] = "NATIONWIDE_KOREA"
+    incident_position: DashboardAgentMapPoint | None = None
+    responder_position: DashboardAgentMapPoint | None = None
+    route: DashboardAgentRouteState
+    rendering: DashboardAgentMapRenderingContract
+    hazard_overlay_status: Literal["NOT_COMPUTED_NO_VALIDATED_DISPERSION_MODEL"]
+
+
+class DashboardAgentWorkflowStep(DashboardModel):
+    step_id: Literal[
+        "INCIDENT_INGESTION",
+        "INCIDENT_PARSING",
+        "INCIDENT_LOCATION",
+        "SUBSTANCE_RESOLUTION",
+        "FACILITY_HISTORY",
+        "EVIDENCE_RETRIEVAL",
+        "ON_SITE_CONFIRMATION",
+        "CONFLICT_SCREENING",
+        "GROUNDED_EXPLANATION",
+        "RESPONSE_RECORD",
+    ]
+    label: str = Field(min_length=1, max_length=120)
+    status: Literal["COMPLETED", "IN_PROGRESS", "WAITING", "BLOCKED", "NOT_APPLICABLE"]
+    detail: str = Field(min_length=1, max_length=500)
+
+
+class DashboardAgentToolExecution(DashboardModel):
+    tool_id: Literal[
+        "RULE_PARSER",
+        "SUBSTANCE_RESOLVER",
+        "FACILITY_HISTORY_SEARCH",
+        "HYBRID_EVIDENCE_RETRIEVER",
+        "CONFIRMATION_GATE",
+        "CAMEO_RULE_ENGINE",
+        "GROUNDED_RAG",
+        "SERVER_ROUTE_PROVIDER",
+    ]
+    status: Literal[
+        "COMPLETED", "WAITING", "BLOCKED", "FALLBACK", "NOT_RUN", "UNAVAILABLE"
+    ]
+    output_reference: str = Field(min_length=1, max_length=160)
+    summary: str = Field(min_length=1, max_length=500)
+
+
+class DashboardOperationsAgentSnapshot(DashboardModel):
+    schema_version: Literal["chemicheck119-operations-agent-v1"]
+    agent_type: Literal["DETERMINISTIC_FIELD_RESPONSE_ORCHESTRATOR"]
+    phase: Literal[
+        "INCIDENT_INTAKE",
+        "EN_ROUTE_TRIAGE",
+        "ON_SCENE_CONFIRMATION",
+        "CONFLICT_SCREENING_COMPLETE",
+        "EVIDENCE_REVIEW_REQUIRED",
+    ]
+    current_objective: str = Field(min_length=1, max_length=500)
+    next_actions: list[str] = Field(min_length=1, max_length=8)
+    workflow: list[DashboardAgentWorkflowStep] = Field(min_length=10, max_length=10)
+    tool_executions: list[DashboardAgentToolExecution] = Field(
+        min_length=8, max_length=8
+    )
+    map_context: DashboardAgentMapContext
+    autonomous_risk_decision_allowed: Literal[False]
+    final_decision_authority: Literal["현장 지휘관"]
+    trace_is_chain_of_thought: Literal[False]
+
+    @model_validator(mode="after")
+    def must_match_model_api_agent_contract(
+        self,
+    ) -> "DashboardOperationsAgentSnapshot":
+        OperationsAgentSnapshot.model_validate(self.model_dump(mode="python"))
+        return self
+
+
+def project_operations_agent(
+    source: dict[str, Any],
+) -> DashboardOperationsAgentSnapshot:
+    """모델 API 에이전트 snapshot을 재생성 없이 BFF camelCase DTO로 투영한다."""
+
+    validated = OperationsAgentSnapshot.model_validate(source)
+    return DashboardOperationsAgentSnapshot.model_validate(
+        validated.model_dump(mode="python")
+    )
+
+
 class DashboardAnalysisBase(DashboardModel):
     schema_version: Literal[DASHBOARD_BFF_SCHEMA_VERSION] = DASHBOARD_BFF_SCHEMA_VERSION
     source_model_schema_version: Literal[API_SCHEMA_VERSION] = API_SCHEMA_VERSION
@@ -875,6 +1079,9 @@ class DashboardAnalysisBase(DashboardModel):
     facility_history: DashboardFacilityHistory
     evidence_cards: list[DashboardEvidenceCard] = Field(default_factory=list)
     grounded_rag: DashboardGroundedRag | None = None
+    # BFF 도입 전 기존 화면도 유지할 수 있도록 전환 기간에는 선택 필드다.
+    # 새 BE는 모델 API의 필수 agent snapshot을 그대로 투영해야 한다.
+    agent: DashboardOperationsAgentSnapshot | None = None
     confirmation_gate: DashboardConfirmationGate
     required_next_steps: list[str]
     provenance: DashboardProvenance
@@ -1033,6 +1240,44 @@ class DashboardConfirmationRequest(DashboardModel):
         return value
 
 
+class DashboardMovementUpdateRequest(DashboardModel):
+    """FE가 새 GPS 관측값만 BE에 전달하는 경량 이동 갱신 계약."""
+
+    responder_position: DashboardResponderPosition
+    journey_state: Literal["DISPATCHED", "EN_ROUTE", "ARRIVED", "ON_SCENE"]
+    client_sequence: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def responder_position_must_match_model_contract(
+        self,
+    ) -> "DashboardMovementUpdateRequest":
+        OperationsContext.model_validate(
+            {
+                "responder_position": self.responder_position.model_dump(mode="python"),
+                "journey_state": self.journey_state,
+            }
+        )
+        return self
+
+
+class DashboardMovementUpdateResponse(DashboardModel):
+    schema_version: Literal[DASHBOARD_BFF_SCHEMA_VERSION] = DASHBOARD_BFF_SCHEMA_VERSION
+    request_id: str = Field(min_length=1, max_length=128)
+    incident_id: str = Field(min_length=1, max_length=128)
+    accepted_at: datetime
+    client_sequence: int = Field(ge=1)
+    map_context: DashboardAgentMapContext
+    next_refresh_seconds: int = Field(ge=3, le=60)
+    route_recalculated: bool
+
+    @field_validator("accepted_at")
+    @classmethod
+    def accepted_at_must_include_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("acceptedAt은 시간대가 포함되어야 합니다.")
+        return value
+
+
 class DashboardConfirmationResponse(DashboardModel):
     schema_version: Literal[DASHBOARD_BFF_SCHEMA_VERSION] = DASHBOARD_BFF_SCHEMA_VERSION
     request_id: str = Field(min_length=1, max_length=128)
@@ -1164,6 +1409,12 @@ def build_dashboard_bff_openapi() -> dict[str, Any]:
     ) -> DashboardConfirmationResponse:
         raise NotImplementedError(incidentId, payload)
 
+    async def update_movement(
+        incidentId: str,
+        payload: DashboardMovementUpdateRequest,
+    ) -> DashboardMovementUpdateResponse:
+        raise NotImplementedError(incidentId, payload)
+
     async def save_record(
         incidentId: str,
         payload: DashboardRecordSaveRequest,
@@ -1208,6 +1459,15 @@ def build_dashboard_bff_openapi() -> dict[str, Any]:
         summary="인증 사용자 기준 현장 물질 확인 레코드 생성",
     )
     application.add_api_route(
+        "/api/c2guard/v1/incidents/{incidentId}/movement",
+        update_movement,
+        methods=["POST"],
+        response_model=DashboardMovementUpdateResponse,
+        responses=common_errors,
+        tags=["dashboard-bff"],
+        summary="차량·단말 현재 위치 갱신과 서버 길찾기 상태 조회",
+    )
+    application.add_api_route(
         "/api/c2guard/v1/incidents/{incidentId}/record",
         save_record,
         methods=["POST"],
@@ -1246,6 +1506,15 @@ def build_dashboard_bff_openapi() -> dict[str, Any]:
         "권위 있는 모델 snapshot·confirmation·provenance를 BE 저장소에서 결합",
         "알 수 없거나 다른 사고의 ID는 409로 거부",
     ]
+    schema["paths"]["/api/c2guard/v1/incidents/{incidentId}/movement"]["post"][
+        "x-backend-required-checks"
+    ] = [
+        "GPS 관측 시각·좌표 범위·clientSequence 단조 증가 검증",
+        "길찾기 API Key는 BE Secret에서만 로드하고 브라우저에 반환하지 않음",
+        "재탐색은 provider rate limit과 이동 거리 임계값으로 제한",
+        "길찾기 실패 시 직선 경로·가짜 ETA 대신 ROUTE_UNAVAILABLE 반환",
+        "DEMO_SIMULATION 경로는 실제 경로와 명확히 구분",
+    ]
     schema["x-contract-version"] = DASHBOARD_BFF_SCHEMA_VERSION
     schema["x-implementation-status"] = "CONTRACT_ONLY_NOT_IMPLEMENTED_IN_LLM"
     schema["x-model-api-schema-version"] = API_SCHEMA_VERSION
@@ -1270,11 +1539,16 @@ __all__ = [
     "DashboardErrorResponse",
     "DashboardGroundedRag",
     "DashboardIncidentAnalyzeRequest",
+    "DashboardOperationsAgentSnapshot",
+    "DashboardOperationsContext",
     "DashboardInconclusiveAnalysisResponse",
     "DashboardMaterialDiscoveryRequest",
     "DashboardMaterialDiscoveryResponse",
+    "DashboardMovementUpdateRequest",
+    "DashboardMovementUpdateResponse",
     "DashboardRecordSaveRequest",
     "DashboardRecordSaveResponse",
     "build_dashboard_bff_openapi",
     "project_completed_model_result",
+    "project_operations_agent",
 ]

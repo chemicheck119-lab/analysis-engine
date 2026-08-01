@@ -5,6 +5,7 @@ import json
 import re
 import shutil
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -411,6 +412,37 @@ def test_health_and_readiness_with_injected_runtime(runtime: ModelRuntime) -> No
             "profile_count": 700,
             "minimum_profile_count": 700,
             "reason": None,
+        },
+        "facility_history_coverage": {
+            "ready": False,
+            "scope": "UNAVAILABLE",
+            "evidence_class": "REPORTED_HANDLING_HISTORY",
+            "current_inventory_confirmed": False,
+            "candidate_row_count": 0,
+            "distinct_facility_count": 0,
+            "distinct_cas_count": 0,
+            "covered_province_count": 0,
+            "covered_provinces": [],
+            "province_breakdown": [],
+            "unknown_location_facility_count": 0,
+            "warning": "시설 이력 후보는 현재 재고·수량·저장 위치의 확정 정보가 아닙니다.",
+            "reason": "facility_candidate 테이블을 확인하지 못했습니다.",
+        },
+        "data_scope_semantics": {
+            "substance_identity_search": "NATIONAL_CATALOG_NO_REGION_FILTER",
+            "facility_history": "NATIONWIDE_HISTORICAL_CANDIDATES_WHEN_READY",
+            "property_profile": "ULSAN_PUBLIC_PROPERTY_PROFILE_SUPPLEMENT",
+            "property_profile_is_nationwide": False,
+        },
+        "operations_agent_capability": {
+            "ready": True,
+            "schema_version": "chemicheck119-operations-agent-v1",
+            "coverage_scope": "NATIONWIDE_KOREA",
+            "map_contract": "PROVIDER_NEUTRAL_GEOJSON",
+            "recommended_renderer": "MAPLIBRE_GL_JS",
+            "route_provider_owner": "BACKEND_SERVER_SIDE",
+            "route_or_eta_inference_allowed": False,
+            "hazard_dispersion_model_available": False,
         },
         "conflict_review_capability": {
             "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
@@ -1133,6 +1165,69 @@ def test_unconfirmed_text_awaits_confirmation_does_not_run_rule_and_hides_source
     )
     assert "source_text" not in body["model_outputs"]["parser"]
     assert source_text not in json.dumps(body, ensure_ascii=False)
+
+
+def test_incident_analysis_returns_nationwide_operations_agent_and_route_contract(
+    runtime: ModelRuntime,
+    stub_pipeline_boundaries: list[dict[str, Any]],
+) -> None:
+    observed_at = datetime.now(timezone.utc).isoformat()
+    payload = _analyze_payload("화성 공장 저장탱크 누출 신고")
+    payload["location"] = {
+        "latitude": 37.2181,
+        "longitude": 126.9417,
+        "coordinate_source": "DISPATCH_SYSTEM",
+        "resolved_at": observed_at,
+    }
+    payload["operations_context"] = {
+        "dispatch_station_name": "화성소방서",
+        "journey_state": "EN_ROUTE",
+        "responder_position": {
+            "latitude": 37.2065,
+            "longitude": 126.8311,
+            "observed_at": observed_at,
+            "source": "MDT_DEVICE_GPS",
+            "accuracy_m": 12,
+        },
+        "route": {
+            "provider": "TEST_SERVER_ROUTE",
+            "mode": "LIVE_API",
+            "route_id": "ROUTE-TEST-001",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": [
+                    [126.8311, 37.2065],
+                    [126.9417, 37.2181],
+                ],
+            },
+            "distance_m": 10_000,
+            "duration_seconds": 1_200,
+            "remaining_distance_m": 4_000,
+            "remaining_duration_seconds": 480,
+            "generated_at": observed_at,
+            "traffic_applied": True,
+            "attribution": "테스트 서버 길찾기",
+        },
+    }
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        response = client.post("/api/v1/incidents/analyze", json=payload)
+
+    assert response.status_code == 200
+    agent = response.json()["agent"]
+    assert agent["phase"] == "EN_ROUTE_TRIAGE"
+    assert agent["map_context"]["coverage_scope"] == "NATIONWIDE_KOREA"
+    assert agent["map_context"]["route"]["status"] == "AVAILABLE"
+    assert agent["map_context"]["route"]["eta_seconds"] == 480
+    assert agent["map_context"]["route"]["progress_ratio"] == 0.6
+    assert agent["map_context"]["route"]["progress_ratio_is_probability"] is False
+    assert agent["map_context"]["hazard_overlay_status"] == (
+        "NOT_COMPUTED_NO_VALIDATED_DISPERSION_MODEL"
+    )
+    assert agent["autonomous_risk_decision_allowed"] is False
+    assert len(agent["workflow"]) == 10
+    assert len(agent["tool_executions"]) == 8
 
 
 def test_api_blocks_forged_risk_output_without_two_confirmations(

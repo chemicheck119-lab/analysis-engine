@@ -7,6 +7,14 @@
 
 ### Added
 
+- 전국 17개 시·도의 시설 과거 이력 범위를 artifact에서 자동 계산하고 API metadata와
+  `chemiguard119 coverage` CLI로 공개
+- 신고 분석 응답에 10단계 workflow, 8개 도구 상태, 다음 행동을 포함하는 결정론적
+  현장대응 에이전트 추가
+- 사고 위치·MDT/GPS 현재 위치·서버 길찾기 GeoJSON·ETA·이동 진행률 계약과 오래된 위치,
+  누락 경로, 발표용 시뮬레이션 구분 추가
+- 검증된 확산 모델 없이 위험 반경을 표시하지 않는 지도 fail-closed 상태 추가
+- BE용 이동 갱신 BFF OpenAPI, TypeScript 타입·클라이언트와 요청·응답 fixture 추가
 - 위험 주장마다 공식기관 URL·문서 위치·독립기관 수·미증명 조건을 반환하는
   `chemicheck119-reference-assurance-v1`
 - 차아염소산나트륨–염산 조합의 CAMEO·CDC·ILO/WHO·UKHSA 5개 자료, 4개 독립기관 교차증빙

@@ -28,6 +28,7 @@
     "routes": {
       "material_discovery": "POST /api/c2guard/v1/substances/discover",
       "incident_analysis": "POST /api/c2guard/v1/incidents/analyze",
+      "movement_update": "POST /api/c2guard/v1/incidents/{incidentId}/movement",
       "on_site_confirmation": "POST /api/c2guard/v1/incidents/{incidentId}/confirmations",
       "record_save": "POST /api/c2guard/v1/incidents/{incidentId}/record"
     },
@@ -40,6 +41,13 @@
       "pair_presentation_contract_version": "dashboard-public-pair-presentation-v1",
       "supported_public_pair_count": 15,
       "backend_must_not_generate_chemical_fields": true
+    },
+    "operations_agent_projection": {
+      "reference_function": "chemiguard119.dashboard_contract.project_operations_agent",
+      "source_field": "agent",
+      "dashboard_fixture": "examples/bff/operations_agent_en_route.json",
+      "backend_must_not_invent_route_or_eta": true,
+      "backward_compatible_optional_bff_field": true
     },
     "deprecated_frontend_shape": {
       "path": "POST /api/incident-check",
@@ -64,6 +72,9 @@
       "incident_analyze_request": "examples/bff/incident_analyze_request.json",
       "incident_awaiting_confirmation_response": "examples/bff/incident_awaiting_confirmation_response.json",
       "incident_screening_completed_response": "examples/bff/incident_screening_completed_response.json",
+      "operations_agent_en_route": "examples/bff/operations_agent_en_route.json",
+      "movement_update_request": "examples/bff/movement_update_request.json",
+      "movement_update_response": "examples/bff/movement_update_response.json",
       "confirmation_request": "examples/bff/confirmation_request.json",
       "confirmation_response": "examples/bff/confirmation_response.json",
       "record_save_request": "examples/bff/record_save_request.json",
@@ -114,6 +125,21 @@
     "candidate_score_semantics": "RANKING_NOT_PROBABILITY",
     "facility_history_semantics": "HISTORICAL_CANDIDATE_NOT_CURRENT_INVENTORY",
     "planned_actions_semantics": "UNVALIDATED_USER_INPUT_NOT_AI_RECOMMENDATION",
+    "map_and_movement": {
+      "coverage_scope": "NATIONWIDE_KOREA",
+      "recommended_renderer": "MAPLIBRE_GL_JS",
+      "geometry_format": "GEOJSON_RFC7946",
+      "route_provider_owner": "BE_Repository server-side",
+      "route_api_key_in_browser_allowed": false,
+      "route_or_eta_inference_allowed": false,
+      "missing_route_status": "ROUTE_UNAVAILABLE",
+      "route_endpoint_mismatch_status": "ROUTE_ENDPOINT_MISMATCH",
+      "route_endpoint_tolerance_m": 1500,
+      "stale_position_seconds": 300,
+      "demo_route_must_use_mode": "DEMO_SIMULATION",
+      "public_osm_standard_tiles_for_production": false,
+      "hazard_overlay_status": "NOT_COMPUTED_NO_VALIDATED_DISPERSION_MODEL"
+    },
     "material_search_capabilities": [
       "CAS_NUMBER",
       "STANDARD_NAME",
@@ -257,6 +283,7 @@
       "model_outputs",
       "evidence",
       "grounded_rag",
+      "agent",
       "conflict_review",
       "confirmation_gate",
       "required_next_steps",
@@ -285,7 +312,8 @@
       "근거 검색",
       "근거 제한형 RAG 요약",
       "충돌 규칙 검토",
-      "모델과 데이터 provenance"
+      "모델과 데이터 provenance",
+      "결정론적 현장대응 에이전트 상태와 다음 행동"
     ]
   },
   "merge_order": [

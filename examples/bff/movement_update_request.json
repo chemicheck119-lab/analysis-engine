@@ -1,0 +1,11 @@
+{
+  "responderPosition": {
+    "latitude": 37.2065,
+    "longitude": 126.8311,
+    "observedAt": "2026-07-31T14:22:00+09:00",
+    "source": "MDT_DEVICE_GPS",
+    "accuracyM": 12.0
+  },
+  "journeyState": "EN_ROUTE",
+  "clientSequence": 17
+}

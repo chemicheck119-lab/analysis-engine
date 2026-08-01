@@ -29,12 +29,13 @@ flowchart LR
 브라우저인 FE가 모델 API를 직접 호출하면 안 된다. 모델 API Key가 노출되고, 사용자 인증과
 현장 확인 기록을 우회할 수 있기 때문이다. FE는 BE/BFF만 호출하고, BE만 모델 API를 호출한다.
 
-사용 흐름은 네 동작으로 단순화한다.
+사용 흐름은 다섯 동작으로 단순화한다.
 
 1. **물질검색**: 이름·CAS 또는 두 가지 이상 성상 관찰로 복수 후보를 찾는다.
 2. **사고분석**: 신고문과 출동지령 정보를 보내 후보와 다음 확인 항목을 받는다.
-3. **현장 물질 확인**: 용기 라벨·현장 MSDS 등으로 사고물질과 시설물질 CAS를 각각 기록한다.
-4. **기록저장**: 대화·분석·확인 기록을 서버에 저장한 다음 화면을 초기화한다.
+3. **출동 위치 갱신**: MDT/GPS 현재 위치와 BE 길찾기 경로를 지도에 갱신한다.
+4. **현장 물질 확인**: 용기 라벨·현장 MSDS 등으로 사고물질과 시설물질 CAS를 각각 기록한다.
+5. **기록저장**: 대화·분석·확인 기록을 서버에 저장한 다음 화면을 초기화한다.
 
 화면에서 반드시 지킬 규칙은 다음과 같다.
 
@@ -72,7 +73,7 @@ flowchart LR
 `state`, `confirmationGate`, `conflictReview.executed`, `conflictReview.status`를 함께
 사용해야 한다.
 
-## 3. 권장 FE용 BFF 경로 4개
+## 3. 권장 FE용 BFF 경로 5개
 
 아래는 **FE가 호출할 BE/BFF v1 경로**다. 모델 API `/api/v1/*`와 구분하며,
 [`dashboard-bff-v1.openapi.json`](../contracts/dashboard-bff-v1.openapi.json)을 단일 원본으로
@@ -83,6 +84,7 @@ flowchart LR
 |---|---|---|---|
 | 사고분석 | `POST /api/c2guard/v1/incidents/analyze` | `POST /api/v1/incidents/analyze` | 최신 `state`·gate·근거·버전을 포함한 화면 DTO |
 | 물질검색 | `POST /api/c2guard/v1/substances/discover` | `POST /api/v1/substances/discover` | 후보·일치 성상·공식 출처와 확인 필요 상태 |
+| 이동 갱신 | `POST /api/c2guard/v1/incidents/{incidentId}/movement` | BE 서버 길찾기·사고 저장소 | 사고/현재 위치, GeoJSON 경로, ETA 또는 명시적 unavailable 상태 |
 | 현장 확인 | `POST /api/c2guard/v1/incidents/{incidentId}/confirmations` | BE 확인 레코드 저장 | `confirmationId`, `reanalyzeRequired=true`; 이어서 사고분석 API 재호출 |
 | 대응 기록 저장 | `POST /api/c2guard/v1/incidents/{incidentId}/record` | BE 영구 저장소 | `recordId`와 `resetAllowed=true`; 성공 전 FE 초기화 금지 |
 
@@ -132,9 +134,23 @@ FE는 신고 내용과 BE가 보유한 출동지령 정보를 함께 보낸다. 
   "occurredAt": "2026-07-31T20:30:00+09:00",
   "location": {
     "facilityName": "예시 사업장",
-    "address": "울산광역시 예시 주소",
-    "latitude": 35.512,
-    "longitude": 129.198
+    "address": "경기 화성시 팔탄면",
+    "province": "경기도",
+    "latitude": 37.2181,
+    "longitude": 126.9417,
+    "coordinateSource": "DISPATCH_SYSTEM",
+    "resolvedAt": "2026-07-31T20:30:00+09:00"
+  },
+  "operationsContext": {
+    "dispatchStationName": "화성소방서",
+    "journeyState": "EN_ROUTE",
+    "responderPosition": {
+      "latitude": 37.2065,
+      "longitude": 126.8311,
+      "observedAt": "2026-07-31T20:32:00+09:00",
+      "source": "MDT_DEVICE_GPS",
+      "accuracyM": 12
+    }
   }
 }
 ```
@@ -142,7 +158,22 @@ FE는 신고 내용과 BE가 보유한 출동지령 정보를 함께 보낸다. 
 BE는 이를 모델의 `incident_id`, `input`, `location` 구조로 변환한다. 확인 전 모델 응답은
 후보와 다음 확인 항목만 화면에 제공한다.
 
-### 3.3 현장 물질 확인
+### 3.3 출동 위치 갱신
+
+GPS가 바뀔 때 전체 AI 분석을 반복하지 않는다. FE는 서버가 응답한
+`nextRefreshSeconds`에 맞춰 최신 위치와 증가하는 `clientSequence`만 movement API에
+전달합니다. BE가 길찾기 Key를 보유하고 필요할 때만 경로를 재계산합니다.
+
+- 길찾기 성공: `AVAILABLE`과 실제 GeoJSON·ETA
+- 발표 fixture: `DEMO_SIMULATION`
+- 경로 없음: `ROUTE_UNAVAILABLE`, 직선 경로와 가짜 ETA 금지
+- GPS가 5분 이상 오래됨: `POSITION_STALE`, ETA 숨김
+- 다른 사고의 경로가 섞임: `ROUTE_ENDPOINT_MISMATCH`, 경로·ETA 숨김
+
+자세한 계약과 fixture는 [전국 현장대응 에이전트와 지도 연동](OPERATIONS_AGENT_AND_MAP.md)을
+참고합니다.
+
+### 3.4 현장 물질 확인
 
 권장 버튼명은 `확인`이 아니라 `현장 물질 확인`이다.
 
@@ -163,7 +194,7 @@ BE가 인증된 사용자, 확인 시각, 역할과 CAS를 저장하고 `confirm
 실행된다. 복사 가능한 구현 예시는
 [`confirmAndRefreshIncident`](../examples/integration/dashboard-bff-client.ts)에 있다.
 
-### 3.4 기록저장
+### 3.5 기록저장
 
 `기록저장`은 지휘관 승인이나 위험 판정 승인이 아니라 **감사 가능한 대응 기록 저장**이다.
 
@@ -191,6 +222,9 @@ BE가 인증된 사용자, 확인 시각, 역할과 CAS를 저장하고 `confirm
 | `facilityNameInput` | `location.facilityName` | `location.facility_name` | 파서 추정값이 아니라 출동지령 또는 사용자 선택 |
 | 지도·출동지령 | `location.address` | `location.address` | 고정 mock이 아닌 BE 사고 정보 |
 | 지도·출동지령 | `location.latitude/longitude` | `location.latitude/longitude` | 없으면 생략 가능 |
+| 좌표 출처·확인 시각 | `location.coordinateSource/resolvedAt` | `location.coordinate_source/resolved_at` | 고정 demo와 실제 디스패치 좌표 구분 |
+| MDT·차량 GPS | `operationsContext.responderPosition` | `operations_context.responder_position` | 관측 시각·출처·정확도 포함 |
+| BE 길찾기 결과 | `operationsContext.route` | `operations_context.route` | 서버 조회 값만 허용, Key 전달 금지 |
 | 대응 대화 중 검토 문구 | `plannedActions[]` | `planned_actions[].raw_text` | AI가 이미 승인한 대응책으로 표시 금지 |
 
 ### 4.2 분석 응답과 화면
@@ -210,6 +244,7 @@ BE가 인증된 사용자, 확인 시각, 역할과 CAS를 저장하고 `confirm
 | `rule_id`, `rule_version`, `scope`, `policy_mode` | `conflictReview.result`의 camelCase 필드 | 어떤 규칙·정책 결과인지 보존 |
 | `mapping_provenance`, `evidence_provenance` | `conflictReview.result`의 camelCase 필드 | CAS–CAMEO 연결과 공개 근거 검증 추적 |
 | `evidence[]` | `evidenceCards[]` | 제목·기관·발췌·원문 URL·문서 버전 표시 |
+| `agent` | `agent` | 실제 workflow·도구 상태·다음 행동·지도 위치/경로 표시 |
 | `required_next_steps[]` | `requiredNextSteps[]` | 현장 확인 및 후속 행동 안내 |
 | `provenance` | `provenance` | 모델·데이터·규칙·전문가 검토 여부 표시/저장 |
 | `safety_notice` | `safetyNotice` | 결과 카드 하단에 누락 없이 표시 |

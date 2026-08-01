@@ -41,6 +41,7 @@ FE가 직접 소비할 BE/BFF 계약은 별도로 고정했습니다.
 POST /api/c2guard/v1/substances/discover
 POST /api/c2guard/v1/incidents/analyze
 POST /api/c2guard/v1/incidents/{incidentId}/confirmations
+POST /api/c2guard/v1/incidents/{incidentId}/movement
 POST /api/c2guard/v1/incidents/{incidentId}/record
 ```
 
@@ -49,6 +50,9 @@ CORS를 열지 않습니다. 브라우저는 같은 origin의 BFF를 우선 사�
 배포 Secret에만 둡니다.
 
 ## 3. 실제 호출 순서
+
+전국 지도·현재 위치·길찾기와 에이전트 상태의 상세 계약은
+[전국 현장대응 에이전트와 지도 연동](OPERATIONS_AGENT_AND_MAP.md)을 먼저 확인합니다.
 
 ### 3.0 물질명을 모를 때
 
@@ -132,7 +136,22 @@ POST {CHEMICHECK119_MODEL_API_BASE_URL}/api/v1/substances/discover
   "location": {
     "address": "경기 화성시 팔탄면",
     "province": "경기도",
-    "facility_name": "예시 사업장"
+    "facility_name": "예시 사업장",
+    "latitude": 37.2181,
+    "longitude": 126.9417,
+    "coordinate_source": "DISPATCH_SYSTEM",
+    "resolved_at": "2026-07-28T17:30:00+09:00"
+  },
+  "operations_context": {
+    "dispatch_station_name": "화성소방서",
+    "journey_state": "EN_ROUTE",
+    "responder_position": {
+      "latitude": 37.2065,
+      "longitude": 126.8311,
+      "observed_at": "2026-07-28T17:32:00+09:00",
+      "source": "MDT_DEVICE_GPS",
+      "accuracy_m": 12
+    }
   },
   "planned_actions": [
     {
@@ -167,6 +186,7 @@ POST {CHEMICHECK119_MODEL_API_BASE_URL}/api/v1/substances/discover
 | `input_fingerprint` | 같은 입력인지 확인, 원문 대체용 아님 |
 | `provenance` | 모델·데이터·정책 버전 |
 | `confirmation_gate` | 충돌 검토 실행 조건 감사 |
+| `agent` | 대응 단계·다음 행동·사고/현재 위치·경로 provenance |
 | `created_at` | BE 저장 시각 |
 
 후보 점수는 확률 컬럼에 저장하지 않습니다. 시설 이력 후보도 현재 재고 테이블로 승격하지

@@ -16,6 +16,7 @@
 | 자동 CAS 힌트 안전성 | 부분 완료 | 합성·내부 회귀 12건 통과, 부분 문자열 위험 힌트 0건 |
 | 사고 분석 E2E | 부분 완료 | 8건 DRAFT 회귀 + 50건 이중 검수 후보·gate, 사람 독립 검수는 미실시 |
 | 업체 이력 후보 | 부분 완료 | ICIS·PRTR 과거 이력 후보 168,424건, 현재 재고 확정 기능 아님 |
+| 전국 데이터 범위 | 검증 | 17개 시·도, 28,647개 시설, 133개 CAS의 과거 이력 후보; 울산 성상 프로필은 별도 보조 범위 |
 | 공식 근거 검색 | 부분 완료 | 근거 5,858건, DRAFT section 12건의 핵심 Recall@5 1.0·가중 Recall@5 0.9688 |
 | 근거 제한형 RAG | 구현 | Rule·공식 근거만 문장별 인용, 기본 extractive·선택 LLM·실패 fallback |
 | 충돌 검토 | 파일럿 | 공개 검증 CAMEO CAS 6종, 15개 조합 회귀 검사·pair별 표시 계약 |
@@ -23,10 +24,12 @@
 | 유사 사고사례 검색 | 미완료 | 출처와 대응 라벨이 검증된 corpus 없음; 공식 근거 RAG와 별도 범위 |
 | 파인튜닝 | 보류 | 준비도 검사만 존재, 기준선 대비 필요성이 입증되지 않음 |
 | FastAPI | 구현 | 통합 분석과 보조 API, 인증·오류 계약·확인 게이트 구현 |
+| 현장대응 에이전트 | 구현 | 10단계 workflow·8개 도구 상태·다음 행동·전국 지도 컨텍스트 반환 |
+| 현재 위치·도로 경로 | 모델 계약 구현 | 사고/MDT 좌표·GeoJSON·ETA·simulation/stale/missing 상태; 실제 사업자 호출은 BE 필요 |
 | 대시보드 표시 계약 | 구현 | BFF OpenAPI·TypeScript 타입·fixture, 확인 전 위험 결과 금지, 15쌍별 정확한 값 고정 |
 | 운영 로그 | 구현 | 안전 JSON 로그, Uvicorn 원 URL access log와 traceback 비활성화 |
 | Docker | 부분 완료 | 일반·bundle Dockerfile과 CI 구성 존재, 로컬 Docker CLI 없음 |
-| 실제 배포 | 차단 | reviewed 평가·재배포 승인·검증된 공개 스테이징 URL 없음 |
+| 실제 배포 | development preview | main preview는 Cloud Run 서울 리전에 배포, 이 작업 브랜치는 미배포; reviewed staging·production은 차단 |
 | FE·BE 연동 자료 | 완료 | 모델·BFF OpenAPI, TypeScript 타입, 성공·실패 fixture와 체크리스트 |
 | FE·BE 실제 연동 | 미완료 | 현재 FE는 물질검색 mock·legacy DTO, BE는 BFF 구현 필요 |
 
@@ -38,12 +41,27 @@
 Python 3.11.15 환경에서 다음을 확인했습니다.
 
 ```text
-전체 테스트: 346 passed
+전체 테스트: 376 passed
 Ruff: 통과
 형식 검사: 통과
 compileall: 통과
 pip check: 통과
 ```
+
+전국 현장대응 에이전트 추가 검증:
+
+```text
+전국 시설 과거 이력: 17개 시·도 / 28,647개 시설 / 168,424개 후보 행 / 133개 CAS
+실제 artifact 통합 API smoke: HTTP 200 / EN_ROUTE_TRIAGE / ROUTE_UNAVAILABLE
+workflow: 10단계
+tool execution trace: 8개
+agent snapshot 조립 2,000회: 평균 0.0412ms / p95 0.0420ms
+```
+
+snapshot 수치는 DB 검색·네트워크·전체 API를 제외한 내부 micro-benchmark입니다. 실제 artifact
+통합 smoke는 1회 약 252ms 관찰값일 뿐 운영 SLO나 성능 보장이 아닙니다. 길찾기 결과가 없는
+smoke에서 `ROUTE_UNAVAILABLE`을 반환한 것은 가짜 직선 경로와 ETA를 만들지 않은 정상
+동작입니다.
 
 추가한 자동 CAS 힌트 안전 회귀 결과:
 

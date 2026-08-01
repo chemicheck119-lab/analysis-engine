@@ -6,6 +6,9 @@ import type {
   IncidentAnalyzeRequest,
   MaterialDiscoveryRequest,
   MaterialDiscoveryResponse,
+  MovementUpdateRequest,
+  MovementUpdateResponse,
+  OperationsAgentSnapshot,
   RecordSaveRequest,
   RecordSaveResponse,
 } from '../../contracts/dashboard-bff-v1.types';
@@ -103,6 +106,36 @@ export function canDisplayConflictRisk(
     response.conflictReview.executed === true &&
     response.conflictReview.riskDisplayAllowed === true &&
     response.riskDisplayAllowed === true
+  );
+}
+
+export function canRenderProviderRoute(
+  agent: OperationsAgentSnapshot | null | undefined,
+): agent is OperationsAgentSnapshot & {
+  mapContext: {
+    route: {
+      status: 'AVAILABLE' | 'DEMO_SIMULATION';
+      geometry: NonNullable<
+        OperationsAgentSnapshot['mapContext']['route']['geometry']
+      >;
+    };
+  };
+} {
+  return Boolean(
+    agent &&
+      (agent.mapContext.route.status === 'AVAILABLE' ||
+        agent.mapContext.route.status === 'DEMO_SIMULATION') &&
+      agent.mapContext.route.geometry,
+  );
+}
+
+export function updateIncidentMovement(
+  incidentId: string,
+  request: MovementUpdateRequest,
+): Promise<MovementUpdateResponse> {
+  return postJson(
+    `/incidents/${encodeURIComponent(incidentId)}/movement`,
+    request,
   );
 }
 

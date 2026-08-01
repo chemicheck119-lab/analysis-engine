@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,7 @@ from chemiguard119 import cli
     ("argv", "command"),
     [
         (["doctor"], "doctor"),
+        (["coverage"], "coverage"),
         (["audit"], "audit"),
         (["prepare"], "prepare"),
         (["train"], "train"),
@@ -68,6 +70,36 @@ def test_doctor_json_does_not_require_full_dataset(
     assert payload["final_csv_count"] == 0
     assert payload["required_csv_count"] == 8
     assert "현장 지휘관" in payload["safety_notice"]
+
+
+def test_coverage_command_reports_historical_scope(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    db_path = tmp_path / "coverage.sqlite"
+    with sqlite3.connect(db_path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE facility_candidate(
+                facility_name TEXT,
+                address TEXT,
+                province TEXT,
+                cas_number TEXT
+            )
+            """
+        )
+        connection.execute(
+            "INSERT INTO facility_candidate VALUES (?, ?, ?, ?)",
+            ("예시 사업장", "서울", "서울특별시", "7647-01-0"),
+        )
+
+    code = cli.main(["coverage", "--db", str(db_path), "--json"])
+
+    payload = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert payload["scope"] == "PARTIAL_KOREA_HISTORICAL_CANDIDATES"
+    assert payload["candidate_row_count"] == 1
+    assert payload["current_inventory_confirmed"] is False
 
 
 def test_deterministic_parse_command_can_run_with_stubbed_artifact(
