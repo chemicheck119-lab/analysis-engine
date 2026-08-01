@@ -17,15 +17,17 @@
 
 ## 2026-08-01 현재 배포 증빙
 
-전국 현장대응 에이전트와 공식근거 교차검증 고도화가 병합된 main commit으로 artifact와
-이미지를 다시 만들고 서울 Cloud Run 외부 smoke를 완료했습니다.
+전국 현장대응 에이전트, 공식근거 교차검증, 전국 공식 사고 외부 보류평가와 v3 Resolver가
+병합된 main commit으로 artifact와 이미지를 다시 만들고 서울 Cloud Run 외부 smoke를
+완료했습니다.
 
 | 항목 | 값 |
 |---|---|
-| main commit | `32736a680d445acea158da42efebd87651ce11b2` |
-| runtime manifest SHA-256 | `92d2baff9697bc3cbc7d8a774a04b37f257d6d47a76b8f5344e32d82373c6c53` |
-| image digest | `model-api-preview@sha256:e01d79c630d6f6381ce08bb3ff289c6e9e5c2116982cee8da7bb3983669a0fda` |
-| Cloud Run revision | `chemicheck119-model-api-staging-p32736a63903281` |
+| main commit | `af71ab34e1b91270d30c90b9b427b99e9a38b846` |
+| runtime manifest SHA-256 | `e24cd53328bf3b7fdf529b56b35c71a7df41e9812d8b499ac3a964936e2908f0` |
+| image digest | `model-api-preview@sha256:2fe50a397266beb7c26768651d4f9d536ef023b1f440916b63da8f10b41ecf23` |
+| Cloud Run revision | `chemicheck119-model-api-staging-paf71ab31509001` |
+| Resolver | `resolver-char-tfidf-v3-incident-adapted` |
 | 서울 service URL | `https://chemicheck119-model-api-staging-w6s6lwanpa-du.a.run.app` |
 
 확인 결과는 readiness `200`, runtime integrity `VERIFIED`, API Key 없는 분석 `401`, 정상
@@ -47,10 +49,23 @@ API는 교차확인 2쌍·등록 공식기관 5곳을 반환합니다. 금속 �
 0%로 배포하고, 후보 URL smoke 통과 후 새 리비전으로 100% 전환한 뒤 서비스 URL 재검사까지
 통과했습니다. 따라서 두 번째 배포부터의 Blue/Green 경로도 실행 결과로 검증됐습니다.
 
-- [main CI와 Docker build](https://github.com/chemicheck119/llm/actions/runs/30690209090)
-- [Cloud Build 이미지 생성](https://console.cloud.google.com/cloud-build/builds;region=asia-northeast3/91048cc6-8da6-407e-b4b1-90d7455cea51?project=181872008704)
+- [main CI와 Docker build](https://github.com/chemicheck119/llm/actions/runs/30702646799)
+- [Cloud Build 이미지 생성](https://console.cloud.google.com/cloud-build/builds;region=asia-northeast3/e1e4c094-9c83-4bb1-b443-79ed70d535a2?project=181872008704)
 - [공식근거 URL·문서 위치 검사](https://github.com/chemicheck119/llm/actions/runs/30686453645)
-- [후보 smoke·Blue/Green 배포](https://github.com/chemicheck119/llm/actions/runs/30690390328)
+- [후보 smoke·Blue/Green 배포](https://github.com/chemicheck119/llm/actions/runs/30703150900)
+
+### readiness가 차단한 잘못된 후보
+
+첫 배포 후보는 main 작업 디렉터리의 오래된 DB를 잘못 선택해 물성 프로필이 0건이었습니다.
+애플리케이션 프로세스는 시작됐지만 `/health/ready`가 503을 유지했고 Cloud Run startup
+probe가 0% 트래픽 상태에서 리비전을 차단했습니다. 기존 리비전은 계속 100% 트래픽을 받아
+중단이 없었습니다.
+
+재시도에서는 직전 검증 배포의 DB·Retriever, v3 Resolver, 현재 main 코드로 manifest를 다시
+생성했습니다. 배포 전에 로컬에서 integrity `VERIFIED`, 물성 프로필 749건, 전국 시설
+28,647곳을 확인했고 이후 후보·서비스 URL smoke가 모두 통과했습니다. 이는 readiness와
+Blue/Green gate가 문서상 설계뿐 아니라 잘못된 artifact 조합을 실제로 차단했다는 운영
+증빙입니다.
 
 ## 2026-08-01 초기 실제 데이터 기술 검수
 

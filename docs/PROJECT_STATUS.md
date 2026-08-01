@@ -32,7 +32,7 @@
 | 대시보드 표시 계약 | 구현 | BFF OpenAPI·TypeScript 타입·fixture, 확인 전 위험 결과 금지, 15쌍별 정확한 값 고정 |
 | 운영 로그 | 구현 | 안전 JSON 로그, Uvicorn 원 URL access log와 traceback 비활성화 |
 | Docker | 부분 완료 | 일반·bundle Dockerfile과 CI 구성 존재, 로컬 Docker CLI 없음 |
-| 실제 배포 | development preview | main `32736a6` agent preview를 서울 Cloud Run에 Blue/Green 배포하고 agent step 외부 smoke 통과; reviewed staging·production은 차단 |
+| 실제 배포 | development preview | main `af71ab3`·v3 Resolver를 서울 Cloud Run revision `paf71ab31509001`에 Blue/Green 배포·외부 smoke 통과; reviewed staging·production은 차단 |
 | FE·BE 연동 자료 | 완료 | 모델·BFF OpenAPI, TypeScript 타입, 성공·실패 fixture와 체크리스트 |
 | FE·BE 실제 연동 | 미완료 | 현재 FE는 물질검색 mock·legacy DTO, BE는 BFF 구현 필요 |
 
