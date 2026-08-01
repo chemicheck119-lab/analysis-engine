@@ -7,6 +7,8 @@
 
 ### Added
 
+- 운영 릴리스 gate를 약화하지 않는 공모전 FE·BE 통합용 `development` preview 이미지 경로
+- preview artifact hash 검사·Cloud Build digest 생성 스크립트와 백엔드 전달 계약
 - 검증된 bundle을 Artifact Registry digest로 고정하는 선택형 모델 릴리스 단계
 - 후보 리비전 0% smoke, Blue/Green 전환과 이전 리비전 자동 롤백을 수행하는 Cloud Run workflow
 - GitHub OIDC Workload Identity Federation·Secret Manager 기반 서울 스테이징 배포 문서

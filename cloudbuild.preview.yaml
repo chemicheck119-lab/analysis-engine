@@ -1,0 +1,21 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file
+      - Dockerfile.preview
+      - --build-arg
+      - RUNTIME_MANIFEST_SHA256=${_RUNTIME_MANIFEST_SHA256}
+      - --build-arg
+      - MODEL_GIT_COMMIT=${_MODEL_GIT_COMMIT}
+      - --tag
+      - ${_IMAGE}
+      - .
+
+images:
+  - ${_IMAGE}
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1200s

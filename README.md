@@ -419,6 +419,7 @@ python -m pip check
 - [최종 브리핑](docs/BRIEFING.md): 발표문, 최신 AI 주제, 수치와 상용 준비 판정
 - [배포](docs/DEPLOYMENT.md): artifact, Secret, Docker, CI/CD, 롤백
 - [Cloud Run 무중단 배포](docs/CLOUD_RUN_DEPLOYMENT.md): 서울 스테이징, OIDC, Blue/Green 전환
+- [공모전 통합 preview](docs/PREVIEW_DEPLOYMENT.md): 비운영 artifact 이미지와 백엔드 인증 연동
 - [운영](docs/OPERATIONS.md): 구조화 로그, 요청 추적, 장애 확인 절차
 - [현재 상태](docs/PROJECT_STATUS.md): 실제 완료 범위, 재현 결과, P0~P3 기술 부채
 - [안전 및 한계](docs/SAFETY_AND_LIMITATIONS.md): 반드시 지켜야 할 해석 경계

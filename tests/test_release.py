@@ -886,3 +886,22 @@ def test_cloud_run_script_smokes_before_traffic_and_rolls_back() -> None:
     assert "GCP_MODEL_API_KEY_SECRET_VERSION" in script
     assert "CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY" not in script
     assert "CHEMIGUARD119_RAG_MODE=extractive" in script
+
+
+def test_competition_preview_is_explicitly_non_production_and_keyless() -> None:
+    project_root = CONFIG_DIR.parent
+    dockerfile = (project_root / "Dockerfile.preview").read_text(encoding="utf-8")
+    cloudbuild = (project_root / "cloudbuild.preview.yaml").read_text(encoding="utf-8")
+    script_path = project_root / "scripts" / "deployment" / "build_cloud_run_preview.sh"
+    script = script_path.read_text(encoding="utf-8")
+
+    subprocess.run(["bash", "-n", str(script_path)], check=True)
+    assert "CHEMIGUARD119_ENVIRONMENT=development" in dockerfile
+    assert "CHEMIGUARD119_API_KEY" not in dockerfile
+    assert "RELEASE_ATTESTATION_HMAC_KEY" not in dockerfile
+    assert "Dockerfile.preview" in cloudbuild
+    assert "MODEL_GIT_COMMIT=${_MODEL_GIT_COMMIT}" in cloudbuild
+    assert "test -z" in script and "status --porcelain" in script
+    assert "runtime_manifest.json" in script
+    assert "gcloud builds submit" in script
+    assert "digest_reference" in script
