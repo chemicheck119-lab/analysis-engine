@@ -10,6 +10,11 @@ from pathlib import Path
 from typing import Any
 
 from chemiguard119.database import connect_readonly
+from chemiguard119.evidence_assurance import (
+    ReferenceAssuranceError,
+    build_reference_assurance,
+    validate_reference_assurance,
+)
 from chemiguard119.paths import CONFIG_DIR
 from chemiguard119.utils import normalize_cas, valid_cas_checksum
 
@@ -323,6 +328,7 @@ def _public_source_cameo_result(
     right_map: dict[str, str],
     planned_actions: list[str] | None,
     ignored_direct_rule: dict[str, str] | None,
+    config_dir: Path,
 ) -> dict[str, Any]:
     """공식 공개 출처로 대조한 CAS–CAMEO 연결의 파일럿 스크리닝."""
 
@@ -366,6 +372,20 @@ def _public_source_cameo_result(
             },
         }
     )
+    try:
+        result["reference_assurance"] = build_reference_assurance(result, config_dir)
+    except ReferenceAssuranceError as error:
+        return {
+            "status": "VERIFY_REQUIRED",
+            "severity": None,
+            "reason": "공식근거 교차증빙 정책을 검증할 수 없습니다.",
+            "configuration_error": type(error).__name__,
+            "policy_mode": PUBLIC_SOURCE_PILOT_POLICY,
+            "expert_reviewed": False,
+            "mapping_provenance": mapping_provenance,
+            "evidence_provenance": result["evidence_provenance"],
+            "human_confirmation_required": True,
+        }
     if ignored_direct_rule is not None:
         result["ignored_direct_rule_ids"] = [ignored_direct_rule.get("rule_id", "")]
 
@@ -566,6 +586,7 @@ def review_pair(
                 right_map=right_map,
                 planned_actions=planned_actions,
                 ignored_direct_rule=direct,
+                config_dir=config_dir,
             )
         return {
             "status": "UNCLASSIFIED",
@@ -733,6 +754,13 @@ def validate_review_output(payload: dict[str, Any]) -> list[str]:
                 or evidence_provenance.get("source_product") != PUBLIC_SOURCE_PRODUCT
             ):
                 errors.append("공개근거 screening evidence provenance 오류")
+            errors.extend(
+                validate_reference_assurance(
+                    payload.get("reference_assurance"),
+                    str(payload.get("incident_cas") or ""),
+                    str(payload.get("facility_cas") or ""),
+                )
+            )
     if payload.get("severity") == "SAFE":
         errors.append("SAFE 상태 사용 금지")
     return errors

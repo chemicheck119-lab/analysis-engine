@@ -98,5 +98,137 @@
     "compatibility_evidence_urls": [
       "https://cameochemicals.noaa.gov/reactivity"
     ]
+  },
+  "reference_assurance": {
+    "schema_version": "chemicheck119-reference-assurance-v1",
+    "policy_id": "OFFICIAL_REFERENCE_TRIANGULATION_V1",
+    "status": "REFERENCE_TRIANGULATED",
+    "claim_id": "HYPOCHLORITE_ACID_CHLORINE_RELEASE_V1",
+    "claim_type": "TOXIC_GAS_GENERATION",
+    "cas_pair": [
+      "7647-01-0",
+      "7681-52-9"
+    ],
+    "claim_text_ko": "차아염소산나트륨이 염산과 같은 산성 물질과 실제 접촉하면 독성 염소가스가 발생할 수 있습니다.",
+    "expected_gas_products": [
+      "Cl2"
+    ],
+    "scope_conditions": [
+      "차아염소산나트륨 수용액과 산성 물질의 실제 접촉",
+      "농도·온도·혼합량에 따라 발생량과 피해 정도가 달라짐"
+    ],
+    "not_proven_by_claim": [
+      "현장에 두 물질이 실제 존재하는지",
+      "두 물질이 실제 혼합됐는지",
+      "발생한 염소가스의 농도와 확산범위",
+      "특정 보호구가 현장 조건에 적합한지"
+    ],
+    "reference_count": 5,
+    "independent_authority_count": 4,
+    "sources": [
+      {
+        "source_id": "CAMEO_4503_REACTIVITY_PROFILE",
+        "authority_id": "NOAA_EPA_CAMEO",
+        "source_role": "PRIMARY_REACTIVITY_DATASHEET",
+        "title": "SODIUM HYPOCHLORITE — CAMEO Chemicals",
+        "source_url": "https://cameochemicals.noaa.gov/chemical/4503",
+        "locator": "Hazards > Reactivity Profile",
+        "published_or_updated": "CAMEO Chemicals 3.1.0 rev 1",
+        "relation": "SUPPORTS",
+        "organization": "NOAA Office of Response and Restoration / U.S. EPA",
+        "independence_group": "US_NOAA_EPA_CAMEO",
+        "authority_kind": "GOVERNMENT_EMERGENCY_RESPONSE"
+      },
+      {
+        "source_id": "CDC_MMWR_BLEACH_ACID_INCIDENTS",
+        "authority_id": "US_CDC",
+        "source_role": "INCIDENT_OR_PUBLIC_HEALTH_CORROBORATION",
+        "title": "Chlorine Gas Toxicity from Mixture of Bleach with Other Cleaning Products",
+        "source_url": "https://www.cdc.gov/mmwr/preview/mmwrhtml/00015111.htm",
+        "locator": "Editorial Note",
+        "published_or_updated": "MMWR incident report",
+        "relation": "SUPPORTS_WITH_INCIDENT_AND_MECHANISM",
+        "organization": "U.S. Centers for Disease Control and Prevention",
+        "independence_group": "US_CDC",
+        "authority_kind": "GOVERNMENT_PUBLIC_HEALTH"
+      },
+      {
+        "source_id": "CDC_HYPOCHLORITE_DISINFECTANT_GUIDANCE",
+        "authority_id": "US_CDC",
+        "source_role": "INCIDENT_OR_PUBLIC_HEALTH_CORROBORATION",
+        "title": "Chemical Disinfectants — Chlorine and Chlorine Compounds",
+        "source_url": "https://www.cdc.gov/infection-control/hcp/disinfection-sterilization/chemical-disinfectants.html",
+        "locator": "Chlorine and Chlorine Compounds",
+        "published_or_updated": "CDC web guidance",
+        "relation": "SUPPORTS",
+        "organization": "U.S. Centers for Disease Control and Prevention",
+        "independence_group": "US_CDC",
+        "authority_kind": "GOVERNMENT_PUBLIC_HEALTH"
+      },
+      {
+        "source_id": "ICSC_1119_SODIUM_HYPOCHLORITE",
+        "authority_id": "ILO_WHO_ICSC",
+        "source_role": "INTERNATIONAL_CHEMICAL_SAFETY_CARD",
+        "title": "ICSC 1119 — Sodium Hypochlorite Solution, Active Chlorine >10%",
+        "source_url": "https://inchem.org/documents/icsc/icsc/eics1119.htm",
+        "locator": "Chemical dangers",
+        "published_or_updated": "April 2017",
+        "relation": "SUPPORTS",
+        "organization": "International Labour Organization / World Health Organization",
+        "independence_group": "ILO_WHO_IPCS",
+        "authority_kind": "INTERGOVERNMENTAL_CHEMICAL_SAFETY"
+      },
+      {
+        "source_id": "UKHSA_SODIUM_HYPOCHLORITE_GENERAL",
+        "authority_id": "UKHSA",
+        "source_role": "INCIDENT_OR_PUBLIC_HEALTH_CORROBORATION",
+        "title": "Sodium hypochlorite: general information",
+        "source_url": "https://www.gov.uk/government/publications/sodium-hypochlorite-properties-incident-management-and-toxicology/sodium-hypochlorite-general-information",
+        "locator": "How exposure to sodium hypochlorite can affect your health",
+        "published_or_updated": "2025-04-24",
+        "relation": "SUPPORTS",
+        "organization": "UK Health Security Agency",
+        "independence_group": "UKHSA",
+        "authority_kind": "GOVERNMENT_PUBLIC_HEALTH"
+      }
+    ],
+    "claim_checks": [
+      {
+        "claim": "SUBSTANCE_IDENTITY_AND_FORM",
+        "status": "PASSED",
+        "basis": "CAMEO 공식 물질 페이지의 CAS와 형태를 정확 대조"
+      },
+      {
+        "claim": "PAIR_REACTIVITY_SCREENING",
+        "status": "PASSED",
+        "basis": "서로 독립된 공식기관 자료가 동일 위험 메커니즘을 지지"
+      },
+      {
+        "claim": "CURRENT_SITE_INVENTORY",
+        "status": "NOT_PROVEN",
+        "basis": "공개 이력과 문헌은 현재 재고를 증명하지 않음"
+      },
+      {
+        "claim": "ACTUAL_MIXING_AND_FIELD_CONDITIONS",
+        "status": "NOT_PROVEN",
+        "basis": "농도·온도·누출량·실제 혼합은 현장 확인 대상"
+      },
+      {
+        "claim": "HUMAN_CHEMICAL_EXPERT_REVIEW",
+        "status": "NOT_PERFORMED",
+        "basis": "공식자료 자동 감사는 사람 전문가 서명 또는 승인이 아님"
+      }
+    ],
+    "registry_sha256": "0373f57cb35194d16db8a1c54cf4ba89d718ea56ea48e3883f24d2afb79f994b",
+    "reviewed_at_utc": "2026-08-01T00:00:00+00:00",
+    "machine_checked": true,
+    "expert_reviewed": false,
+    "human_expert_substitute": false,
+    "decision_support_only": true,
+    "limitations": [
+      "공식기관 교차증빙은 사람 화학 전문가의 현장 승인 또는 법적 인증이 아닙니다.",
+      "자료는 위험 메커니즘을 지지하지만 현장 발생확률이나 피해확률을 제공하지 않습니다.",
+      "현장 재고·농도·온도·누출량·실제 혼합·보호구 적합성은 별도 확인이 필요합니다."
+    ]
   }
 }

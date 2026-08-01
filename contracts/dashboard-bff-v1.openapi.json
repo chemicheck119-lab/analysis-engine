@@ -357,6 +357,9 @@
             "title": "Policymode",
             "type": "string"
           },
+          "referenceAssurance": {
+            "$ref": "#/components/schemas/DashboardReferenceAssurance"
+          },
           "requiredChecks": {
             "items": {
               "type": "string"
@@ -436,7 +439,8 @@
           "expertReviewed",
           "humanConfirmationRequired",
           "mappingProvenance",
-          "evidenceProvenance"
+          "evidenceProvenance",
+          "referenceAssurance"
         ],
         "title": "DashboardCompletedConflictResult",
         "type": "object"
@@ -2228,6 +2232,331 @@
           "savedAt"
         ],
         "title": "DashboardRecordSaveResponse",
+        "type": "object"
+      },
+      "DashboardReferenceAssurance": {
+        "additionalProperties": false,
+        "properties": {
+          "casPair": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Caspair",
+            "type": "array"
+          },
+          "claimChecks": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardReferenceClaimCheck"
+            },
+            "minItems": 1,
+            "title": "Claimchecks",
+            "type": "array"
+          },
+          "claimId": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimid"
+          },
+          "claimTextKo": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimtextko"
+          },
+          "claimType": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimtype"
+          },
+          "decisionSupportOnly": {
+            "const": true,
+            "title": "Decisionsupportonly",
+            "type": "boolean"
+          },
+          "expectedGasProducts": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectedgasproducts"
+          },
+          "expertReviewed": {
+            "const": false,
+            "title": "Expertreviewed",
+            "type": "boolean"
+          },
+          "humanExpertSubstitute": {
+            "const": false,
+            "title": "Humanexpertsubstitute",
+            "type": "boolean"
+          },
+          "independentAuthorityCount": {
+            "minimum": 1.0,
+            "title": "Independentauthoritycount",
+            "type": "integer"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Limitations",
+            "type": "array"
+          },
+          "machineChecked": {
+            "const": true,
+            "title": "Machinechecked",
+            "type": "boolean"
+          },
+          "notProvenByClaim": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notprovenbyclaim"
+          },
+          "policyId": {
+            "const": "OFFICIAL_REFERENCE_TRIANGULATION_V1",
+            "title": "Policyid",
+            "type": "string"
+          },
+          "referenceCount": {
+            "minimum": 1.0,
+            "title": "Referencecount",
+            "type": "integer"
+          },
+          "registrySha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Registrysha256",
+            "type": "string"
+          },
+          "reviewedAtUtc": {
+            "format": "date-time",
+            "title": "Reviewedatutc",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "const": "chemicheck119-reference-assurance-v1",
+            "title": "Schemaversion",
+            "type": "string"
+          },
+          "scopeConditions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scopeconditions"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardReferenceSource"
+            },
+            "minItems": 1,
+            "title": "Sources",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "REFERENCE_TRIANGULATED",
+              "PRIMARY_AUTHORITY_ONLY"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "policyId",
+          "status",
+          "casPair",
+          "referenceCount",
+          "independentAuthorityCount",
+          "sources",
+          "claimChecks",
+          "registrySha256",
+          "reviewedAtUtc",
+          "machineChecked",
+          "expertReviewed",
+          "humanExpertSubstitute",
+          "decisionSupportOnly",
+          "limitations"
+        ],
+        "title": "DashboardReferenceAssurance",
+        "type": "object"
+      },
+      "DashboardReferenceClaimCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Basis",
+            "type": "string"
+          },
+          "claim": {
+            "enum": [
+              "SUBSTANCE_IDENTITY_AND_FORM",
+              "PAIR_REACTIVITY_SCREENING",
+              "CURRENT_SITE_INVENTORY",
+              "ACTUAL_MIXING_AND_FIELD_CONDITIONS",
+              "HUMAN_CHEMICAL_EXPERT_REVIEW"
+            ],
+            "title": "Claim",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PASSED",
+              "LIMITED",
+              "NOT_PROVEN",
+              "NOT_PERFORMED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "claim",
+          "status",
+          "basis"
+        ],
+        "title": "DashboardReferenceClaimCheck",
+        "type": "object"
+      },
+      "DashboardReferenceSource": {
+        "additionalProperties": false,
+        "properties": {
+          "authorityId": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Authorityid",
+            "type": "string"
+          },
+          "authorityKind": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Authoritykind",
+            "type": "string"
+          },
+          "independenceGroup": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Independencegroup",
+            "type": "string"
+          },
+          "locator": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Locator",
+            "type": "string"
+          },
+          "organization": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Organization",
+            "type": "string"
+          },
+          "publishedOrUpdated": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Publishedorupdated",
+            "type": "string"
+          },
+          "relation": {
+            "enum": [
+              "SUPPORTS",
+              "SUPPORTS_WITH_INCIDENT_AND_MECHANISM",
+              "SUPPORTS_SCREENING_ONLY"
+            ],
+            "title": "Relation",
+            "type": "string"
+          },
+          "sourceId": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Sourceid",
+            "type": "string"
+          },
+          "sourceRole": {
+            "enum": [
+              "PRIMARY_REACTIVITY_DATASHEET",
+              "INCIDENT_OR_PUBLIC_HEALTH_CORROBORATION",
+              "INTERNATIONAL_CHEMICAL_SAFETY_CARD"
+            ],
+            "title": "Sourcerole",
+            "type": "string"
+          },
+          "sourceUrl": {
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "title": "Sourceurl",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sourceId",
+          "authorityId",
+          "organization",
+          "independenceGroup",
+          "authorityKind",
+          "sourceRole",
+          "title",
+          "sourceUrl",
+          "locator",
+          "publishedOrUpdated",
+          "relation"
+        ],
+        "title": "DashboardReferenceSource",
         "type": "object"
       },
       "DashboardResolverCandidate": {

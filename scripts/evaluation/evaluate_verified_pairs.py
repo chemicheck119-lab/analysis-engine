@@ -34,6 +34,7 @@ def main() -> None:
     )
     print(f"상태 분포: {report['status_counts']}")
     print(f"서수 등급 분포: {report['risk_level_counts']}")
+    print(f"공식근거 보증 분포: {report['reference_assurance_status_counts']}")
     print(f"결과: {args.output}")
 
 

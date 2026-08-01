@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from chemiguard119.paths import CONFIG_DIR
 from chemiguard119.rules import (
     ALLOWED_SEVERITIES,
     PUBLIC_SOURCE_PILOT_POLICY,
@@ -519,6 +520,10 @@ def _public_source_fixture(
         ),
         encoding="utf-8",
     )
+    (config_dir / "reference_assurance_registry.json").write_text(
+        (CONFIG_DIR / "reference_assurance_registry.json").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
 
     db_path = tmp_path / "public-rules.sqlite"
     with sqlite3.connect(db_path) as connection:
@@ -611,6 +616,13 @@ def test_public_source_pilot_returns_labeled_non_probability_screening(
         ],
         "compatibility_evidence_urls": ["https://cameochemicals.noaa.gov/reactivity"],
     }
+    assurance = result["reference_assurance"]
+    assert assurance["status"] == "REFERENCE_TRIANGULATED"
+    assert assurance["reference_count"] == 5
+    assert assurance["independent_authority_count"] == 4
+    assert assurance["expert_reviewed"] is False
+    assert assurance["human_expert_substitute"] is False
+    assert assurance["expected_gas_products"] == ["Cl2"]
     assert validate_review_output(result) == []
 
 
@@ -673,6 +685,29 @@ def test_public_source_completed_output_requires_provenance_and_false_expert_fla
 
     assert "공개근거 screening expert_reviewed는 false여야 합니다." in errors
     assert "공개근거 screening evidence_provenance 누락" in errors
+
+
+def test_public_source_reference_registry_failure_blocks_risk_output(
+    tmp_path: Path,
+) -> None:
+    db_path, config_dir = _public_source_fixture(tmp_path)
+    (config_dir / "reference_assurance_registry.json").write_text(
+        '{"schema_version":"forged","expert_reviewed":true}',
+        encoding="utf-8",
+    )
+
+    result = review_pair(
+        "7681-52-9",
+        "7647-01-0",
+        db_path,
+        config_dir=config_dir,
+        policy_mode=PUBLIC_SOURCE_PILOT_POLICY,
+    )
+
+    assert result["status"] == "VERIFY_REQUIRED"
+    assert result["severity"] is None
+    assert result["configuration_error"] == "ReferenceAssuranceError"
+    assert result["expert_reviewed"] is False
 
 
 def test_unknown_policy_mode_is_rejected_before_rule_execution(tmp_path: Path) -> None:

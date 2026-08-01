@@ -38,6 +38,7 @@ KOSHA·CAMEO 근거 검색
 - **Discovery**: 두 가지 이상 성상 관찰에서 공개자료 기반 후보와 출처를 찾습니다.
 - **Retriever**: KOSHA·CAMEO 문서에서 관련 근거를 검색합니다.
 - **Rule Engine**: 현장에서 확인된 두 CAS를 CAMEO 반응성 데이터와 대조합니다.
+- **Reference Assurance**: 위험 주장마다 독립 공식기관 근거 수와 미증명 조건을 검사합니다.
 - **Grounded RAG**: Rule 결과와 검색 근거만 짧게 요약하고 문장마다 출처를 붙입니다.
 - **FastAPI**: 사고 분석은 통합 API 하나로, 관찰 기반 물질탐색은 별도 API로 제공합니다.
 - **LM Studio**: 로컬 RAG 생성 실험에 선택적으로 사용할 수 있으며 운영 필수 요소는 아닙니다.
@@ -58,6 +59,7 @@ KOSHA·CAMEO 근거 검색
 | 유사 사고 사례 검색 | 미구현 | 검증된 사고–대응 사례 corpus와 출처·라벨 부족; 현재 RAG는 공식 MSDS·CAMEO만 사용 |
 | 시설 물질 후보 | 구현 | ICIS·PRTR 공개 **과거 취급 이력** 검색 |
 | 물질 충돌 검토 | 공개 근거 파일럿 | 공개 검증 crosswalk CAS 6개·물질쌍 15개, pair별 표시 계약, `expert_reviewed=false` |
+| 공식근거 교차검증 | 구현 | 대표 1쌍은 5개 자료·4개 독립기관, 나머지 14쌍은 CAMEO 단일체계로 구분 |
 | 생성형 파인튜닝 | 준비도 점검만 | 데이터 gate만 구현, 실제 학습·운영 적용 안 함 |
 | FastAPI·CLI | 구현 | API Key, health check, 구조화된 오류 응답 |
 | 대시보드 BFF 계약 | 계약·fixture 구현 | FE용 OpenAPI·TypeScript 타입·성공/실패 예제 제공, 실제 BE 구현은 미완료 |
@@ -81,6 +83,7 @@ KOSHA·CAMEO 근거 검색
 | CAMEO | NOAA가 제공하는 화학물질 반응성·대응 정보 체계 |
 | Artifact | 학습·전처리로 생성된 SQLite DB와 모델 파일 |
 | 현장 확인 게이트 | 사고물질과 시설물질을 각각 확인하기 전 충돌 결과를 내지 않는 규칙 |
+| Reference Assurance | 같은 위험 주장을 지지하는 공식기관 수와 아직 증명되지 않은 조건을 기록하는 계층 |
 
 ## 4. 5분 빠른 시작: artifact가 없을 때
 
@@ -416,6 +419,7 @@ python -m pip check
 - [모델 평가](docs/EVALUATION.md): 지표 정의, 기준선, 실패 원인 분리
 - [평가 V2](docs/EVALUATION_V2.md): 21·10·6의 출처, 상용 타당성, 공모전 AI 고도화 기준
 - [E2E 독립 검수](docs/E2E_REVIEW_GUIDE.md): 정답 없는 50건 후보를 이중 검수 locked set으로 만드는 절차
+- [공식근거 교차검증](docs/EVIDENCE_ASSURANCE.md): 주장별 공식 출처, 독립기관 수, fail-closed 정책
 - [최종 브리핑](docs/BRIEFING.md): 발표문, 최신 AI 주제, 수치와 상용 준비 판정
 - [배포](docs/DEPLOYMENT.md): artifact, Secret, Docker, CI/CD, 롤백
 - [Cloud Run 무중단 배포](docs/CLOUD_RUN_DEPLOYMENT.md): 서울 스테이징, OIDC, Blue/Green 전환
@@ -446,6 +450,9 @@ OpenAI-compatible 계약의 서버 LLM 또는 외부 API로 바꿀 수 있습니
 아니요. `PUBLIC_SOURCE_PILOT_V1`에서 공개 출처로 검증된 스크리닝을 실행할 수 있습니다.
 다만 응답은 항상 `expert_reviewed=false`이며 결과를 전문가 승인 또는 현장 명령으로 표현하면
 안 됩니다.
+
+대표 차아염소산나트륨–염산 조합은 여러 공식기관 근거가 같은 위험 메커니즘을 지지하는지
+자동 점검합니다. 이 값은 `REFERENCE_TRIANGULATED`이지 “전문가 승인”이 아닙니다.
 
 ### 업체별 보유 물질을 정확히 알 수 있나요?
 

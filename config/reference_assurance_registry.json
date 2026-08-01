@@ -1,0 +1,114 @@
+{
+  "schema_version": "chemicheck119-reference-assurance-registry-v1",
+  "policy_id": "OFFICIAL_REFERENCE_TRIANGULATION_V1",
+  "reviewed_at_utc": "2026-08-01T00:00:00+00:00",
+  "review_method": "CLAIM_LEVEL_OFFICIAL_SOURCE_TRIANGULATION",
+  "expert_reviewed": false,
+  "human_expert_substitute": false,
+  "minimum_independent_authorities": 3,
+  "required_source_roles": [
+    "PRIMARY_REACTIVITY_DATASHEET",
+    "INCIDENT_OR_PUBLIC_HEALTH_CORROBORATION"
+  ],
+  "authorities": [
+    {
+      "authority_id": "NOAA_EPA_CAMEO",
+      "organization": "NOAA Office of Response and Restoration / U.S. EPA",
+      "independence_group": "US_NOAA_EPA_CAMEO",
+      "authority_kind": "GOVERNMENT_EMERGENCY_RESPONSE",
+      "allowed_hosts": ["cameochemicals.noaa.gov"]
+    },
+    {
+      "authority_id": "US_CDC",
+      "organization": "U.S. Centers for Disease Control and Prevention",
+      "independence_group": "US_CDC",
+      "authority_kind": "GOVERNMENT_PUBLIC_HEALTH",
+      "allowed_hosts": ["cdc.gov", "www.cdc.gov"]
+    },
+    {
+      "authority_id": "ILO_WHO_ICSC",
+      "organization": "International Labour Organization / World Health Organization",
+      "independence_group": "ILO_WHO_IPCS",
+      "authority_kind": "INTERGOVERNMENTAL_CHEMICAL_SAFETY",
+      "allowed_hosts": ["inchem.org", "www.inchem.org"]
+    },
+    {
+      "authority_id": "UKHSA",
+      "organization": "UK Health Security Agency",
+      "independence_group": "UKHSA",
+      "authority_kind": "GOVERNMENT_PUBLIC_HEALTH",
+      "allowed_hosts": ["gov.uk", "www.gov.uk"]
+    }
+  ],
+  "pair_claims": [
+    {
+      "claim_id": "HYPOCHLORITE_ACID_CHLORINE_RELEASE_V1",
+      "cas_pair": ["7647-01-0", "7681-52-9"],
+      "claim_type": "TOXIC_GAS_GENERATION",
+      "claim_text_ko": "차아염소산나트륨이 염산과 같은 산성 물질과 실제 접촉하면 독성 염소가스가 발생할 수 있습니다.",
+      "expected_gas_products": ["Cl2"],
+      "scope_conditions": [
+        "차아염소산나트륨 수용액과 산성 물질의 실제 접촉",
+        "농도·온도·혼합량에 따라 발생량과 피해 정도가 달라짐"
+      ],
+      "not_proven_by_claim": [
+        "현장에 두 물질이 실제 존재하는지",
+        "두 물질이 실제 혼합됐는지",
+        "발생한 염소가스의 농도와 확산범위",
+        "특정 보호구가 현장 조건에 적합한지"
+      ],
+      "sources": [
+        {
+          "source_id": "CAMEO_4503_REACTIVITY_PROFILE",
+          "authority_id": "NOAA_EPA_CAMEO",
+          "source_role": "PRIMARY_REACTIVITY_DATASHEET",
+          "title": "SODIUM HYPOCHLORITE — CAMEO Chemicals",
+          "source_url": "https://cameochemicals.noaa.gov/chemical/4503",
+          "locator": "Hazards > Reactivity Profile",
+          "published_or_updated": "CAMEO Chemicals 3.1.0 rev 1",
+          "relation": "SUPPORTS"
+        },
+        {
+          "source_id": "CDC_MMWR_BLEACH_ACID_INCIDENTS",
+          "authority_id": "US_CDC",
+          "source_role": "INCIDENT_OR_PUBLIC_HEALTH_CORROBORATION",
+          "title": "Chlorine Gas Toxicity from Mixture of Bleach with Other Cleaning Products",
+          "source_url": "https://www.cdc.gov/mmwr/preview/mmwrhtml/00015111.htm",
+          "locator": "Editorial Note",
+          "published_or_updated": "MMWR incident report",
+          "relation": "SUPPORTS_WITH_INCIDENT_AND_MECHANISM"
+        },
+        {
+          "source_id": "CDC_HYPOCHLORITE_DISINFECTANT_GUIDANCE",
+          "authority_id": "US_CDC",
+          "source_role": "INCIDENT_OR_PUBLIC_HEALTH_CORROBORATION",
+          "title": "Chemical Disinfectants — Chlorine and Chlorine Compounds",
+          "source_url": "https://www.cdc.gov/infection-control/hcp/disinfection-sterilization/chemical-disinfectants.html",
+          "locator": "Chlorine and Chlorine Compounds",
+          "published_or_updated": "CDC web guidance",
+          "relation": "SUPPORTS"
+        },
+        {
+          "source_id": "ICSC_1119_SODIUM_HYPOCHLORITE",
+          "authority_id": "ILO_WHO_ICSC",
+          "source_role": "INTERNATIONAL_CHEMICAL_SAFETY_CARD",
+          "title": "ICSC 1119 — Sodium Hypochlorite Solution, Active Chlorine >10%",
+          "source_url": "https://inchem.org/documents/icsc/icsc/eics1119.htm",
+          "locator": "Chemical dangers",
+          "published_or_updated": "April 2017",
+          "relation": "SUPPORTS"
+        },
+        {
+          "source_id": "UKHSA_SODIUM_HYPOCHLORITE_GENERAL",
+          "authority_id": "UKHSA",
+          "source_role": "INCIDENT_OR_PUBLIC_HEALTH_CORROBORATION",
+          "title": "Sodium hypochlorite: general information",
+          "source_url": "https://www.gov.uk/government/publications/sodium-hypochlorite-properties-incident-management-and-toxicology/sodium-hypochlorite-general-information",
+          "locator": "How exposure to sodium hypochlorite can affect your health",
+          "published_or_updated": "2025-04-24",
+          "relation": "SUPPORTS"
+        }
+      ]
+    }
+  ]
+}

@@ -56,6 +56,9 @@ def test_evaluation_runs_every_unique_verified_pair(
             "cameo_group_screening": [{"pair_id": "1__2"}],
             "evidence_urls": ["https://cameochemicals.noaa.gov/reactivity"],
             "expert_reviewed": False,
+            "reference_assurance": {
+                "status": "PRIMARY_AUTHORITY_ONLY",
+            },
         }
 
     monkeypatch.setattr(pair_evaluation, "review_pair", fake_review)
@@ -71,6 +74,7 @@ def test_evaluation_runs_every_unique_verified_pair(
     assert report["expected_unique_pair_count"] == 3
     assert report["evaluated_pair_count"] == 3
     assert report["status_counts"] == {"SCREENING_COMPLETED": 3}
+    assert report["reference_assurance_status_counts"] == {"PRIMARY_AUTHORITY_ONLY": 3}
     assert report["offline_regression_only"] is True
     assert report["does_not_confirm_on_site_presence"] is True
     assert report["is_probability"] is False

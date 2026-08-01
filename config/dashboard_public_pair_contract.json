@@ -1102,7 +1102,7 @@
     }
   ],
   "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
-  "source_metrics_version": "verified-pair-regression-v1",
+  "source_metrics_version": "verified-pair-regression-v2",
   "source_snapshot": "data/evaluation/verified_pair_snapshot_2024.json",
-  "source_snapshot_sha256": "9989ab77d4f82ad78c7382a313431cb588b008498591c1b3fd2ab3816d4aee86"
+  "source_snapshot_sha256": "f13df0a0caf28fc7ca58586263049238131f74933981cb283889f081d6997d3c"
 }

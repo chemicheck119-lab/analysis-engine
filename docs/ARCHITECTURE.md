@@ -169,6 +169,13 @@ stateDiagram-v2
 정책은 `config/conflict_policy.json`에 선언되고 운영 crosswalk는
 `config/cameo_crosswalk.csv`에서 관리합니다.
 
+공개근거 스크리닝이 완료된 뒤 `Reference Assurance`가
+`config/reference_assurance_registry.json`을 읽어 주장·CAS 물질쌍·예상 생성물·공식기관
+URL을 대조합니다. 대표 조합처럼 독립 공식기관 3개 이상과 필수 근거 역할을 만족하면
+`REFERENCE_TRIANGULATED`, 그렇지 않으면 `PRIMARY_AUTHORITY_ONLY`로 반환합니다. registry가
+누락되거나 불변조건이 깨지면 Rule 결과는 `VERIFY_REQUIRED`로 닫히고 readiness도 실패합니다.
+이 계층은 사람 전문가 승인이나 현장 검증을 대체하지 않습니다.
+
 현재 원칙은 다음과 같습니다.
 
 - 정책 ID: `PUBLIC_SOURCE_PILOT_V1`

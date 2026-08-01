@@ -17,7 +17,7 @@ from chemiguard119.rules import (
 from chemiguard119.utils import sha256_file
 
 
-METRICS_VERSION = "verified-pair-regression-v1"
+METRICS_VERSION = "verified-pair-regression-v2"
 PUBLIC_VERIFIED = "PUBLIC_SOURCE_VERIFIED"
 
 
@@ -88,11 +88,16 @@ def evaluate_verified_pairs(
                 "evidence_urls": review.get("evidence_urls") or [],
                 "expert_reviewed": review.get("expert_reviewed"),
                 "is_probability": risk_scale.get("is_probability"),
+                "reference_assurance": review.get("reference_assurance"),
             }
         )
 
     status_counts = Counter(str(row["status"]) for row in results)
     risk_counts = Counter(str(row["risk_level"]) for row in results)
+    assurance_counts = Counter(
+        str((row.get("reference_assurance") or {}).get("status") or "MISSING")
+        for row in results
+    )
     return {
         "metrics_version": METRICS_VERSION,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -110,13 +115,15 @@ def evaluate_verified_pairs(
         "evaluated_pair_count": len(results),
         "status_counts": dict(sorted(status_counts.items())),
         "risk_level_counts": dict(sorted(risk_counts.items())),
+        "reference_assurance_status_counts": dict(sorted(assurance_counts.items())),
         "pairs": results,
         "offline_regression_only": True,
         "does_not_confirm_on_site_presence": True,
         "is_probability": False,
         "interpretation": (
-            "공개 검증 CAS와 CAMEO 원자료의 연결 회귀 검사이며 현장 존재 확인, "
-            "사고 확률 또는 전문가 승인을 의미하지 않습니다."
+            "공개 검증 CAS와 CAMEO 원자료의 연결 및 주장별 공식근거 커버리지 "
+            "회귀 검사이며 현장 존재 확인, 사고 확률 또는 전문가 승인을 의미하지 "
+            "않습니다."
         ),
     }
 

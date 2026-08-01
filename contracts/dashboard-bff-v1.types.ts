@@ -233,6 +233,57 @@ export interface AwaitingAnalysisResponse extends AnalysisCommon {
   riskDisplayAllowed: false;
 }
 
+export interface ReferenceAssurance {
+  schemaVersion: 'chemicheck119-reference-assurance-v1';
+  policyId: 'OFFICIAL_REFERENCE_TRIANGULATION_V1';
+  status: 'REFERENCE_TRIANGULATED' | 'PRIMARY_AUTHORITY_ONLY';
+  claimId?: string | null;
+  claimType?: string | null;
+  casPair: [string, string];
+  claimTextKo?: string | null;
+  expectedGasProducts?: string[] | null;
+  scopeConditions?: string[] | null;
+  notProvenByClaim?: string[] | null;
+  referenceCount: number;
+  independentAuthorityCount: number;
+  sources: Array<{
+    sourceId: string;
+    authorityId: string;
+    organization: string;
+    independenceGroup: string;
+    authorityKind: string;
+    sourceRole:
+      | 'PRIMARY_REACTIVITY_DATASHEET'
+      | 'INCIDENT_OR_PUBLIC_HEALTH_CORROBORATION'
+      | 'INTERNATIONAL_CHEMICAL_SAFETY_CARD';
+    title: string;
+    sourceUrl: string;
+    locator: string;
+    publishedOrUpdated: string;
+    relation:
+      | 'SUPPORTS'
+      | 'SUPPORTS_WITH_INCIDENT_AND_MECHANISM'
+      | 'SUPPORTS_SCREENING_ONLY';
+  }>;
+  claimChecks: Array<{
+    claim:
+      | 'SUBSTANCE_IDENTITY_AND_FORM'
+      | 'PAIR_REACTIVITY_SCREENING'
+      | 'CURRENT_SITE_INVENTORY'
+      | 'ACTUAL_MIXING_AND_FIELD_CONDITIONS'
+      | 'HUMAN_CHEMICAL_EXPERT_REVIEW';
+    status: 'PASSED' | 'LIMITED' | 'NOT_PROVEN' | 'NOT_PERFORMED';
+    basis: string;
+  }>;
+  registrySha256: string;
+  reviewedAtUtc: string;
+  machineChecked: true;
+  expertReviewed: false;
+  humanExpertSubstitute: false;
+  decisionSupportOnly: true;
+  limitations: string[];
+}
+
 export interface OrdinalRiskResult {
   /**
    * 아래 화학 상세 필드는 config/dashboard_public_pair_contract.json과
@@ -300,6 +351,7 @@ export interface OrdinalRiskResult {
     mappingEvidenceUrls: string[];
     compatibilityEvidenceUrls: string[];
   };
+  referenceAssurance: ReferenceAssurance;
 }
 
 export interface CompletedAnalysisResponse extends AnalysisCommon {

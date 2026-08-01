@@ -135,6 +135,12 @@ OpenAPI에서 정확 CAS로 수집하고 검토한 행을 원천 스냅샷에 �
 CAS에서 CAMEO 물질로 연결하는 운영 crosswalk는 원자료의 내부 물질–그룹 매핑과 별도입니다.
 `config/cameo_crosswalk.csv`의 `PUBLIC_SOURCE_VERIFIED` 행만 공개 근거 파일럿 대상입니다.
 
+`config/reference_assurance_registry.json`은 위험 주장별로 CAMEO와 독립 공식기관 자료를
+연결합니다. 기관별 허용 host, 독립성 그룹, 문서 내 위치, 주장과의 관계를 고정하고 파일
+SHA-256을 runtime manifest와 API 결과에 포함합니다. 현재 다기관 교차증빙은
+차아염소산나트륨–염산 1쌍이며, 나머지 공개 검증 14쌍은 CAMEO 단일체계 상태입니다. 이
+registry는 현재 재고·실제 혼합·현장 농도나 사람 전문가 승인을 증명하지 않습니다.
+
 ### 5.5 시설 이력
 
 시설 통합 입력에서 CAS가 정확히 일치하는 이력만 후보 테이블에 넣습니다. PRTR 결측 배출량을

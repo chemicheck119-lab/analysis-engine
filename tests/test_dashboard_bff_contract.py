@@ -121,6 +121,7 @@ def test_dashboard_openapi_is_backend_owned_and_never_exposes_model_key() -> Non
         "policyMode",
         "mappingProvenance",
         "evidenceProvenance",
+        "referenceAssurance",
     } <= completed_required
     assert set(
         schema["components"]["schemas"]["DashboardRecordSaveRequest"]["required"]
@@ -214,6 +215,7 @@ def test_generated_contract_drift_and_pair_contract_are_release_gates() -> None:
 
     assert "python scripts/contracts/export_contracts.py --check" in ci_workflow
     assert "config/dashboard_public_pair_contract.json" in release_workflow
+    assert "config/reference_assurance_registry.json" in release_workflow
 
 
 def test_material_discovery_fixtures_are_candidate_only() -> None:
@@ -416,6 +418,26 @@ def test_completed_bff_projection_is_lossless_for_model_safety_fields() -> None:
             ("conflictReview", "result", "evidenceUrls"),
             ["https://example.com/fake"],
         ),
+        (
+            (
+                "conflictReview",
+                "result",
+                "referenceAssurance",
+                "sources",
+                "0",
+                "sourceUrl",
+            ),
+            "https://example.com/forged",
+        ),
+        (
+            (
+                "conflictReview",
+                "result",
+                "referenceAssurance",
+                "registrySha256",
+            ),
+            "0" * 64,
+        ),
     ],
 )
 def test_completed_analysis_rejects_mapping_or_risk_corruption(
@@ -423,10 +445,13 @@ def test_completed_analysis_rejects_mapping_or_risk_corruption(
     invalid_value: Any,
 ) -> None:
     payload = _load_json(BFF_EXAMPLES / "incident_screening_completed_response.json")
-    cursor: dict[str, Any] = payload
+    cursor: Any = payload
     for key in path[:-1]:
-        cursor = cursor[key]
-    cursor[path[-1]] = invalid_value
+        cursor = cursor[int(key)] if isinstance(cursor, list) else cursor[key]
+    if isinstance(cursor, list):
+        cursor[int(path[-1])] = invalid_value
+    else:
+        cursor[path[-1]] = invalid_value
 
     with pytest.raises(ValidationError):
         DashboardCompletedAnalysisResponse.model_validate(payload)

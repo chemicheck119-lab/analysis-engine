@@ -122,10 +122,15 @@ config/
 ├── dashboard_public_pair_contract.json
 ├── data_source_registry.json
 ├── pair_rules.csv
+├── reference_assurance_registry.json
 ├── release_attestation.schema.json
 ├── release_quality_policy.json
 └── substance_overrides.csv
 ```
+
+`reference_assurance_registry.json`도 runtime manifest의 checksum 대상입니다. 이 파일이
+누락·변조되면 `PUBLIC_SOURCE_PILOT_V1` readiness가 실패하고 위험등급 API가 fail-closed로
+차단됩니다.
 
 환경을 진단하고 로컬 익명 모드로 실행합니다.
 

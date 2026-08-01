@@ -56,6 +56,9 @@ from chemiguard119.discovery import discover_substances
 from chemiguard119.database import connect_readonly
 from chemiguard119.observability import configure_json_logging, emit_json_event
 from chemiguard119.facility import search_facility_history
+from chemiguard119.evidence_assurance import (
+    reference_assurance_configuration_status,
+)
 from chemiguard119.pipeline import PIPELINE_SCHEMA_VERSION, analyze_incident
 from chemiguard119.preprocessing import MINIMUM_ULSAN_PROFILE_COUNT
 from chemiguard119.rag import GroundedRagService, RAG_SCHEMA_VERSION
@@ -152,6 +155,7 @@ def _conflict_review_capability(
     crosswalk_path = config_dir / "cameo_crosswalk.csv"
     direct_rule_path = config_dir / "pair_rules.csv"
     policy_path = config_dir / "conflict_policy.json"
+    reference_assurance = reference_assurance_configuration_status(config_dir)
     try:
         with crosswalk_path.open(encoding="utf-8-sig", newline="") as handle:
             crosswalk_rows = list(csv.DictReader(handle))
@@ -172,6 +176,7 @@ def _conflict_review_capability(
             "expert_reviewed": False,
             "direct_rules_enabled": False,
             "configuration_valid": False,
+            "reference_assurance": reference_assurance,
         }
 
     public_rows = [
@@ -236,7 +241,10 @@ def _conflict_review_capability(
         and public_policy.get("probability_output_allowed") is False
         and public_policy.get("final_decision_authority") == "현장 지휘관 판단"
     )
-    public_ready = public_policy_valid and len(public_cas) >= 2
+    public_configuration_valid = bool(
+        public_policy_valid and reference_assurance["ready"]
+    )
+    public_ready = public_configuration_valid and len(public_cas) >= 2
     approved_ready = approved_direct_rule_count > 0 or len(approved_cas) >= 2
     conflict_ready = (
         public_ready if policy_mode == PUBLIC_SOURCE_PILOT_POLICY else approved_ready
@@ -255,10 +263,11 @@ def _conflict_review_capability(
             policy_mode == APPROVED_ONLY_POLICY and approved_direct_rule_count > 0
         ),
         "configuration_valid": (
-            public_policy_valid
+            public_configuration_valid
             if policy_mode == PUBLIC_SOURCE_PILOT_POLICY
             else policy_mode == APPROVED_ONLY_POLICY
         ),
+        "reference_assurance": reference_assurance,
     }
 
 
@@ -277,6 +286,17 @@ def _empty_conflict_review_capability(policy_mode: str) -> dict[str, Any]:
         "expert_reviewed": False,
         "direct_rules_enabled": False,
         "configuration_valid": False,
+        "reference_assurance": {
+            "ready": False,
+            "schema_version": None,
+            "policy_id": None,
+            "registry_sha256": None,
+            "authority_count": 0,
+            "triangulated_pair_count": 0,
+            "expert_reviewed": False,
+            "human_expert_substitute": False,
+            "error": "runtime artifact를 불러오지 못했습니다.",
+        },
     }
 
 
@@ -617,6 +637,7 @@ def _authorize(
                     "config/conflict_policy.json",
                     "config/cameo_crosswalk.csv",
                     "config/pair_rules.csv",
+                    "config/reference_assurance_registry.json",
                 ],
             )
         if capability.get("conflict_review_ready") is not True:
@@ -628,6 +649,7 @@ def _authorize(
                 fields=[
                     "config/cameo_crosswalk.csv",
                     "config/pair_rules.csv",
+                    "config/reference_assurance_registry.json",
                 ],
             )
     if getattr(request.app.state, "allow_anonymous", False):

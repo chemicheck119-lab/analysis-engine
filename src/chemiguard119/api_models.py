@@ -201,6 +201,7 @@ class InconclusiveConflictResult(StrictModel):
     mapping_provenance_errors: dict[str, list[str]] | None = None
     mapping_provenance: list[dict[str, Any]] | None = None
     evidence_provenance: dict[str, Any] | None = None
+    reference_assurance: dict[str, Any] | None = None
     screening: list[dict[str, Any]] | None = None
     cameo_group_screening: list[dict[str, Any]] | None = None
     unsupported_compatibility_class_ids: list[str] | None = None
@@ -254,6 +255,7 @@ class CompletedConflictResult(StrictModel):
     expert_reviewed: Literal[False] | None = None
     mapping_provenance: list[dict[str, Any]] | None = None
     evidence_provenance: dict[str, Any] | None = None
+    reference_assurance: dict[str, Any] | None = None
     ignored_direct_rule_ids: list[str] | None = None
 
 

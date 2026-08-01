@@ -195,6 +195,18 @@ BE는 HTTP 성공 여부와 모델 워크플로 상태를 분리합니다.
 FE는 `schema_version`, `state`, `confirmation_gate`, `conflict_review`,
 `required_next_steps`, `safety_notice`가 없는 성공 응답을 정상 결과로 표시하지 않습니다.
 
+완료 결과의 `conflict_review.result.reference_assurance`도 손실 없이 camelCase
+`conflictReview.result.referenceAssurance`로 전달합니다.
+
+| assurance 상태 | FE 배지 | 동작 |
+|---|---|---|
+| `REFERENCE_TRIANGULATED` | 공식근거 교차확인 | 출처 수·기관 수·주장·한계를 접어서 표시 |
+| `PRIMARY_AUTHORITY_ONLY` | CAMEO 단일체계 근거 | 단일 체계임을 경고하고 원문 링크 표시 |
+| Rule `VERIFY_REQUIRED` | 근거 검증 필요 | 위험등급 숨김, 현장 MSDS 확인 요청 |
+
+`REFERENCE_TRIANGULATED`를 “전문가 승인”으로 번역하면 안 됩니다. FE는
+`claimChecks`의 `NOT_PROVEN`과 `NOT_PERFORMED`를 대응 근거 영역에서 확인 가능하게 합니다.
+
 현재 대시보드 BFF v1은 실제 배포 정책인
 `PUBLIC_SOURCE_PILOT_V1 / SCREENING_COMPLETED` 표시 계약만 고정합니다. 모델 API의 향후
 전문가 승인 `APPROVED_ONLY / COMPLETED` 결과를 FE에 노출할 때는 BFF 계약 버전을 올리고
@@ -215,7 +227,7 @@ FE는 `schema_version`, `state`, `confirmation_gate`, `conflict_review`,
 |---|---|---|---|
 | 확인 전 | 물질 후보 확인 필요 | 신고문 후보, 과거 이력 후보, 확인 버튼 | 위험등급, 반응, 대응 권고 |
 | 한 물질만 확인 | 추가 물질 확인 필요 | 확인된 CAS, 남은 확인 역할 | 위험등급, 반응, 대응 권고 |
-| 두 물질 확인 + 규칙 실행 | 대응충돌검토 결과 | 서수 등급, 반응, 근거 URL·버전 | 확률·백분율 |
+| 두 물질 확인 + 규칙 실행 | 대응충돌검토 결과 | 서수 등급, 반응, 근거 보증 상태·URL·버전 | 확률·백분율·전문가 승인 표현 |
 | 두 물질 확인 + 근거 부족 | 공개 근거 부족 | 확인된 두 CAS, 추가 확인 안내 | 임의 위험등급 |
 
 기계 판독 가능한 원본은

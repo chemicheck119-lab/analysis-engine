@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import shutil
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -18,6 +19,24 @@ from chemiguard119.rules import APPROVED_ONLY_POLICY, PUBLIC_SOURCE_PILOT_POLICY
 
 
 DEPLOYED_API_KEY = "0123456789abcdef" * 4
+REFERENCE_REGISTRY_SOURCE = (
+    Path(__file__).resolve().parents[1] / "config" / "reference_assurance_registry.json"
+)
+
+
+def _expected_reference_assurance(config_dir: Path) -> dict[str, Any]:
+    registry_path = config_dir / "reference_assurance_registry.json"
+    return {
+        "ready": True,
+        "schema_version": "chemicheck119-reference-assurance-registry-v1",
+        "policy_id": "OFFICIAL_REFERENCE_TRIANGULATION_V1",
+        "registry_sha256": hashlib.sha256(registry_path.read_bytes()).hexdigest(),
+        "authority_count": 4,
+        "triangulated_pair_count": 1,
+        "expert_reviewed": False,
+        "human_expert_substitute": False,
+        "error": None,
+    }
 
 
 def _write_policy_config(
@@ -67,6 +86,10 @@ def _write_policy_config(
             }
         ),
         encoding="utf-8",
+    )
+    shutil.copy2(
+        REFERENCE_REGISTRY_SOURCE,
+        config_dir / "reference_assurance_registry.json",
     )
 
 
@@ -401,6 +424,7 @@ def test_health_and_readiness_with_injected_runtime(runtime: ModelRuntime) -> No
             "expert_reviewed": False,
             "direct_rules_enabled": False,
             "configuration_valid": True,
+            "reference_assurance": _expected_reference_assurance(runtime.config_dir),
         },
         "integrity": {
             "status": "INJECTED_OR_LEGACY_RUNTIME",
@@ -554,6 +578,7 @@ def test_readiness_and_metadata_report_approved_conflict_review_capability(
         "expert_reviewed": True,
         "direct_rules_enabled": True,
         "configuration_valid": True,
+        "reference_assurance": _expected_reference_assurance(runtime.config_dir),
     }
     assert ready.status_code == 200
     assert ready.json()["conflict_review_capability"] == expected
@@ -628,7 +653,36 @@ def test_approved_direct_rule_makes_conflict_review_ready_without_crosswalk(
         "expert_reviewed": True,
         "direct_rules_enabled": True,
         "configuration_valid": True,
+        "reference_assurance": _expected_reference_assurance(runtime.config_dir),
     }
+
+
+def test_public_source_readiness_fails_closed_for_invalid_reference_registry(
+    runtime: ModelRuntime,
+) -> None:
+    (runtime.config_dir / "reference_assurance_registry.json").write_text(
+        '{"schema_version":"forged"}',
+        encoding="utf-8",
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        ready = client.get("/health/ready")
+        response = client.post(
+            "/api/v1/substances/resolve",
+            json={"query": "염산"},
+        )
+
+    assert ready.status_code == 503
+    capability = ready.json()["conflict_review_capability"]
+    assert capability["configuration_valid"] is False
+    assert capability["reference_assurance"]["ready"] is False
+    assert capability["reference_assurance"]["expert_reviewed"] is False
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "CONFLICT_POLICY_CONFIGURATION_INVALID"
+    assert (
+        "config/reference_assurance_registry.json" in response.json()["error"]["fields"]
+    )
 
 
 def test_production_rejects_placeholder_or_weak_api_key(runtime: ModelRuntime) -> None:

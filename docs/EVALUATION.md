@@ -126,12 +126,13 @@ python scripts/evaluation/evaluate_verified_pairs.py \
   --output data/evaluation/verified_pair_snapshot_2024.json
 ```
 
-출력에는 DB와 crosswalk의 SHA-256, 예상·실행 조합 수, 상태와 서수 등급 분포가
+출력에는 DB와 crosswalk의 SHA-256, 예상·실행 조합 수, 상태·서수 등급·공식근거 보증 분포가
 포함됩니다. `offline_regression_only=true`, `does_not_confirm_on_site_presence=true`,
 `is_probability=false`가 항상 함께 기록됩니다.
 
-2026-07-28 스냅샷에서는 공개 검증 6종의 고유 조합 15개를 모두 실행했고 15개 모두
+2026-08-01 스냅샷에서는 공개 검증 6종의 고유 조합 15개를 모두 실행했고 15개 모두
 `SCREENING_COMPLETED`였습니다. 서수 등급 분포는 `HIGH=8`, `MEDIUM=2`, `LOW=5`입니다.
+공식근거 보증은 `REFERENCE_TRIANGULATED=1`, `PRIMARY_AUTHORITY_ONLY=14`입니다.
 이는 15개 데이터 연결이 실행된다는 회귀 결과이며, 낮음 조합의 안전 보장이나 실제
 사고확률·현장 정확도를 뜻하지 않습니다.
 

@@ -60,6 +60,7 @@ REQUIRED_CONFIG_FILES = (
     "cameo_crosswalk.csv",
     "conflict_policy.json",
     "pair_rules.csv",
+    "reference_assurance_registry.json",
     "substance_overrides.csv",
     DATA_SOURCE_REGISTRY_FILE,
     RELEASE_QUALITY_POLICY_FILE,

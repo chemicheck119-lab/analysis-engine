@@ -7,6 +7,11 @@
 
 ### Added
 
+- 위험 주장마다 공식기관 URL·문서 위치·독립기관 수·미증명 조건을 반환하는
+  `chemicheck119-reference-assurance-v1`
+- 차아염소산나트륨–염산 조합의 CAMEO·CDC·ILO/WHO·UKHSA 5개 자료, 4개 독립기관 교차증빙
+- 나머지 14개 CAMEO 조합을 `PRIMARY_AUTHORITY_ONLY`로 구분하는 커버리지 회귀 평가
+- 근거 registry 변조·출처 host 오류·예상 생성물 불일치 시 위험등급을 차단하는 fail-closed gate
 - 운영 릴리스 gate를 약화하지 않는 공모전 FE·BE 통합용 `development` preview 이미지 경로
 - preview artifact hash 검사·Cloud Build digest 생성 스크립트와 백엔드 전달 계약
 - 검증된 bundle을 Artifact Registry digest로 고정하는 선택형 모델 릴리스 단계
@@ -58,6 +63,8 @@
 
 ### Fixed
 
+- 단일 CAMEO 체계 결과와 다기관 교차증빙 결과가 화면에서 같은 근거 수준으로 보이던 문제
+- AI 자동 감사가 사람 화학 전문가 승인으로 오해될 수 있던 응답 계약 공백
 - 확인 전 `hasIncompatible=false`가 `낮음/없음`으로 보이거나 과거 시설 이력이 현재 보유로
   보일 수 있는 대시보드 계약 공백
 - 현장 물질 확인과 전체 대응기록 저장이 한 동작으로 섞이고 저장 전 화면이 초기화될 수 있는

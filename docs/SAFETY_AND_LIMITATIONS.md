@@ -171,6 +171,22 @@ CAMEO 원자료 class를 다음 서수 등급으로 표시합니다.
 
 사용자는 UI의 “대응 근거”에서 이 정보를 확인할 수 있어야 합니다.
 
+### 10.1 공식근거 교차검증은 전문가 승인이 아님
+
+`reference_assurance`는 위험 주장과 공식기관 자료를 연결하고 독립기관 수를 계산하는 자동
+감사 계층입니다. 대표 차아염소산나트륨–염산 조합은 5개 문서·4개 독립기관으로
+`REFERENCE_TRIANGULATED`이지만 다음은 여전히 증명하지 않습니다.
+
+- 현장 현재 재고
+- 실제 혼합 여부
+- 농도·온도·누출량
+- 피해확률 또는 확산반경
+- 보호구의 현장 적합성
+- 사람 화학 전문가의 승인
+
+따라서 `expert_reviewed=false`, `human_expert_substitute=false`를 항상 유지합니다. 자세한
+출처와 fail-closed 정책은 [공식근거 교차검증](EVIDENCE_ASSURANCE.md)을 참조합니다.
+
 ## 11. 계획 대응의 한계
 
 `planned_actions`는 사용자가 검토 중이라고 입력한 텍스트입니다. 현재 Rule Engine이 해당

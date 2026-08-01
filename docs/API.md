@@ -557,6 +557,27 @@ Rule 입력이 아니며 `risk_determination_allowed=false`입니다. 해당 CAS
 API는 두 현장 확인 게이트를 통과한 뒤 `PUBLIC_SOURCE_PILOT_V1`로 조회합니다. 전문가 검토는
 실행 조건이 아니지만 응답에는 `expert_reviewed=false`가 명시됩니다.
 
+완료 결과의 `reference_assurance`는 공식근거 증빙 범위를 별도로 제공합니다.
+
+```json
+{
+  "status": "REFERENCE_TRIANGULATED",
+  "reference_count": 5,
+  "independent_authority_count": 4,
+  "expert_reviewed": false,
+  "human_expert_substitute": false,
+  "claim_checks": [
+    {"claim": "PAIR_REACTIVITY_SCREENING", "status": "PASSED"},
+    {"claim": "CURRENT_SITE_INVENTORY", "status": "NOT_PROVEN"},
+    {"claim": "ACTUAL_MIXING_AND_FIELD_CONDITIONS", "status": "NOT_PROVEN"}
+  ]
+}
+```
+
+현재 대표 조합 1개만 `REFERENCE_TRIANGULATED`이며 다른 14개는
+`PRIMARY_AUTHORITY_ONLY`입니다. registry 누락·변조 또는 생성물 불일치는 완료 결과가 아니라
+Rule `VERIFY_REQUIRED`로 반환됩니다.
+
 최상위 응답에도 `rule_policy`, `expert_reviewed`, `decision_support_only`,
 `responder_confirmation_required`, `conflict_review_capability`가 포함되고, 실제 스크리닝
 내용은 `result`에 들어갑니다.
@@ -606,11 +627,13 @@ API는 두 현장 확인 게이트를 통과한 뒤 `PUBLIC_SOURCE_PILOT_V1`로 
 4. 서수 등급을 백분율로 바꾸지 않고 `LOW`를 안전 보장으로 표현하지 않습니다.
 5. `expert_reviewed=false`와 공개 근거 파일럿 라벨을 결과 근처에 표시합니다.
 6. `mapping_provenance`와 `evidence_provenance`를 “대응 근거”에서 확인할 수 있게 합니다.
-7. 시설 이력은 “과거 공개 이력 후보”로 표시합니다.
-8. `required_next_steps`와 업무 상태를 사용자에게 그대로 전달합니다.
-9. `X-Request-Id`, `analysis_id`, `incident_id`를 함께 기록해 장애를 추적합니다.
-10. 물질 탐색 후보는 `현장 물질 확인` 이후에만 확인 객체로 변환합니다.
-11. 기록 저장은 BE 성공 응답 뒤 화면을 초기화합니다.
+7. `reference_assurance.status`를 “공식근거 교차확인” 또는 “CAMEO 단일체계 근거”로 표시합니다.
+8. `NOT_PROVEN` 항목과 `human_expert_substitute=false`를 숨기지 않습니다.
+9. 시설 이력은 “과거 공개 이력 후보”로 표시합니다.
+10. `required_next_steps`와 업무 상태를 사용자에게 그대로 전달합니다.
+11. `X-Request-Id`, `analysis_id`, `incident_id`를 함께 기록해 장애를 추적합니다.
+12. 물질 탐색 후보는 `현장 물질 확인` 이후에만 확인 객체로 변환합니다.
+13. 기록 저장은 BE 성공 응답 뒤 화면을 초기화합니다.
 
 ## 14. TypeScript 호출 예시
 
@@ -647,6 +670,7 @@ API Key는 서버 환경변수나 Secret Manager에서 읽어야 하며 프론�
 - [README](../README.md)
 - [아키텍처](ARCHITECTURE.md)
 - [데이터와 모델](DATA_AND_MODEL.md)
+- [공식근거 교차검증](EVIDENCE_ASSURANCE.md)
 - [배포](DEPLOYMENT.md)
 - [안전 및 한계](SAFETY_AND_LIMITATIONS.md)
 - [대시보드 적용 흐름](DASHBOARD_FLOW.md)

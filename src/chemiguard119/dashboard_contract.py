@@ -23,9 +23,10 @@ from pydantic import (
 )
 
 from chemiguard119.api_models import API_SCHEMA_VERSION, CompletedConflictResult
+from chemiguard119.evidence_assurance import build_reference_assurance
 from chemiguard119.paths import CONFIG_DIR
 from chemiguard119.rules import validate_review_output
-from chemiguard119.utils import normalize_cas, valid_cas_checksum
+from chemiguard119.utils import normalize_cas, sha256_file, valid_cas_checksum
 
 
 DASHBOARD_BFF_SCHEMA_VERSION = "chemicheck119-dashboard-bff-v1"
@@ -419,6 +420,64 @@ class DashboardEvidenceProvenance(DashboardModel):
     compatibility_evidence_urls: list[HttpUrl] = Field(min_length=1)
 
 
+class DashboardReferenceSource(DashboardModel):
+    source_id: str = Field(min_length=1, max_length=160)
+    authority_id: str = Field(min_length=1, max_length=120)
+    organization: str = Field(min_length=1, max_length=300)
+    independence_group: str = Field(min_length=1, max_length=120)
+    authority_kind: str = Field(min_length=1, max_length=120)
+    source_role: Literal[
+        "PRIMARY_REACTIVITY_DATASHEET",
+        "INCIDENT_OR_PUBLIC_HEALTH_CORROBORATION",
+        "INTERNATIONAL_CHEMICAL_SAFETY_CARD",
+    ]
+    title: str = Field(min_length=1, max_length=500)
+    source_url: HttpUrl
+    locator: str = Field(min_length=1, max_length=500)
+    published_or_updated: str = Field(min_length=1, max_length=200)
+    relation: Literal[
+        "SUPPORTS",
+        "SUPPORTS_WITH_INCIDENT_AND_MECHANISM",
+        "SUPPORTS_SCREENING_ONLY",
+    ]
+
+
+class DashboardReferenceClaimCheck(DashboardModel):
+    claim: Literal[
+        "SUBSTANCE_IDENTITY_AND_FORM",
+        "PAIR_REACTIVITY_SCREENING",
+        "CURRENT_SITE_INVENTORY",
+        "ACTUAL_MIXING_AND_FIELD_CONDITIONS",
+        "HUMAN_CHEMICAL_EXPERT_REVIEW",
+    ]
+    status: Literal["PASSED", "LIMITED", "NOT_PROVEN", "NOT_PERFORMED"]
+    basis: str = Field(min_length=1, max_length=1_000)
+
+
+class DashboardReferenceAssurance(DashboardModel):
+    schema_version: Literal["chemicheck119-reference-assurance-v1"]
+    policy_id: Literal["OFFICIAL_REFERENCE_TRIANGULATION_V1"]
+    status: Literal["REFERENCE_TRIANGULATED", "PRIMARY_AUTHORITY_ONLY"]
+    claim_id: str | None = Field(default=None, max_length=200)
+    claim_type: str | None = Field(default=None, max_length=120)
+    cas_pair: list[str] = Field(min_length=2, max_length=2)
+    claim_text_ko: str | None = Field(default=None, max_length=2_000)
+    expected_gas_products: list[str] | None = None
+    scope_conditions: list[str] | None = None
+    not_proven_by_claim: list[str] | None = None
+    reference_count: int = Field(ge=1)
+    independent_authority_count: int = Field(ge=1)
+    sources: list[DashboardReferenceSource] = Field(min_length=1)
+    claim_checks: list[DashboardReferenceClaimCheck] = Field(min_length=1)
+    registry_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    reviewed_at_utc: datetime
+    machine_checked: Literal[True]
+    expert_reviewed: Literal[False]
+    human_expert_substitute: Literal[False]
+    decision_support_only: Literal[True]
+    limitations: list[str] = Field(min_length=1)
+
+
 class DashboardCompletedConflictResult(DashboardModel):
     kind: Literal["ORDINAL_SCREENING_RESULT"] = "ORDINAL_SCREENING_RESULT"
     status: Literal["SCREENING_COMPLETED"]
@@ -450,6 +509,7 @@ class DashboardCompletedConflictResult(DashboardModel):
         max_length=2,
     )
     evidence_provenance: DashboardEvidenceProvenance
+    reference_assurance: DashboardReferenceAssurance
 
     @field_validator("incident_cas", "facility_cas")
     @classmethod
@@ -494,6 +554,25 @@ class DashboardCompletedConflictResult(DashboardModel):
         result_evidence_urls = {str(url).rstrip("/") for url in self.evidence_urls}
         if result_evidence_urls != mapping_urls | compatibility_urls:
             raise ValueError("완료 결과 evidence URL이 검증 provenance와 다릅니다.")
+        expected_registry_sha = sha256_file(
+            CONFIG_DIR / "reference_assurance_registry.json"
+        )
+        if self.reference_assurance.registry_sha256 != expected_registry_sha:
+            raise ValueError("공식근거 보증 registry checksum이 배포 설정과 다릅니다.")
+        expected_reference_assurance = DashboardReferenceAssurance.model_validate(
+            build_reference_assurance(
+                {
+                    "incident_cas": self.incident_cas,
+                    "facility_cas": self.facility_cas,
+                    "gas_products": self.gas_products or [],
+                },
+                CONFIG_DIR,
+            )
+        )
+        if self.reference_assurance != expected_reference_assurance:
+            raise ValueError(
+                "공식근거 보증 내용이 배포된 주장 registry와 정확히 일치하지 않습니다."
+            )
 
         expected_brief = (
             "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 "
@@ -619,6 +698,7 @@ class DashboardCompletedConflictResult(DashboardModel):
                 item.model_dump(mode="json") for item in self.mapping_provenance
             ],
             "evidence_provenance": self.evidence_provenance.model_dump(mode="json"),
+            "reference_assurance": self.reference_assurance.model_dump(mode="json"),
         }
         CompletedConflictResult.model_validate(source_payload)
         errors = validate_review_output(source_payload)
@@ -675,6 +755,7 @@ def project_completed_model_result(
             "human_confirmation_required": normalized["human_confirmation_required"],
             "mapping_provenance": normalized["mapping_provenance"],
             "evidence_provenance": normalized["evidence_provenance"],
+            "reference_assurance": normalized["reference_assurance"],
         }
     )
 

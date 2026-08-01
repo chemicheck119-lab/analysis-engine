@@ -174,6 +174,138 @@
         "compatibilityEvidenceUrls": [
           "https://cameochemicals.noaa.gov/reactivity"
         ]
+      },
+      "referenceAssurance": {
+        "schemaVersion": "chemicheck119-reference-assurance-v1",
+        "policyId": "OFFICIAL_REFERENCE_TRIANGULATION_V1",
+        "status": "REFERENCE_TRIANGULATED",
+        "claimId": "HYPOCHLORITE_ACID_CHLORINE_RELEASE_V1",
+        "claimType": "TOXIC_GAS_GENERATION",
+        "casPair": [
+          "7647-01-0",
+          "7681-52-9"
+        ],
+        "claimTextKo": "차아염소산나트륨이 염산과 같은 산성 물질과 실제 접촉하면 독성 염소가스가 발생할 수 있습니다.",
+        "expectedGasProducts": [
+          "Cl2"
+        ],
+        "scopeConditions": [
+          "차아염소산나트륨 수용액과 산성 물질의 실제 접촉",
+          "농도·온도·혼합량에 따라 발생량과 피해 정도가 달라짐"
+        ],
+        "notProvenByClaim": [
+          "현장에 두 물질이 실제 존재하는지",
+          "두 물질이 실제 혼합됐는지",
+          "발생한 염소가스의 농도와 확산범위",
+          "특정 보호구가 현장 조건에 적합한지"
+        ],
+        "referenceCount": 5,
+        "independentAuthorityCount": 4,
+        "sources": [
+          {
+            "sourceId": "CAMEO_4503_REACTIVITY_PROFILE",
+            "authorityId": "NOAA_EPA_CAMEO",
+            "organization": "NOAA Office of Response and Restoration / U.S. EPA",
+            "independenceGroup": "US_NOAA_EPA_CAMEO",
+            "authorityKind": "GOVERNMENT_EMERGENCY_RESPONSE",
+            "sourceRole": "PRIMARY_REACTIVITY_DATASHEET",
+            "title": "SODIUM HYPOCHLORITE — CAMEO Chemicals",
+            "sourceUrl": "https://cameochemicals.noaa.gov/chemical/4503",
+            "locator": "Hazards > Reactivity Profile",
+            "publishedOrUpdated": "CAMEO Chemicals 3.1.0 rev 1",
+            "relation": "SUPPORTS"
+          },
+          {
+            "sourceId": "CDC_MMWR_BLEACH_ACID_INCIDENTS",
+            "authorityId": "US_CDC",
+            "organization": "U.S. Centers for Disease Control and Prevention",
+            "independenceGroup": "US_CDC",
+            "authorityKind": "GOVERNMENT_PUBLIC_HEALTH",
+            "sourceRole": "INCIDENT_OR_PUBLIC_HEALTH_CORROBORATION",
+            "title": "Chlorine Gas Toxicity from Mixture of Bleach with Other Cleaning Products",
+            "sourceUrl": "https://www.cdc.gov/mmwr/preview/mmwrhtml/00015111.htm",
+            "locator": "Editorial Note",
+            "publishedOrUpdated": "MMWR incident report",
+            "relation": "SUPPORTS_WITH_INCIDENT_AND_MECHANISM"
+          },
+          {
+            "sourceId": "CDC_HYPOCHLORITE_DISINFECTANT_GUIDANCE",
+            "authorityId": "US_CDC",
+            "organization": "U.S. Centers for Disease Control and Prevention",
+            "independenceGroup": "US_CDC",
+            "authorityKind": "GOVERNMENT_PUBLIC_HEALTH",
+            "sourceRole": "INCIDENT_OR_PUBLIC_HEALTH_CORROBORATION",
+            "title": "Chemical Disinfectants — Chlorine and Chlorine Compounds",
+            "sourceUrl": "https://www.cdc.gov/infection-control/hcp/disinfection-sterilization/chemical-disinfectants.html",
+            "locator": "Chlorine and Chlorine Compounds",
+            "publishedOrUpdated": "CDC web guidance",
+            "relation": "SUPPORTS"
+          },
+          {
+            "sourceId": "ICSC_1119_SODIUM_HYPOCHLORITE",
+            "authorityId": "ILO_WHO_ICSC",
+            "organization": "International Labour Organization / World Health Organization",
+            "independenceGroup": "ILO_WHO_IPCS",
+            "authorityKind": "INTERGOVERNMENTAL_CHEMICAL_SAFETY",
+            "sourceRole": "INTERNATIONAL_CHEMICAL_SAFETY_CARD",
+            "title": "ICSC 1119 — Sodium Hypochlorite Solution, Active Chlorine >10%",
+            "sourceUrl": "https://inchem.org/documents/icsc/icsc/eics1119.htm",
+            "locator": "Chemical dangers",
+            "publishedOrUpdated": "April 2017",
+            "relation": "SUPPORTS"
+          },
+          {
+            "sourceId": "UKHSA_SODIUM_HYPOCHLORITE_GENERAL",
+            "authorityId": "UKHSA",
+            "organization": "UK Health Security Agency",
+            "independenceGroup": "UKHSA",
+            "authorityKind": "GOVERNMENT_PUBLIC_HEALTH",
+            "sourceRole": "INCIDENT_OR_PUBLIC_HEALTH_CORROBORATION",
+            "title": "Sodium hypochlorite: general information",
+            "sourceUrl": "https://www.gov.uk/government/publications/sodium-hypochlorite-properties-incident-management-and-toxicology/sodium-hypochlorite-general-information",
+            "locator": "How exposure to sodium hypochlorite can affect your health",
+            "publishedOrUpdated": "2025-04-24",
+            "relation": "SUPPORTS"
+          }
+        ],
+        "claimChecks": [
+          {
+            "claim": "SUBSTANCE_IDENTITY_AND_FORM",
+            "status": "PASSED",
+            "basis": "CAMEO 공식 물질 페이지의 CAS와 형태를 정확 대조"
+          },
+          {
+            "claim": "PAIR_REACTIVITY_SCREENING",
+            "status": "PASSED",
+            "basis": "서로 독립된 공식기관 자료가 동일 위험 메커니즘을 지지"
+          },
+          {
+            "claim": "CURRENT_SITE_INVENTORY",
+            "status": "NOT_PROVEN",
+            "basis": "공개 이력과 문헌은 현재 재고를 증명하지 않음"
+          },
+          {
+            "claim": "ACTUAL_MIXING_AND_FIELD_CONDITIONS",
+            "status": "NOT_PROVEN",
+            "basis": "농도·온도·누출량·실제 혼합은 현장 확인 대상"
+          },
+          {
+            "claim": "HUMAN_CHEMICAL_EXPERT_REVIEW",
+            "status": "NOT_PERFORMED",
+            "basis": "공식자료 자동 감사는 사람 전문가 서명 또는 승인이 아님"
+          }
+        ],
+        "registrySha256": "0373f57cb35194d16db8a1c54cf4ba89d718ea56ea48e3883f24d2afb79f994b",
+        "reviewedAtUtc": "2026-08-01T00:00:00Z",
+        "machineChecked": true,
+        "expertReviewed": false,
+        "humanExpertSubstitute": false,
+        "decisionSupportOnly": true,
+        "limitations": [
+          "공식기관 교차증빙은 사람 화학 전문가의 현장 승인 또는 법적 인증이 아닙니다.",
+          "자료는 위험 메커니즘을 지지하지만 현장 발생확률이나 피해확률을 제공하지 않습니다.",
+          "현장 재고·농도·온도·누출량·실제 혼합·보호구 적합성은 별도 확인이 필요합니다."
+        ]
       }
     },
     "riskDisplayAllowed": true

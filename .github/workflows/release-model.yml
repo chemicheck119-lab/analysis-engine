@@ -584,6 +584,7 @@ jobs:
             config/dashboard_public_pair_contract.json
             config/data_source_registry.json
             config/pair_rules.csv
+            config/reference_assurance_registry.json
             config/release_attestation.schema.json
             config/release_quality_policy.json
             config/substance_overrides.csv
