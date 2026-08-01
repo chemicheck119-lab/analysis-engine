@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import shutil
 import sqlite3
+import subprocess
 from hashlib import sha256
 from pathlib import Path
 
@@ -842,3 +843,46 @@ def test_release_workflow_keeps_signing_key_out_of_runtime_and_records_digest() 
     assert r"(?:[0-9a-fA-F]{64}|[A-Za-z0-9_-]{43})" in workflow
     assert "digest_reference=" in workflow
     assert "배포 고정 digest" in workflow
+    assert "google-github-actions/auth@v3" in workflow
+    assert "GCP_WORKLOAD_IDENTITY_PROVIDER" in workflow
+    assert "Artifact Registry digest" in workflow
+    assert "service_account_key" not in workflow.lower()
+
+
+def test_cloud_run_workflow_uses_oidc_and_staging_environment() -> None:
+    workflow_path = CONFIG_DIR.parent / ".github" / "workflows" / "deploy-cloud-run.yml"
+    workflow = workflow_path.read_text(encoding="utf-8")
+
+    assert "id-token: write" in workflow
+    assert "environment: staging" in workflow
+    assert "google-github-actions/auth@v3" in workflow
+    assert "google-github-actions/setup-gcloud@v3" in workflow
+    assert "GCP_WORKLOAD_IDENTITY_PROVIDER" in workflow
+    assert "CHEMIGUARD119_API_KEY: ${{ secrets.CHEMIGUARD119_API_KEY }}" in workflow
+    assert "service_account_key" not in workflow.lower()
+    assert "cancel-in-progress: false" in workflow
+
+
+def test_cloud_run_script_smokes_before_traffic_and_rolls_back() -> None:
+    script_path = (
+        CONFIG_DIR.parent / "scripts" / "deployment" / "deploy_cloud_run_blue_green.sh"
+    )
+    script = script_path.read_text(encoding="utf-8")
+
+    subprocess.run(["bash", "-n", str(script_path)], check=True)
+    no_traffic = script.index("--no-traffic")
+    candidate_smoke = script.index('smoke "$candidate_url"')
+    promote = script.index('--to-revisions "$candidate_revision=100"')
+    post_promote_smoke = script.index('smoke "$service_url"')
+
+    assert no_traffic < candidate_smoke < promote < post_promote_smoke
+    assert '--to-revisions "$previous_revision=100"' in script
+    assert 'minimum_instances="${GCP_MIN_INSTANCES:-0}"' in script
+    assert "IMAGE_DIGEST" in script and "@sha256:" in script
+    assert "gcloud run revisions describe" in script
+    assert 'test "$deployed_image" = "$IMAGE_DIGEST"' in script or (
+        'if [ "$deployed_image" != "$IMAGE_DIGEST" ]' in script
+    )
+    assert "GCP_MODEL_API_KEY_SECRET_VERSION" in script
+    assert "CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY" not in script
+    assert "CHEMIGUARD119_RAG_MODE=extractive" in script

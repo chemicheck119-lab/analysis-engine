@@ -7,6 +7,9 @@
 
 ### Added
 
+- 검증된 bundle을 Artifact Registry digest로 고정하는 선택형 모델 릴리스 단계
+- 후보 리비전 0% smoke, Blue/Green 전환과 이전 리비전 자동 롤백을 수행하는 Cloud Run workflow
+- GitHub OIDC Workload Identity Federation·Secret Manager 기반 서울 스테이징 배포 문서
 - 완료된 CAMEO Rule 결과와 KOSHA·CAMEO 검색 근거만 요약하는 선택형 Grounded RAG
 - 문장별 `source_id` 검증, 위험등급 불일치 차단과 LLM 장애 시 extractive fallback
 - 모델 API와 대시보드 BFF 계약의 선택형 `grounded_rag`/`groundedRag` 응답

@@ -415,6 +415,26 @@ docker run --detach \
 API Key·manifest SHA·Git commit은 shell history에 남기기보다 배포 플랫폼 Secret으로
 주입하세요. attestation HMAC 키는 이미지 빌드가 끝난 뒤 실행 서버에 주입하지 않습니다.
 
+### 10.1 Cloud Run Blue/Green 배포
+
+`release-model.yml`에서 `push_artifact_registry=true`를 선택하면 검증된 bundle 이미지만
+Google Artifact Registry에 푸시하고 `image@sha256:...`를 출력합니다. 그 digest를
+`deploy-cloud-run.yml`에 입력하면 다음 순서로 배포합니다.
+
+```text
+현재 리비전 100%
+→ 새 리비전 0% + candidate URL
+→ readiness·인증·안전 smoke
+→ 새 리비전 100%
+→ 서비스 URL 재검사
+→ 실패 시 이전 리비전 100% 복원
+```
+
+기본 스테이징은 `min-instances=0`이므로 배포 중 요청을 끊지 않지만 유휴 상태 뒤 첫 요청의
+cold start 가능성은 있습니다. 상시 대기 인스턴스 1개는 비용 승인 후 Repository Variable
+`GCP_MIN_INSTANCES=1`로 변경합니다. GCP 초기 설정과 실제 실행 명령은
+[Cloud Run 무중단 배포](CLOUD_RUN_DEPLOYMENT.md)를 따릅니다.
+
 ## 11. 시작 후 smoke test
 
 ### 11.1 Readiness
@@ -547,4 +567,5 @@ PYTHONPATH=src python scripts/integration/smoke_model_api.py \
 - [FE·BE·AI 연동 및 병합 계약](BACKEND_INTEGRATION.md)
 - [데이터와 모델](DATA_AND_MODEL.md)
 - [운영](OPERATIONS.md)
+- [Cloud Run 무중단 배포](CLOUD_RUN_DEPLOYMENT.md)
 - [안전 및 한계](SAFETY_AND_LIMITATIONS.md)

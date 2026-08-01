@@ -21,3 +21,5 @@ tmp/
 .env
 .env.*
 !.env.example
+# google-github-actions/auth가 만드는 단기 OIDC credential 파일
+gha-creds-*.json

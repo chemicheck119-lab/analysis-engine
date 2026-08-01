@@ -8,10 +8,16 @@ on:
         required: true
         default: false
         type: boolean
+      push_artifact_registry:
+        description: 검증된 이미지를 Cloud Run 배포용 Google Artifact Registry에 푸시합니다.
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
   packages: write
+  id-token: write
 
 concurrency:
   group: model-release-${{ github.ref }}
@@ -636,6 +642,67 @@ jobs:
           echo "GHCR_IMAGE=$remote_image" >> "$GITHUB_ENV"
           echo "digest_reference=$digest_reference" >> "$GITHUB_OUTPUT"
 
+      - name: Google Cloud 배포 변수 검사
+        if: inputs.push_artifact_registry
+        shell: bash
+        env:
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          GCP_REGION: ${{ vars.GCP_REGION }}
+          GCP_ARTIFACT_REPOSITORY: ${{ vars.GCP_ARTIFACT_REPOSITORY }}
+          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          GCP_DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+        run: |
+          set -euo pipefail
+          for name in \
+            GCP_PROJECT_ID \
+            GCP_REGION \
+            GCP_ARTIFACT_REPOSITORY \
+            GCP_WORKLOAD_IDENTITY_PROVIDER \
+            GCP_DEPLOY_SERVICE_ACCOUNT
+          do
+            test -n "${!name:-}" || {
+              echo "필수 GitHub Repository Variable이 없습니다: $name"
+              exit 1
+            }
+          done
+
+      - name: Google Cloud OIDC 인증
+        if: inputs.push_artifact_registry
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Google Cloud CLI 설정
+        if: inputs.push_artifact_registry
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: 검증된 이미지 Artifact Registry 푸시
+        if: inputs.push_artifact_registry
+        id: artifact-registry-push
+        shell: bash
+        env:
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          GCP_REGION: ${{ vars.GCP_REGION }}
+          GCP_ARTIFACT_REPOSITORY: ${{ vars.GCP_ARTIFACT_REPOSITORY }}
+        run: |
+          set -euo pipefail
+          registry_host="$GCP_REGION-docker.pkg.dev"
+          image_name="$registry_host/$GCP_PROJECT_ID/$GCP_ARTIFACT_REPOSITORY/model-api"
+          remote_image="$image_name:$GITHUB_SHA-$RUNTIME_MANIFEST_SHA256"
+          gcloud auth configure-docker "$registry_host" --quiet
+          docker tag "$LOCAL_IMAGE" "$remote_image"
+          docker push "$remote_image"
+          digest_reference="$(docker image inspect "$remote_image" \
+            --format '{{range .RepoDigests}}{{println .}}{{end}}' | \
+            awk -v prefix="$image_name@sha256:" 'index($0, prefix) == 1 { print; exit }')"
+          case "$digest_reference" in
+            "$image_name@sha256:"*) ;;
+            *) echo "Artifact Registry digest를 확인할 수 없습니다: $digest_reference"; exit 1 ;;
+          esac
+          echo "digest_reference=$digest_reference" >> "$GITHUB_OUTPUT"
+
       - name: 릴리스 검증 요약
         if: success()
         shell: bash
@@ -651,5 +718,11 @@ jobs:
               echo "- 배포 고정 digest: \`${{ steps.ghcr-push.outputs.digest_reference }}\`"
             else
               echo "- GHCR push: 비활성화"
+            fi
+            if [ "${{ inputs.push_artifact_registry }}" = "true" ]; then
+              echo "- Artifact Registry digest: \`${{ steps.artifact-registry-push.outputs.digest_reference }}\`"
+              echo "- 다음 단계: Cloud Run 스테이징 배포 workflow에 이 digest를 입력"
+            else
+              echo "- Artifact Registry push: 비활성화"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
