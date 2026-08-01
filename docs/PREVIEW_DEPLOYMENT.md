@@ -15,7 +15,30 @@
 실제 지휘 판단에 사용하면 안 됩니다. 운영 릴리스는 `Dockerfile.bundle`과
 `release-model.yml`만 사용합니다.
 
-## 2026-08-01 실제 데이터 기술 검수
+## 2026-08-01 현재 배포 증빙
+
+전국 현장대응 에이전트가 병합된 main commit으로 artifact와 이미지를 다시 만들고 서울
+Cloud Run 외부 smoke를 완료했습니다.
+
+| 항목 | 값 |
+|---|---|
+| main commit | `e24fa93d538229844af4377976ee5a180c881fb3` |
+| runtime manifest SHA-256 | `4f7bb5d311f58c6b5687e1500dd6272479fe6fd9661e7b81c64832be8cd1f9d2` |
+| image digest | `model-api-preview@sha256:ff6194a8b31aec367fa4f42832733f375a0c233d16abdbe1a059beddbe887f8c` |
+| Cloud Run revision | `chemicheck119-model-api-staging-pe24fa935616331` |
+| 서울 service URL | `https://chemicheck119-model-api-staging-w6s6lwanpa-du.a.run.app` |
+
+확인 결과는 readiness `200`, runtime integrity `VERIFIED`, API Key 없는 분석 `401`, 정상
+Key 분석 `200`, 전국 17개 시·도 범위와 `EN_ROUTE_TRIAGE` 에이전트 응답입니다. 길찾기
+사업자는 BE가 아직 연결하지 않았으므로 `ROUTE_UNAVAILABLE`은 정상적인 fail-closed
+상태입니다. 이 증빙은 공모전 통합 preview가 실행된다는 뜻이며 운영 승인이나 현장 정확도
+증빙이 아닙니다.
+
+같은 image digest로 preview 전용 자동화도 실제 실행해 이전 리비전 100% 상태에서 새 후보를
+0%로 배포하고, 후보 URL smoke 통과 후 새 리비전으로 100% 전환한 뒤 서비스 URL 재검사까지
+통과했습니다. 따라서 두 번째 배포부터의 Blue/Green 경로도 실행 결과로 검증됐습니다.
+
+## 2026-08-01 초기 실제 데이터 기술 검수
 
 `main` commit `646580e162196297ecd19e3f592da5f33776a5e4`와 실제 8개 원천 CSV로
 `INTERNAL_REGRESSION` 파이프라인을 재실행했습니다.
@@ -57,6 +80,25 @@ scripts/deployment/build_cloud_run_preview.sh
 3. Git 추적 파일과 검증 artifact만 임시 build context에 포함
 4. API Key와 attestation key를 이미지에 넣지 않음
 5. Artifact Registry digest 반환
+
+## preview Cloud Run 배포
+
+최초 서비스는 이전 리비전이 없으므로 직접 생성한 후 즉시 smoke합니다. 두 번째 배포부터는
+별도 workflow가 새 리비전에 트래픽을 주지 않고 후보 URL을 먼저 검사한 뒤 100% 전환하며,
+전환 후 실패하면 이전 리비전으로 롤백합니다.
+
+```bash
+gh workflow run deploy-preview-cloud-run.yml \
+  --repo chemicheck119/llm \
+  --ref main \
+  -f image_digest='asia-northeast3-docker.pkg.dev/chemi-check/chemicheck119/model-api-preview@sha256:64자리' \
+  -f runtime_manifest_sha256='64자리-manifest-sha256' \
+  -f git_commit='40자리-main-commit'
+```
+
+preview workflow는 `model-api-preview@sha256:`만 허용하고 실행 환경을 `development`로
+고정합니다. 운영 `model-api@sha256:` workflow와 분리돼 있어 `PILOT_REVIEWED` gate를
+약화하지 않습니다.
 
 ## 백엔드 계약
 

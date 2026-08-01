@@ -29,7 +29,7 @@
 | 대시보드 표시 계약 | 구현 | BFF OpenAPI·TypeScript 타입·fixture, 확인 전 위험 결과 금지, 15쌍별 정확한 값 고정 |
 | 운영 로그 | 구현 | 안전 JSON 로그, Uvicorn 원 URL access log와 traceback 비활성화 |
 | Docker | 부분 완료 | 일반·bundle Dockerfile과 CI 구성 존재, 로컬 Docker CLI 없음 |
-| 실제 배포 | development preview | main preview는 Cloud Run 서울 리전에 배포, 이 작업 브랜치는 미배포; reviewed staging·production은 차단 |
+| 실제 배포 | development preview | main `e24fa93` preview를 서울 Cloud Run에 배포하고 후보 0% smoke·100% 전환·서비스 재검사 통과; reviewed staging·production은 차단 |
 | FE·BE 연동 자료 | 완료 | 모델·BFF OpenAPI, TypeScript 타입, 성공·실패 fixture와 체크리스트 |
 | FE·BE 실제 연동 | 미완료 | 현재 FE는 물질검색 mock·legacy DTO, BE는 BFF 구현 필요 |
 
@@ -186,7 +186,8 @@ Top-1: 메틸 에틸 케톤 / 78-93-3
 1. 50건 검수 후보와 이중 검수 gate는 있으나 실제 사람 검수가 끝난 독립 보류셋은 없습니다.
 2. KOSHA 상세 근거는 현재 artifact 기준 9종으로 전체 카탈로그보다 매우 적습니다.
 3. 공개 검증 CAMEO 범위가 CAS 6종·물질쌍 15개로 제한됩니다.
-4. 검증된 스테이징 URL과 실제 서버 배포 성공 기록이 없습니다.
+4. 공모전 통합용 development preview URL과 배포 성공 기록은 확보했지만, 독립 검수된
+   `PILOT_REVIEWED` staging·production 배포는 없습니다.
 5. 릴리스 artifact는 반드시 고정된 Python 3.11 환경에서 새로 생성해야 합니다.
 6. CAMEO·ICIS 파생 artifact의 컨테이너 재배포 조건 검토가 완료되지 않았습니다.
 7. 신규 section 회귀는 핵심 Recall 1.0이지만 전체 Recall 0.875로 운영 정책 0.90에

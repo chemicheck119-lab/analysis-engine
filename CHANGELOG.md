@@ -7,6 +7,9 @@
 
 ### Added
 
+- 전국 현장대응 에이전트가 포함된 main preview의 서울 Cloud Run 실제 배포 증빙
+- 운영 릴리스 gate와 분리된 공모전 preview 후보 smoke·Blue/Green·롤백 workflow
+
 - 전국 17개 시·도의 시설 과거 이력 범위를 artifact에서 자동 계산하고 API metadata와
   `chemiguard119 coverage` CLI로 공개
 - 신고 분석 응답에 10단계 workflow, 8개 도구 상태, 다음 행동을 포함하는 결정론적

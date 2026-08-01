@@ -905,3 +905,36 @@ def test_competition_preview_is_explicitly_non_production_and_keyless() -> None:
     assert "runtime_manifest.json" in script
     assert "gcloud builds submit" in script
     assert "digest_reference" in script
+
+
+def test_competition_preview_deploy_is_separate_and_fail_closed() -> None:
+    project_root = CONFIG_DIR.parent
+    workflow_path = (
+        project_root / ".github" / "workflows" / "deploy-preview-cloud-run.yml"
+    )
+    script_path = (
+        project_root
+        / "scripts"
+        / "deployment"
+        / "deploy_cloud_run_preview_blue_green.sh"
+    )
+    workflow = workflow_path.read_text(encoding="utf-8")
+    script = script_path.read_text(encoding="utf-8")
+
+    subprocess.run(["bash", "-n", str(script_path)], check=True)
+    assert "id-token: write" in workflow
+    assert "environment: staging" in workflow
+    assert "google-github-actions/auth@v3" in workflow
+    assert "model-api-preview@sha256:" in workflow
+    assert "service_account_key" not in workflow.lower()
+    assert "deploy_cloud_run_preview_blue_green.sh" in workflow
+    assert "CHEMIGUARD119_ENVIRONMENT=development" in script
+    assert "model-api-preview@sha256:" in script
+    assert 'smoke "$candidate_url"' in script
+    assert '--to-revisions "$candidate_revision=100"' in script
+    assert '--to-revisions "$previous_revision=100"' in script
+    assert 'payload.get("expert_reviewed") is not False' in script
+    assert 'payload.get("decision_support_only") is not True' in script
+    assert "NATIONWIDE_KOREA_HISTORICAL_CANDIDATES" in script
+    assert 'candidate_tag="p${RELEASE_GIT_COMMIT:0:7}${run_attempt}"' in script
+    assert "CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY" not in script
