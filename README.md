@@ -58,7 +58,7 @@ KOSHA·CAMEO 근거 검색
 | 공식 근거 검색 | 구현 | KOSHA 상세 근거 9종과 CAMEO 근거, section 중심 BM25·TF-IDF |
 | 근거 제한형 RAG | 구현 | 기존 검색·CAMEO 결과만 요약, 문장별 출처 ID 검증, 실패 시 extractive fallback |
 | Section 검색 평가 | 구현 | 핵심·보조 문서와 필수 사실 회수율·기권 성능·95% 구간을 분리, DRAFT 상용 주장은 차단 |
-| 사고 분석 E2E 평가 | 부분 구현 | 8건 DRAFT 회귀 + 50건 독립 검수 후보·이중 검수 gate, 사람 검수 전 정확도 주장 금지 |
+| 사고 분석 E2E 평가 | 부분 구현 | 8건 DRAFT 회귀 + 정답 없는 50건 안전 preflight, 정확도 주장은 하지 않음 |
 | KOSHA 근거 확장 | 수집기 구현 | 공식 OpenAPI staging 수집·검토 필요, 현재 artifact는 9종 |
 | 유사 사고 사례 검색 | 미구현 | 검증된 사고–대응 사례 corpus와 출처·라벨 부족; 현재 RAG는 공식 MSDS·CAMEO만 사용 |
 | 시설 물질 후보 | 구현 | ICIS·PRTR 공개 **과거 취급 이력** 검색 |
@@ -434,6 +434,7 @@ python -m pip check
 - [평가 V2](docs/EVALUATION_V2.md): 21·10·6의 출처, 상용 타당성, 공모전 AI 고도화 기준
 - [E2E 독립 검수](docs/E2E_REVIEW_GUIDE.md): 정답 없는 50건 후보를 이중 검수 locked set으로 만드는 절차
 - [공식근거 교차검증](docs/EVIDENCE_ASSURANCE.md): 주장별 공식 출처, 독립기관 수, fail-closed 정책
+- [공모전 공식근거 보증](docs/COMPETITION_ASSURANCE.md): 사람 검수 없이 사용할 제출 기준과 금지 표현
 - [최종 브리핑](docs/BRIEFING.md): 발표문, 최신 AI 주제, 수치와 상용 준비 판정
 - [배포](docs/DEPLOYMENT.md): artifact, Secret, Docker, CI/CD, 롤백
 - [Cloud Run 무중단 배포](docs/CLOUD_RUN_DEPLOYMENT.md): 서울 스테이징, OIDC, Blue/Green 전환

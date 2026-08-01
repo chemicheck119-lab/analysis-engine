@@ -35,7 +35,7 @@ chemiguard119 evaluate-e2e \
 [`e2e_scenario_regression_2026-07-31.json`](../data/evaluation/e2e_scenario_regression_2026-07-31.json)에
 있습니다.
 
-### 공모전용 E2E 50건 독립 검수 후보
+### 향후 사람 검수용 E2E 50건 후보
 
 8건 DRAFT에서 바로 “정확도”를 주장하지 않도록, 공개 검증 CAMEO 15쌍의 확인 상태 전이
 45건과 안전 hard case 5건을 `e2e-review generate`로 만들었습니다. 이 50건은 정답이 없는
@@ -49,6 +49,12 @@ chemiguard119 evaluate-e2e \
 서로 다른 두 사람이 빈 시트를 독립 작성하고 모든 기대 필드가 일치해야만
 `DOUBLE_REVIEWED_NON_EXPERT` locked test가 생성됩니다. 자세한 명령과 라벨 규칙은
 [E2E 독립 검수 가이드](E2E_REVIEW_GUIDE.md)를 따릅니다.
+
+현재는 독립 검수 인력을 확보하지 못했으므로 이 후보를 공모전 정확도 근거로 사용하지
+않습니다. 공모전 시연은 정확도 대체 주장이 아니라 [공모전 공식근거 보증
+기준](COMPETITION_ASSURANCE.md)에 따라 공식기관 근거 교차확인, 안전 gate 회귀, 출처 drift
+검사와 배포 smoke를 분리해 제시합니다. 사람 검수 gate는 향후 현장 파일럿 조건으로
+그대로 유지합니다.
 
 ## 평가 profile과 section 평가
 
