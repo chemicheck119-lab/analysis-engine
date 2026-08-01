@@ -730,6 +730,57 @@ class DashboardProvenance(DashboardModel):
     final_decision_authority: Literal["현장 지휘관"]
 
 
+class DashboardGroundedRagStatement(DashboardModel):
+    text: str = Field(min_length=1, max_length=600)
+    source_ids: list[str] = Field(min_length=1, max_length=3)
+
+
+class DashboardGroundedRagCitation(DashboardModel):
+    source_id: str = Field(min_length=1, max_length=500)
+    source_type: Literal["KOSHA", "CAMEO", "CAMEO_RULE_ENGINE"]
+    title: str = Field(min_length=1, max_length=500)
+    cas_number: str | None = Field(default=None, max_length=12)
+    source_urls: list[HttpUrl] = Field(min_length=1, max_length=5)
+
+
+class DashboardGroundedRag(DashboardModel):
+    """대시보드가 표시할 짧은 근거 요약과 출처 링크."""
+
+    schema_version: Literal["chemicheck119-grounded-rag-v1"]
+    status: Literal[
+        "COMPLETED",
+        "FALLBACK_EXTRACTIVE",
+        "DISABLED",
+        "NO_GROUNDED_EVIDENCE",
+        "NOT_RUN_REQUIRES_CONFIRMED_PAIR",
+        "NOT_RUN_RULE_NOT_COMPLETED",
+    ]
+    used_llm: bool
+    model: str | None = Field(default=None, max_length=300)
+    statements: list[DashboardGroundedRagStatement] = Field(
+        default_factory=list,
+        max_length=5,
+    )
+    citations: list[DashboardGroundedRagCitation] = Field(
+        default_factory=list,
+        max_length=7,
+    )
+    risk_decision_source: Literal["DETERMINISTIC_CAMEO_RULE_ENGINE"]
+    semantic_grounding_verified: Literal[False]
+    fallback_reason: str | None = Field(default=None, max_length=120)
+    limitations: list[str] = Field(min_length=1, max_length=5)
+
+    @model_validator(mode="after")
+    def statement_citations_must_exist(self) -> "DashboardGroundedRag":
+        citation_ids = {item.source_id for item in self.citations}
+        statement_ids = {
+            source_id for item in self.statements for source_id in item.source_ids
+        }
+        if statement_ids - citation_ids:
+            raise ValueError("RAG 문장이 응답에 없는 sourceId를 인용했습니다.")
+        return self
+
+
 class DashboardAnalysisBase(DashboardModel):
     schema_version: Literal[DASHBOARD_BFF_SCHEMA_VERSION] = DASHBOARD_BFF_SCHEMA_VERSION
     source_model_schema_version: Literal[API_SCHEMA_VERSION] = API_SCHEMA_VERSION
@@ -742,6 +793,7 @@ class DashboardAnalysisBase(DashboardModel):
     )
     facility_history: DashboardFacilityHistory
     evidence_cards: list[DashboardEvidenceCard] = Field(default_factory=list)
+    grounded_rag: DashboardGroundedRag | None = None
     confirmation_gate: DashboardConfirmationGate
     required_next_steps: list[str]
     provenance: DashboardProvenance
@@ -789,6 +841,11 @@ class DashboardAwaitingAnalysisResponse(DashboardAnalysisBase):
             raise ValueError("확인 대기 state가 역할별 확인 상태와 다릅니다.")
         if set(self.conflict_review.missing_confirmations) != expected_missing:
             raise ValueError("missingConfirmations가 역할별 확인 상태와 다릅니다.")
+        if (
+            self.grounded_rag is not None
+            and self.grounded_rag.status != "NOT_RUN_REQUIRES_CONFIRMED_PAIR"
+        ):
+            raise ValueError("확인 대기 상태에서는 RAG 요약을 실행할 수 없습니다.")
         return self
 
 
@@ -815,6 +872,13 @@ class DashboardCompletedAnalysisResponse(DashboardAnalysisBase):
             is not self.conflict_review.result.expert_reviewed
         ):
             raise ValueError("분석 provenance와 충돌 결과 검토 상태가 다릅니다.")
+        if self.grounded_rag is not None and self.grounded_rag.status in {
+            "NOT_RUN_REQUIRES_CONFIRMED_PAIR",
+            "NOT_RUN_RULE_NOT_COMPLETED",
+        }:
+            raise ValueError(
+                "완료된 Rule 결과에는 완료·fallback RAG 상태가 필요합니다."
+            )
         return self
 
 
@@ -838,6 +902,11 @@ class DashboardInconclusiveAnalysisResponse(DashboardAnalysisBase):
             and self.confirmation_gate.rule_execution_allowed
         ):
             raise ValueError("Rule 실행 결과에는 두 물질의 현장 확인이 필요합니다.")
+        if (
+            self.grounded_rag is not None
+            and self.grounded_rag.status != "NOT_RUN_RULE_NOT_COMPLETED"
+        ):
+            raise ValueError("미분류 Rule 결과에서는 RAG 요약을 실행할 수 없습니다.")
         return self
 
 
@@ -1118,6 +1187,7 @@ __all__ = [
     "DashboardConfirmationRequest",
     "DashboardConfirmationResponse",
     "DashboardErrorResponse",
+    "DashboardGroundedRag",
     "DashboardIncidentAnalyzeRequest",
     "DashboardInconclusiveAnalysisResponse",
     "DashboardMaterialDiscoveryRequest",

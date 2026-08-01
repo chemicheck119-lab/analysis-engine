@@ -154,6 +154,8 @@ def test_shared_unconfirmed_response_is_safe_dashboard_fixture() -> None:
     assert validated.state == "AWAITING_SUBSTANCE_CONFIRMATION"
     assert validated.confirmation_gate.all_required_confirmed is False
     assert validated.conflict_review.executed is False
+    assert validated.grounded_rag is not None
+    assert validated.grounded_rag.status == "NOT_RUN_REQUIRES_CONFIRMED_PAIR"
     mentions = validated.model_outputs["parser"]["substance_mentions"]
     assert [(item["surface_text"], item["role"]) for item in mentions] == [
         ("차아염소산나트륨", "INCIDENT"),

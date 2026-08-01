@@ -16,6 +16,7 @@
 - KOSHA·CAMEO 공식 근거 검색
 - 업체명·주소로 공개된 과거 취급 이력 후보 검색
 - 현장에서 확인된 두 물질의 CAMEO 충돌 스크리닝
+- 완료된 Rule 결과와 공식 근거만 인용하는 짧은 RAG 요약
 - 사고 분석 결과를 통합 응답으로 조립하고 각 API의 안전 불변조건 검증
 
 이 저장소가 담당하지 않는 일은 다음과 같습니다.
@@ -42,6 +43,9 @@ flowchart LR
     API --> RETRIEVER["근거 Retriever"]
     API --> FACILITY["시설 이력 검색"]
     API --> RULES["CAMEO Rule Engine"]
+    RETRIEVER --> RAG["Grounded RAG"]
+    RULES --> RAG
+    RAG --> API
     RESOLVER --> MODEL["resolver.joblib"]
     DISCOVERY --> DB
     DISCOVERY --> RESOLVER
@@ -71,6 +75,7 @@ flowchart LR
 | Retriever | `src/chemiguard119/retrieval.py` | 공식 근거의 하이브리드 검색 | 없음 |
 | 시설 이력 검색 | `src/chemiguard119/facility.py` | 과거 취급 이력 후보 조회 | 없음 |
 | Rule Engine | `src/chemiguard119/rules.py` | CAMEO 그룹 호환성 lookup | 공개 근거 파일럿 스크리닝 |
+| Grounded RAG | `src/chemiguard119/rag.py` | Rule·공식 근거를 문장별 출처와 함께 요약, 실패 시 extractive fallback | 없음 |
 | 전처리 | `src/chemiguard119/preprocessing.py` | 원천 CSV를 SQLite·학습 입력으로 변환 | 없음 |
 | 릴리스 검증 | `src/chemiguard119/release.py` | manifest·해시·버전 검증 | 없음 |
 | E2E 평가기 | `src/chemiguard119/e2e_evaluation.py` | 실제 사고 분석 상태 전이·기권·확인 gate 회귀 | 없음 |
@@ -122,7 +127,14 @@ flowchart LR
 6. 두 물질의 모든 CAMEO 반응성 그룹 조합 조회
 7. 가장 보수적인 서수 등급 선택
 8. 출처·매핑 provenance와 `expert_reviewed=false` 추가
-9. 응답 안전 불변조건 검증
+9. 완료된 Rule과 검색 근거만 Grounded RAG에 전달
+10. LLM 사용 시 문장별 `source_id`와 위험등급 일치 검사
+11. 실패 시 공식 근거 extractive 요약으로 전환
+12. 응답 안전 불변조건 검증
+
+Grounded RAG는 신고 원문을 외부 모델에 보내지 않고, 이미 검색된 공식 문서 발췌와 Rule
+결과만 전달합니다. 위험등급은 Rule Engine만 결정합니다. 두 CAS가 확인되지 않았거나 Rule이
+미분류이면 RAG도 실행하지 않습니다.
 
 공개 근거 조건을 만족하면 Rule 결과는 `SCREENING_COMPLETED`, 범위는
 `PUBLIC_SOURCE_CAMEO_SCREENING`입니다. 매핑이 없거나 검증 조건을 만족하지 않으면 임의로

@@ -77,7 +77,13 @@ CORS를 열지 않습니다. 브라우저는 같은 origin의 BFF를 우선 사�
 2. BE가 인증 사용자와 확인 시각을 포함한 서로 다른 확인 레코드 두 개를 저장합니다.
 3. BE가 두 `confirmed_*_substance` 객체를 포함해 통합 API를 다시 호출합니다.
 4. AI는 CAMEO 공개 근거 정책으로 결정론적 충돌 검토를 실행합니다.
-5. FE는 `risk_scale.is_probability=false`를 지키고 서수 등급을 백분율로 바꾸지 않습니다.
+5. AI는 완료된 Rule과 공식 검색 근거만 `grounded_rag`에 짧게 정리합니다.
+6. FE는 `risk_scale.is_probability=false`를 지키고 서수 등급을 백분율로 바꾸지 않습니다.
+
+BE는 `grounded_rag.statements[].source_ids`와 `citations[].source_id`를 연결해 BFF의
+`groundedRag`로 전달합니다. 화면은 문장과 공식 원문 링크만 보여주며 LLM 모델명·지연시간을
+주요 UI에 표시할 필요가 없습니다. `grounded_rag`가 없어도 기존 v1 응답을 처리할 수 있게
+선택 필드로 취급합니다.
 
 전문가 사전 승인은 이 API 실행 조건이 아닙니다. 대신 공개 근거 파일럿 결과에는
 `expert_reviewed=false`가 유지되며 최종 판단은 현장 지휘관에게 있습니다.

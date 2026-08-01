@@ -38,6 +38,34 @@ export interface EvidenceCard {
   casLinkStatus?: string | null;
 }
 
+export interface GroundedRagSummary {
+  schemaVersion: 'chemicheck119-grounded-rag-v1';
+  status:
+    | 'COMPLETED'
+    | 'FALLBACK_EXTRACTIVE'
+    | 'DISABLED'
+    | 'NO_GROUNDED_EVIDENCE'
+    | 'NOT_RUN_REQUIRES_CONFIRMED_PAIR'
+    | 'NOT_RUN_RULE_NOT_COMPLETED';
+  usedLlm: boolean;
+  model?: string | null;
+  statements: Array<{
+    text: string;
+    sourceIds: string[];
+  }>;
+  citations: Array<{
+    sourceId: string;
+    sourceType: 'KOSHA' | 'CAMEO' | 'CAMEO_RULE_ENGINE';
+    title: string;
+    casNumber?: string | null;
+    sourceUrls: string[];
+  }>;
+  riskDecisionSource: 'DETERMINISTIC_CAMEO_RULE_ENGINE';
+  semanticGroundingVerified: false;
+  fallbackReason?: string | null;
+  limitations: string[];
+}
+
 export interface MaterialCandidate {
   rank: number;
   casNumber: string;
@@ -170,6 +198,8 @@ export interface AnalysisCommon {
     }>;
   };
   evidenceCards: EvidenceCard[];
+  /** 대응 근거 카드: statements와 citations만 화면에 표시하면 된다. */
+  groundedRag?: GroundedRagSummary | null;
   confirmationGate: {
     policy: 'TWO_AUTHENTICATED_ON_SITE_CONFIRMATIONS_REQUIRED';
     incidentConfirmed: boolean;

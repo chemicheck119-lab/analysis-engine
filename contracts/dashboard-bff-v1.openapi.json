@@ -26,6 +26,16 @@
           "facilityHistory": {
             "$ref": "#/components/schemas/DashboardFacilityHistory"
           },
+          "groundedRag": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardGroundedRag"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "incidentId": {
             "maxLength": 128,
             "minLength": 1,
@@ -132,6 +142,16 @@
           },
           "facilityHistory": {
             "$ref": "#/components/schemas/DashboardFacilityHistory"
+          },
+          "groundedRag": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardGroundedRag"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "incidentId": {
             "maxLength": 128,
@@ -1009,6 +1029,186 @@
         "title": "DashboardFacilityHistory",
         "type": "object"
       },
+      "DashboardGroundedRag": {
+        "additionalProperties": false,
+        "description": "대시보드가 표시할 짧은 근거 요약과 출처 링크.",
+        "properties": {
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardGroundedRagCitation"
+            },
+            "maxItems": 7,
+            "title": "Citations",
+            "type": "array"
+          },
+          "fallbackReason": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallbackreason"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Limitations",
+            "type": "array"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "riskDecisionSource": {
+            "const": "DETERMINISTIC_CAMEO_RULE_ENGINE",
+            "title": "Riskdecisionsource",
+            "type": "string"
+          },
+          "schemaVersion": {
+            "const": "chemicheck119-grounded-rag-v1",
+            "title": "Schemaversion",
+            "type": "string"
+          },
+          "semanticGroundingVerified": {
+            "const": false,
+            "title": "Semanticgroundingverified",
+            "type": "boolean"
+          },
+          "statements": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardGroundedRagStatement"
+            },
+            "maxItems": 5,
+            "title": "Statements",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "COMPLETED",
+              "FALLBACK_EXTRACTIVE",
+              "DISABLED",
+              "NO_GROUNDED_EVIDENCE",
+              "NOT_RUN_REQUIRES_CONFIRMED_PAIR",
+              "NOT_RUN_RULE_NOT_COMPLETED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "usedLlm": {
+            "title": "Usedllm",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "status",
+          "usedLlm",
+          "riskDecisionSource",
+          "semanticGroundingVerified",
+          "limitations"
+        ],
+        "title": "DashboardGroundedRag",
+        "type": "object"
+      },
+      "DashboardGroundedRagCitation": {
+        "additionalProperties": false,
+        "properties": {
+          "casNumber": {
+            "anyOf": [
+              {
+                "maxLength": 12,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Casnumber"
+          },
+          "sourceId": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Sourceid",
+            "type": "string"
+          },
+          "sourceType": {
+            "enum": [
+              "KOSHA",
+              "CAMEO",
+              "CAMEO_RULE_ENGINE"
+            ],
+            "title": "Sourcetype",
+            "type": "string"
+          },
+          "sourceUrls": {
+            "items": {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Sourceurls",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sourceId",
+          "sourceType",
+          "title",
+          "sourceUrls"
+        ],
+        "title": "DashboardGroundedRagCitation",
+        "type": "object"
+      },
+      "DashboardGroundedRagStatement": {
+        "additionalProperties": false,
+        "properties": {
+          "sourceIds": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Sourceids",
+            "type": "array"
+          },
+          "text": {
+            "maxLength": 600,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "sourceIds"
+        ],
+        "title": "DashboardGroundedRagStatement",
+        "type": "object"
+      },
       "DashboardIncidentAnalyzeRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1179,6 +1379,16 @@
           },
           "facilityHistory": {
             "$ref": "#/components/schemas/DashboardFacilityHistory"
+          },
+          "groundedRag": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardGroundedRag"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "incidentId": {
             "maxLength": 128,

@@ -342,6 +342,26 @@ Resolver가 신고 질의에서 자동으로 선택한 CAS 힌트를 포함한 �
 - [API](API.md)
 - [안전 및 한계](SAFETY_AND_LIMITATIONS.md)
 
+## 8.1 Grounded RAG 안전 회귀
+
+`tests/test_rag.py`의 12개 수집 케이스는 다음 실패를 검사합니다.
+
+- 현장 확인 전 LLM 미호출
+- 공식 URL 없는 Rule에 가짜 인용을 만들지 않음
+- KOSHA·CAMEO 공식 도메인이 아닌 URL을 RAG 입력에서 제외
+- 알 수 없는 `source_id`, Rule과 다른 위험등급, 안전 단정 차단
+- timeout·잘못된 설정 시 extractive fallback
+- 메타데이터에 LLM 주소·API Key가 노출되지 않음
+
+추가 API 통합 테스트는 새 엔드포인트 없이 `/api/v1/incidents/analyze`의 완료 응답에
+`grounded_rag`가 포함되고 기존 `conflict_review` 위험등급이 그대로 유지되는지 확인합니다.
+
+2026-08-01 로컬 1,000회 extractive micro-benchmark는 평균 0.0131ms, p95 0.0132ms였습니다.
+이는 작은 고정 입력에서 **요약 조립 함수의 추가 비용만** 측정한 값이며 검색·Rule·네트워크를
+포함한 API SLO가 아닙니다. 실제 LLM 품질·지연시간은 모델이 확정되지 않아 평가 불충분입니다.
+운영 `llm` 모드 채택 전에는 별도 locked 근거 질의셋에서 인용 정확성, 근거 밖 주장률, 형식
+성공률과 p95를 측정해야 합니다.
+
 ## 9. 온라인 경로 상대 성능 측정
 
 검색 정확도 평가와 API 지연시간 측정은 별개입니다. 아래 명령은 동일 장비와 동일

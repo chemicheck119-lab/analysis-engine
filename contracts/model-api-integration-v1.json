@@ -256,6 +256,7 @@
       "input_fingerprint",
       "model_outputs",
       "evidence",
+      "grounded_rag",
       "conflict_review",
       "confirmation_gate",
       "required_next_steps",
@@ -282,6 +283,7 @@
       "물질 후보 검색",
       "시설 이력 후보 검색",
       "근거 검색",
+      "근거 제한형 RAG 요약",
       "충돌 규칙 검토",
       "모델과 데이터 provenance"
     ]

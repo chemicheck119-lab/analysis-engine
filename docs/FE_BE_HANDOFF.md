@@ -333,7 +333,8 @@ mock fallback으로 실제 분석처럼 보이는 위험 결과를 만들어서�
 - [ ] “N종 보유 확인”을 “과거 공개 이력 후보 N종 · 현장 확인 필요”로 변경
 - [ ] 카드 버튼명을 `현장 물질 확인`으로 바꾸고 confirmation API 연결
 - [ ] 확인 성공 뒤 `reanalyzeRequired=true`이면 같은 사고 ID로 사고분석 API 재호출
-- [ ] RAG 카드를 제목·기관·공식 문서 발췌·원문 URL·문서 버전으로 렌더링
+- [ ] `groundedRag.statements`를 짧은 대응 근거로, 연결된 `citations.sourceUrls`를 원문 링크로 렌더링
+- [ ] RAG 미실행·fallback 상태를 오류로 과장하지 말고 `conflictReview`를 위험등급 원본으로 사용
 - [ ] 근거 경고와 `safetyNotice`를 누락 없이 표시
 - [ ] `기록저장` 전 초기화 안내 확인창 표시
 - [ ] 저장 성공 후에만 토스트와 화면 초기화

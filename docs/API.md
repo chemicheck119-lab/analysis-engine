@@ -187,6 +187,11 @@ curl -X POST http://127.0.0.1:8000/api/v1/incidents/analyze \
     "substance_candidates": [],
     "candidate_score_notice": "후보 점수는 위험확률이 아닙니다."
   },
+  "grounded_rag": {
+    "status": "NOT_RUN_REQUIRES_CONFIRMED_PAIR",
+    "statements": [],
+    "citations": []
+  },
   "conflict_review": {
     "executed": false,
     "status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS"
@@ -307,6 +312,53 @@ curl -X POST http://127.0.0.1:8000/api/v1/incidents/analyze \
 
 공개 검증 매핑이 없으면 `VERIFY_REQUIRED`, 그룹 결과가 없거나 미매핑이면
 `UNCLASSIFIED`가 될 수 있습니다. 이 경우 등급을 임의 생성하지 않습니다.
+
+### 6.5 근거 제한형 RAG 응답
+
+두 CAS가 현장에서 확인되고 Rule 결과가 완료된 경우에만 `grounded_rag`가 설명을
+반환합니다. UI는 `statements[].text`와 해당 `source_ids`의 `citations[].source_urls`만
+연결해 간단한 “대응 근거” 카드로 표시하면 됩니다.
+
+```json
+{
+  "grounded_rag": {
+    "schema_version": "chemicheck119-grounded-rag-v1",
+    "status": "FALLBACK_EXTRACTIVE",
+    "mode": "extractive",
+    "used_llm": false,
+    "statements": [
+      {
+        "text": "공개 CAMEO 근거에서 높은 충돌 위험이 확인됐습니다.",
+        "source_ids": ["RULE_RESULT"]
+      }
+    ],
+    "citations": [
+      {
+        "source_id": "RULE_RESULT",
+        "source_type": "CAMEO_RULE_ENGINE",
+        "title": "확인된 두 물질의 CAMEO 충돌 스크리닝",
+        "source_urls": ["https://cameochemicals.noaa.gov/reactivity"]
+      }
+    ],
+    "risk_decision_source": "DETERMINISTIC_CAMEO_RULE_ENGINE",
+    "semantic_grounding_verified": false,
+    "fallback_reason": "EXTRACTIVE_MODE"
+  }
+}
+```
+
+| `status` | 의미 |
+|---|---|
+| `COMPLETED` | 선택 LLM이 만든 요약이 인용 ID·위험등급 검사를 통과 |
+| `FALLBACK_EXTRACTIVE` | LLM 미사용·실패·검증 실패로 공식 근거를 그대로 조립 |
+| `DISABLED` | RAG 기능을 명시적으로 끔 |
+| `NO_GROUNDED_EVIDENCE` | 표시할 공식 근거가 없음 |
+| `NOT_RUN_REQUIRES_CONFIRMED_PAIR` | 두 물질의 현장 확인 전이라 미실행 |
+| `NOT_RUN_RULE_NOT_COMPLETED` | Rule이 미분류·추가 확인 상태라 미실행 |
+
+`semantic_grounding_verified=false`는 인용 ID가 존재함을 검사했지만 문장 의미 전체를 자동으로
+과학 검증했다고 주장하지 않는다는 뜻입니다. RAG의 문장을 위험 판정으로 사용하면 안 되며
+`conflict_review`가 유일한 위험등급 원본입니다.
 
 전체 분석 응답에서는 같은 정책 정보가 `provenance.rule_policy`,
 `provenance.expert_reviewed`, `provenance.decision_support_only`,

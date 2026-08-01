@@ -813,6 +813,70 @@ class ConfirmationGateState(StrictModel):
         return self
 
 
+RagStatus = Literal[
+    "COMPLETED",
+    "FALLBACK_EXTRACTIVE",
+    "DISABLED",
+    "NO_GROUNDED_EVIDENCE",
+    "NOT_RUN_REQUIRES_CONFIRMED_PAIR",
+    "NOT_RUN_RULE_NOT_COMPLETED",
+]
+
+
+class GroundedRagStatement(StrictModel):
+    text: str = Field(min_length=1, max_length=600)
+    source_ids: list[str] = Field(min_length=1, max_length=3)
+
+
+class GroundedRagCitation(StrictModel):
+    source_id: str = Field(min_length=1, max_length=500)
+    source_type: Literal["KOSHA", "CAMEO", "CAMEO_RULE_ENGINE"]
+    title: str = Field(min_length=1, max_length=500)
+    cas_number: str | None = Field(default=None, max_length=12)
+    source_urls: list[str] = Field(min_length=1, max_length=5)
+
+
+class GroundedRagCitationValidation(StrictModel):
+    passed: Literal[True]
+    unknown_source_ids: list[str] = Field(default_factory=list, max_length=0)
+
+
+class GroundedRagAnswer(StrictModel):
+    """위험 판단과 분리된, 인용 ID 검증형 RAG 설명 계약."""
+
+    schema_version: Literal["chemicheck119-grounded-rag-v1"]
+    status: RagStatus
+    mode: Literal["off", "extractive", "llm"]
+    used_llm: bool
+    model: str | None = Field(default=None, max_length=300)
+    statements: list[GroundedRagStatement] = Field(default_factory=list, max_length=5)
+    citations: list[GroundedRagCitation] = Field(default_factory=list, max_length=7)
+    citation_validation: GroundedRagCitationValidation
+    risk_decision_source: Literal["DETERMINISTIC_CAMEO_RULE_ENGINE"]
+    semantic_grounding_verified: Literal[False]
+    fallback_reason: str | None = Field(default=None, max_length=120)
+    latency_ms: float = Field(ge=0)
+    limitations: list[str] = Field(min_length=1, max_length=5)
+
+    @model_validator(mode="after")
+    def citations_and_execution_state_must_be_consistent(self) -> "GroundedRagAnswer":
+        citation_ids = {item.source_id for item in self.citations}
+        statement_ids = {
+            source_id for item in self.statements for source_id in item.source_ids
+        }
+        if statement_ids - citation_ids:
+            raise ValueError("RAG 문장이 응답에 없는 source_id를 인용했습니다.")
+        if self.status == "COMPLETED":
+            if not self.used_llm or not self.model or not self.statements:
+                raise ValueError("COMPLETED RAG에는 LLM·모델·문장이 필요합니다.")
+        elif self.status == "FALLBACK_EXTRACTIVE":
+            if self.used_llm or not self.statements or not self.fallback_reason:
+                raise ValueError("extractive fallback 상태가 일관되지 않습니다.")
+        elif self.used_llm or self.model or self.statements or self.citations:
+            raise ValueError("RAG 미실행 상태에는 모델·문장·인용을 포함할 수 없습니다.")
+        return self
+
+
 class AnalysisResponse(StrictModel):
     schema_version: Literal["chemiguard119-api-v1"] = API_SCHEMA_VERSION
     analysis_id: str
@@ -822,6 +886,7 @@ class AnalysisResponse(StrictModel):
     input_fingerprint: str
     model_outputs: dict[str, Any]
     evidence: list[dict[str, Any]]
+    grounded_rag: GroundedRagAnswer | None = None
     conflict_review: ConflictReviewContract
     confirmation_gate: ConfirmationGateState
     required_next_steps: list[str]
@@ -832,6 +897,25 @@ class AnalysisResponse(StrictModel):
     def output_must_match_confirmation_and_rule_gate(self) -> "AnalysisResponse":
         incident_confirmed = self.confirmation_gate.incident_confirmed
         facility_confirmed = self.confirmation_gate.facility_confirmed
+        if self.grounded_rag is not None:
+            if not self.confirmation_gate.all_required_confirmed:
+                if self.grounded_rag.status != "NOT_RUN_REQUIRES_CONFIRMED_PAIR":
+                    raise ValueError(
+                        "현장 확인 전에는 RAG 대응 요약을 실행할 수 없습니다."
+                    )
+            elif isinstance(self.conflict_review, ExecutedConflictReview):
+                completed = self.conflict_review.status in {
+                    "COMPLETED",
+                    "SCREENING_COMPLETED",
+                }
+                if (
+                    completed
+                    and self.grounded_rag.status == "NOT_RUN_RULE_NOT_COMPLETED"
+                ) or (
+                    not completed
+                    and self.grounded_rag.status != "NOT_RUN_RULE_NOT_COMPLETED"
+                ):
+                    raise ValueError("RAG 상태가 Rule 완료 상태와 일치하지 않습니다.")
         evidence_errors = validate_evidence_confirmation_gate(
             self.evidence,
             incident_confirmed=incident_confirmed,
@@ -937,6 +1021,9 @@ __all__ = [
     "ConfirmedSubstanceInput",
     "ErrorResponse",
     "ExecutedConflictReview",
+    "GroundedRagAnswer",
+    "GroundedRagCitation",
+    "GroundedRagStatement",
     "EvidenceSearchRequest",
     "FacilityHistorySearchRequest",
     "InconclusiveConflictResult",

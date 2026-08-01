@@ -78,6 +78,27 @@
     }
   },
   "evidence": [],
+  "grounded_rag": {
+    "schema_version": "chemicheck119-grounded-rag-v1",
+    "status": "NOT_RUN_REQUIRES_CONFIRMED_PAIR",
+    "mode": "extractive",
+    "used_llm": false,
+    "model": null,
+    "statements": [],
+    "citations": [],
+    "citation_validation": {
+      "passed": true,
+      "unknown_source_ids": []
+    },
+    "risk_decision_source": "DETERMINISTIC_CAMEO_RULE_ENGINE",
+    "semantic_grounding_verified": false,
+    "fallback_reason": null,
+    "latency_ms": 0.0,
+    "limitations": [
+      "LLM은 위험등급을 결정하지 않습니다.",
+      "인용 ID 검증은 문장의 과학적 의미까지 보증하지 않습니다."
+    ]
+  },
   "conflict_review": {
     "executed": false,
     "status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",

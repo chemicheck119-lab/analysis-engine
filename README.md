@@ -1,6 +1,6 @@
 # 케미체크119 AI·모델 API
 
-화학사고 신고를 **물질 후보 검색 → 공식 근거 검색 → 물질 간 충돌 검토**로 연결하는
+화학사고 신고를 **물질 후보 검색 → 공식 근거 검색 → 물질 간 충돌 검토 → 근거 요약**으로 연결하는
 FastAPI 서비스와 CLI입니다. 백엔드는 대응충돌검토용 통합 분석 API와 물질검색 탭용 탐색
 API를 호출하며, 이 저장소의 파이프라인이 여러 모델·규칙 구성요소를 순서대로 실행합니다.
 
@@ -27,6 +27,8 @@ KOSHA·CAMEO 근거 검색
         ↓
 공개 근거 기반 충돌 스크리닝
         ↓
+공식 근거만 인용하는 짧은 RAG 요약
+        ↓
 근거·정책·버전이 포함된 JSON 응답
 ```
 
@@ -36,8 +38,9 @@ KOSHA·CAMEO 근거 검색
 - **Discovery**: 두 가지 이상 성상 관찰에서 공개자료 기반 후보와 출처를 찾습니다.
 - **Retriever**: KOSHA·CAMEO 문서에서 관련 근거를 검색합니다.
 - **Rule Engine**: 현장에서 확인된 두 CAS를 CAMEO 반응성 데이터와 대조합니다.
+- **Grounded RAG**: Rule 결과와 검색 근거만 짧게 요약하고 문장마다 출처를 붙입니다.
 - **FastAPI**: 사고 분석은 통합 API 하나로, 관찰 기반 물질탐색은 별도 API로 제공합니다.
-- **LM Studio**: 신고문 구조화 비교 실험에만 선택적으로 사용합니다. 운영 API에 필요하지 않습니다.
+- **LM Studio**: 로컬 RAG 생성 실험에 선택적으로 사용할 수 있으며 운영 필수 요소는 아닙니다.
 
 ## 2. 현재 구현 상태
 
@@ -48,10 +51,11 @@ KOSHA·CAMEO 근거 검색
 | 자동 CAS 힌트 안전 회귀 | 구현 | 부분 문자열·모호 표현 12건, 위험 힌트 0건 |
 | 신고문 구조화 | 구현 | 기본 결정적 파서, LM Studio는 선택 실험 |
 | 공식 근거 검색 | 구현 | KOSHA 상세 근거 9종과 CAMEO 근거, section 중심 BM25·TF-IDF |
+| 근거 제한형 RAG | 구현 | 기존 검색·CAMEO 결과만 요약, 문장별 출처 ID 검증, 실패 시 extractive fallback |
 | Section 검색 평가 | 구현 | 핵심·보조 문서와 필수 사실 회수율·기권 성능·95% 구간을 분리, DRAFT 상용 주장은 차단 |
 | 사고 분석 E2E 평가 | 부분 구현 | 8건 DRAFT 회귀 + 50건 독립 검수 후보·이중 검수 gate, 사람 검수 전 정확도 주장 금지 |
 | KOSHA 근거 확장 | 수집기 구현 | 공식 OpenAPI staging 수집·검토 필요, 현재 artifact는 9종 |
-| 유사 사고 사례 RAG | 미구현 | 검증된 사고–대응 사례 corpus와 출처·라벨 부족 |
+| 유사 사고 사례 검색 | 미구현 | 검증된 사고–대응 사례 corpus와 출처·라벨 부족; 현재 RAG는 공식 MSDS·CAMEO만 사용 |
 | 시설 물질 후보 | 구현 | ICIS·PRTR 공개 **과거 취급 이력** 검색 |
 | 물질 충돌 검토 | 공개 근거 파일럿 | 공개 검증 crosswalk CAS 6개·물질쌍 15개, pair별 표시 계약, `expert_reviewed=false` |
 | 생성형 파인튜닝 | 준비도 점검만 | 데이터 gate만 구현, 실제 학습·운영 적용 안 함 |
@@ -72,7 +76,8 @@ KOSHA·CAMEO 근거 검색
 |---|---|
 | CAS 번호 | 화학물질을 구분하는 국제 등록 번호 |
 | Resolver | 입력한 이름을 물질·CAS 후보로 연결하는 검색 모델 |
-| RAG / Retriever | 저장된 공식 근거 중 질문과 관련된 내용을 찾는 검색 계층 |
+| Retriever | 저장된 공식 근거 중 질문과 관련된 내용을 찾는 검색 계층 |
+| RAG | 찾은 근거와 Rule 결과만 이용해 출처가 붙은 짧은 설명을 만드는 계층 |
 | CAMEO | NOAA가 제공하는 화학물질 반응성·대응 정보 체계 |
 | Artifact | 학습·전처리로 생성된 SQLite DB와 모델 파일 |
 | 현장 확인 게이트 | 사고물질과 시설물질을 각각 확인하기 전 충돌 결과를 내지 않는 규칙 |
@@ -128,6 +133,19 @@ chemiguard119 doctor --json
 ```bash
 CHEMIGUARD119_ALLOW_ANONYMOUS=true chemiguard119-api
 ```
+
+기본값 `CHEMIGUARD119_RAG_MODE=extractive`는 외부 모델 없이 공식 근거를 짧게 조립합니다.
+LM Studio로 생성형 요약까지 시험하려면 Developer 서버에서 모델을 로드한 뒤 다음처럼 실행합니다.
+
+```bash
+export CHEMIGUARD119_RAG_MODE=llm
+export CHEMIGUARD119_RAG_BASE_URL=http://127.0.0.1:1234/v1
+export CHEMIGUARD119_RAG_MODEL='LM-Studio에-표시된-모델-ID'
+CHEMIGUARD119_ALLOW_ANONYMOUS=true chemiguard119-api
+```
+
+LLM 호출이 실패하거나 인용 검증을 통과하지 못하면 API 오류 대신
+`grounded_rag.status=FALLBACK_EXTRACTIVE`를 반환합니다.
 
 다른 터미널에서 확인합니다.
 
@@ -411,13 +429,15 @@ python -m pip check
 
 항상 한 번은 아닙니다. 일반 사고 분석은 `POST /api/v1/incidents/analyze`, 물질명을 모를
 때는 별도 `POST /api/v1/substances/discover`를 사용합니다. 현장 확인 뒤 충돌 검토를 위해
-`incidents/analyze`를 다시 호출할 수 있습니다. 각 요청 내부에서는 외부 LLM 호출 없이
-Resolver·Retriever·Rule Engine이 목적에 맞게 실행됩니다.
+`incidents/analyze`를 다시 호출할 수 있습니다. 기본 모드는 외부 LLM 없이 Resolver·Retriever·
+Rule Engine과 extractive 요약을 실행합니다. `RAG_MODE=llm`일 때만 두 CAS 확인과 Rule 완료
+후 선택한 LLM을 최대 한 번 호출합니다.
 
 ### 서버에 LM Studio를 설치해야 하나요?
 
-아니요. 기본 운영 경로는 FastAPI, SQLite, scikit-learn 모델과 결정적 규칙 엔진만 사용합니다.
-LM Studio는 선택적인 로컬 실험 도구입니다.
+아니요. 기본 운영 경로는 FastAPI, SQLite, scikit-learn 모델, 결정적 규칙 엔진과 extractive
+요약만 사용합니다. LM Studio는 선택적인 로컬 RAG 실험 도구이며, 배포 시에는 같은
+OpenAI-compatible 계약의 서버 LLM 또는 외부 API로 바꿀 수 있습니다.
 
 ### 전문가 검토가 없으면 충돌 기능을 사용할 수 없나요?
 

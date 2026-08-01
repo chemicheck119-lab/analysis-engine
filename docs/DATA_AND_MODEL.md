@@ -266,9 +266,18 @@ Retriever는 다음 검색 결과를 Reciprocal Rank Fusion으로 결합합니�
 RRF·TF-IDF 점수는 검색 순위를 위한 값입니다. 위험도, 사고확률, 근거의 사실성 확률로
 표현하면 안 됩니다.
 
-현재 Retriever corpus는 KOSHA·CAMEO 공식 근거입니다. 사고 내용과 당시 대응이 함께
-검증된 사례 corpus가 없어 **유사 사고 사례 RAG는 아직 구현하지 않았습니다.** 사례 출처,
-사고 단위 중복 제거, 대응 결과 라벨과 개인정보 처리 기준이 마련된 뒤 별도 평가해야 합니다.
+현재 Retriever corpus는 KOSHA·CAMEO 공식 근거입니다.
+
+### 9.4 Grounded RAG
+
+Retriever가 찾은 공식 문서와 완료된 CAMEO Rule 결과를 `src/chemiguard119/rag.py`가 짧은
+문장으로 조립합니다. 기본 `extractive` 모드는 외부 모델 없이 원문 발췌를 사용합니다.
+선택 `llm` 모드는 같은 근거만 OpenAI-compatible 서버에 보내며 모든 문장의 `source_id`와
+Rule 위험등급 일치를 검사합니다. 검증·timeout·호출 실패는 extractive로 되돌아갑니다.
+
+이는 **공식 근거 설명 RAG**입니다. 사고 내용과 당시 대응이 함께 검증된 사례 corpus가 없어
+**유사 사고 사례 검색은 아직 구현하지 않았습니다.** 사례 출처, 사고 단위 중복 제거, 대응
+결과 라벨과 개인정보 처리 기준이 마련된 뒤 별도 평가해야 합니다.
 
 ## 10. 모델 4: 시설 이력 검색
 

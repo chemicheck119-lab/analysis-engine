@@ -295,6 +295,16 @@ def _completed_rule_result() -> dict[str, Any]:
     }
 
 
+def _public_source_completed_rule_result() -> dict[str, Any]:
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "examples"
+        / "api"
+        / "conflict_screening_completed_result.json"
+    )
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def _enable_approved_policy_for_test(runtime: ModelRuntime) -> None:
     """APPROVED_ONLY 출력 계약 테스트가 readiness 게이트를 통과하게 한다."""
 
@@ -1489,6 +1499,42 @@ def test_api_blocks_confirmed_state_that_disagrees_with_rule_result(
     assert response.json()["error"]["code"] == "OUTPUT_VALIDATION_FAILED"
 
 
+def test_completed_analysis_exposes_grounded_rag_without_new_endpoint(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    result = _public_source_completed_rule_result()
+    pipeline_result = _safe_confirmed_pipeline_result()
+    pipeline_result["status"] = "SCREENING_COMPLETED"
+    pipeline_result["rule_review"] = {
+        "executed": True,
+        "status": "SCREENING_COMPLETED",
+        "gate": "BOTH_CAS_RESPONDER_CONFIRMED",
+        "policy_mode": PUBLIC_SOURCE_PILOT_POLICY,
+        "result": result,
+    }
+    monkeypatch.setattr(
+        api, "analyze_incident", lambda *_args, **_kwargs: pipeline_result
+    )
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/incidents/analyze",
+            json=_analyze_payload_with_confirmed_pair(),
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["state"] == "SCREENING_COMPLETED"
+    assert body["grounded_rag"]["status"] == "FALLBACK_EXTRACTIVE"
+    assert body["grounded_rag"]["used_llm"] is False
+    assert {item["source_id"] for item in body["grounded_rag"]["citations"]} == {
+        "RULE_RESULT"
+    }
+    assert body["conflict_review"]["result"]["risk_level_ko"] == "높음"
+
+
 @pytest.mark.parametrize(
     ("review_status", "scope", "policy_mode", "extra_fields"),
     [
@@ -1901,6 +1947,10 @@ def test_rule_requires_two_complete_confirmation_records_and_forces_demo_off(
     assert one_response.status_code == 200
     assert one_response.json()["state"] == "AWAITING_FACILITY_CONFIRMATION"
     assert one_response.json()["conflict_review"]["executed"] is False
+    assert (
+        one_response.json()["grounded_rag"]["status"]
+        == "NOT_RUN_REQUIRES_CONFIRMED_PAIR"
+    )
     assert missing_id_response.status_code == 422
     assert not_present_response.status_code == 422
 
@@ -1908,6 +1958,7 @@ def test_rule_requires_two_complete_confirmation_records_and_forces_demo_off(
     both_body = both_response.json()
     assert both_body["state"] == "VERIFY_REQUIRED"
     assert both_body["conflict_review"]["executed"] is True
+    assert both_body["grounded_rag"]["status"] == "NOT_RUN_RULE_NOT_COMPLETED"
     assert both_body["provenance"]["confirmations"] == {
         "incident": {
             "confirmation_id": "CNF-INC-001",

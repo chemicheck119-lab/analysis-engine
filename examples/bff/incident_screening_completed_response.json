@@ -33,6 +33,37 @@
     "candidates": []
   },
   "evidenceCards": [],
+  "groundedRag": {
+    "schemaVersion": "chemicheck119-grounded-rag-v1",
+    "status": "FALLBACK_EXTRACTIVE",
+    "usedLlm": false,
+    "model": null,
+    "statements": [
+      {
+        "text": "NOAA/EPA CAMEO 공개 원자료로 대조한 반응성 그룹 조합 중 가장 보수적인 등급은 높음입니다.",
+        "sourceIds": [
+          "RULE_RESULT"
+        ]
+      }
+    ],
+    "citations": [
+      {
+        "sourceId": "RULE_RESULT",
+        "sourceType": "CAMEO_RULE_ENGINE",
+        "title": "확인된 두 물질의 CAMEO 충돌 스크리닝",
+        "casNumber": null,
+        "sourceUrls": [
+          "https://cameochemicals.noaa.gov/reactivity"
+        ]
+      }
+    ],
+    "riskDecisionSource": "DETERMINISTIC_CAMEO_RULE_ENGINE",
+    "semanticGroundingVerified": false,
+    "fallbackReason": "EXTRACTIVE_MODE",
+    "limitations": [
+      "LLM은 위험등급을 결정하지 않습니다."
+    ]
+  },
   "confirmationGate": {
     "policy": "TWO_AUTHENTICATED_ON_SITE_CONFIRMATIONS_REQUIRED",
     "incidentConfirmed": true,

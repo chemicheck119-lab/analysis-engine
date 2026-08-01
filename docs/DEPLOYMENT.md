@@ -2,8 +2,9 @@
 
 ## 1. 배포 원칙
 
-케미체크119는 LM Studio 없이 FastAPI, 읽기 전용 SQLite, scikit-learn artifact와 결정적
-CAMEO Rule Engine으로 배포합니다.
+케미체크119의 필수 경로는 LM Studio 없이 FastAPI, 읽기 전용 SQLite, scikit-learn artifact와
+결정적 CAMEO Rule Engine으로 배포합니다. RAG 생성은 선택 기능이며 꺼지거나 실패해도 공식
+근거 extractive 요약으로 계속 동작합니다.
 
 운영 릴리스 단위는 다음 네 가지입니다.
 
@@ -46,7 +47,24 @@ staging·production 서버가 시작할 때 외부에서 주입한 manifest SHA-
 | `CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY` | 생략 | 검수·빌드 전용 32바이트 Secret, 실행 서버 주입 금지 |
 | `CHEMIGUARD119_RULE_POLICY` | `PUBLIC_SOURCE_PILOT_V1` | 기본값 유지 권장 |
 
-### 3.2 경로
+### 3.2 선택형 Grounded RAG
+
+| 변수 | 기본값 | 의미 |
+|---|---|---|
+| `CHEMIGUARD119_RAG_MODE` | `extractive` | `off`, `extractive`, `llm` 중 하나 |
+| `CHEMIGUARD119_RAG_BASE_URL` | `http://127.0.0.1:1234/v1` | `llm` 모드의 OpenAI-compatible base URL |
+| `CHEMIGUARD119_RAG_MODEL` | 없음 | 서버에 로드된 모델 ID; 없으면 fallback |
+| `CHEMIGUARD119_RAG_API_KEY` | 없음 | 외부 LLM 인증 Secret; 응답·메타데이터·로그에 노출 금지 |
+| `CHEMIGUARD119_RAG_TIMEOUT_SECONDS` | `8` | 1~30초; 초과·오류 시 fallback |
+
+로컬 LM Studio는 [`/v1/chat/completions`의 JSON Schema structured output](https://lmstudio.ai/docs/developer/openai-compat/structured-output)을
+지원합니다. 배포 서버는 LM Studio일 필요가 없고 같은 API 계약을 제공하면 됩니다. 모델에
+전송하는 데이터는 완료된 Rule 결과와 KOSHA·CAMEO 발췌뿐이며 신고 원문은 제외됩니다.
+
+운영 기본값은 비용과 외부 장애가 없는 `extractive`를 권장합니다. `llm` 도입 전에는 해당
+모델의 구조화 출력 성공률, p95 지연시간, 메모리·비용을 별도 staging에서 측정합니다.
+
+### 3.3 경로
 
 | 변수 | 기본 상대경로 |
 |---|---|

@@ -37,6 +37,16 @@
             "title": "Evidence",
             "type": "array"
           },
+          "grounded_rag": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GroundedRagAnswer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "incident_id": {
             "anyOf": [
               {
@@ -457,6 +467,226 @@
           "query"
         ],
         "title": "FacilityHistorySearchRequest",
+        "type": "object"
+      },
+      "GroundedRagAnswer": {
+        "additionalProperties": false,
+        "description": "위험 판단과 분리된, 인용 ID 검증형 RAG 설명 계약.",
+        "properties": {
+          "citation_validation": {
+            "$ref": "#/components/schemas/GroundedRagCitationValidation"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/GroundedRagCitation"
+            },
+            "maxItems": 7,
+            "title": "Citations",
+            "type": "array"
+          },
+          "fallback_reason": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Reason"
+          },
+          "latency_ms": {
+            "minimum": 0.0,
+            "title": "Latency Ms",
+            "type": "number"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Limitations",
+            "type": "array"
+          },
+          "mode": {
+            "enum": [
+              "off",
+              "extractive",
+              "llm"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "risk_decision_source": {
+            "const": "DETERMINISTIC_CAMEO_RULE_ENGINE",
+            "title": "Risk Decision Source",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "chemicheck119-grounded-rag-v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "semantic_grounding_verified": {
+            "const": false,
+            "title": "Semantic Grounding Verified",
+            "type": "boolean"
+          },
+          "statements": {
+            "items": {
+              "$ref": "#/components/schemas/GroundedRagStatement"
+            },
+            "maxItems": 5,
+            "title": "Statements",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "COMPLETED",
+              "FALLBACK_EXTRACTIVE",
+              "DISABLED",
+              "NO_GROUNDED_EVIDENCE",
+              "NOT_RUN_REQUIRES_CONFIRMED_PAIR",
+              "NOT_RUN_RULE_NOT_COMPLETED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "used_llm": {
+            "title": "Used Llm",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "schema_version",
+          "status",
+          "mode",
+          "used_llm",
+          "citation_validation",
+          "risk_decision_source",
+          "semantic_grounding_verified",
+          "latency_ms",
+          "limitations"
+        ],
+        "title": "GroundedRagAnswer",
+        "type": "object"
+      },
+      "GroundedRagCitation": {
+        "additionalProperties": false,
+        "properties": {
+          "cas_number": {
+            "anyOf": [
+              {
+                "maxLength": 12,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cas Number"
+          },
+          "source_id": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_type": {
+            "enum": [
+              "KOSHA",
+              "CAMEO",
+              "CAMEO_RULE_ENGINE"
+            ],
+            "title": "Source Type",
+            "type": "string"
+          },
+          "source_urls": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Source Urls",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "source_type",
+          "title",
+          "source_urls"
+        ],
+        "title": "GroundedRagCitation",
+        "type": "object"
+      },
+      "GroundedRagCitationValidation": {
+        "additionalProperties": false,
+        "properties": {
+          "passed": {
+            "const": true,
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "unknown_source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 0,
+            "title": "Unknown Source Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "passed"
+        ],
+        "title": "GroundedRagCitationValidation",
+        "type": "object"
+      },
+      "GroundedRagStatement": {
+        "additionalProperties": false,
+        "properties": {
+          "source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "text": {
+            "maxLength": 600,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "source_ids"
+        ],
+        "title": "GroundedRagStatement",
         "type": "object"
       },
       "IncidentAnalyzeRequest": {
@@ -1197,7 +1427,7 @@
     }
   },
   "info": {
-    "description": "화학사고 신고 구조화, 물질 후보 검색, 공식 근거 검색과 공개근거 CAMEO 스크리닝 또는 승인 Rule 조회를 제공하는 의사결정 지원 API입니다. 모델 출력은 현장 명령이 아닙니다.",
+    "description": "화학사고 신고 구조화, 물질 후보 검색, 공식 근거 검색, 근거 제한형 RAG와 공개근거 CAMEO 스크리닝 또는 승인 Rule 조회를 제공하는 의사결정 지원 API입니다. 모델 출력은 현장 명령이 아닙니다.",
     "title": "케미체크119 모델 API",
     "version": "0.4.0"
   },

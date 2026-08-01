@@ -64,6 +64,20 @@
     "candidates": []
   },
   "evidenceCards": [],
+  "groundedRag": {
+    "schemaVersion": "chemicheck119-grounded-rag-v1",
+    "status": "NOT_RUN_REQUIRES_CONFIRMED_PAIR",
+    "usedLlm": false,
+    "model": null,
+    "statements": [],
+    "citations": [],
+    "riskDecisionSource": "DETERMINISTIC_CAMEO_RULE_ENGINE",
+    "semanticGroundingVerified": false,
+    "fallbackReason": null,
+    "limitations": [
+      "LLM은 위험등급을 결정하지 않습니다."
+    ]
+  },
   "confirmationGate": {
     "policy": "TWO_AUTHENTICATED_ON_SITE_CONFIRMATIONS_REQUIRED",
     "incidentConfirmed": false,

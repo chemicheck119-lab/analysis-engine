@@ -58,6 +58,7 @@ from chemiguard119.observability import configure_json_logging, emit_json_event
 from chemiguard119.facility import search_facility_history
 from chemiguard119.pipeline import PIPELINE_SCHEMA_VERSION, analyze_incident
 from chemiguard119.preprocessing import MINIMUM_ULSAN_PROFILE_COUNT
+from chemiguard119.rag import GroundedRagService, RAG_SCHEMA_VERSION
 from chemiguard119.resolver import load_resolver, resolve_substance
 from chemiguard119.retrieval import load_retriever, search_evidence
 from chemiguard119.release import (
@@ -822,8 +823,9 @@ def _public_analysis_response(
     *,
     request_id: str,
     analysis_id: str,
-    elapsed_ms: float,
+    started_at: float,
     rule_policy: str,
+    rag_service: GroundedRagService,
     facility_history: dict[str, Any] | None = None,
 ) -> AnalysisResponse:
     if pipeline_result.get("status") == "INVALID_INPUT":
@@ -906,6 +908,8 @@ def _public_analysis_response(
     policy_mode = rule_policy
     rule_wrapper = pipeline_result.get("rule_review") or {}
     rule_result = rule_wrapper.get("result") or {}
+    grounded_rag = rag_service.answer(public_evidence, rule_wrapper)
+    elapsed_ms = (time.perf_counter() - started_at) * 1_000
     expert_reviewed = bool(
         rule_wrapper.get("executed") is True
         and _result_expert_reviewed(policy_mode, rule_result)
@@ -919,6 +923,7 @@ def _public_analysis_response(
         input_fingerprint=input_fingerprint,
         model_outputs=model_outputs,
         evidence=public_evidence,
+        grounded_rag=grounded_rag,
         conflict_review=pipeline_result.get("rule_review", {}),
         confirmation_gate=confirmation_gate,
         required_next_steps=_required_next_steps(state_value),
@@ -930,6 +935,8 @@ def _public_analysis_response(
             "retriever_schema_version": runtime.retriever_artifact.get(
                 "schema_version"
             ),
+            "grounded_rag_schema_version": RAG_SCHEMA_VERSION,
+            "grounded_rag_mode": grounded_rag["mode"],
             "runtime_loaded_at_utc": runtime.loaded_at_utc,
             "processed_at_utc": datetime.now(timezone.utc).isoformat(),
             "latency_ms": round(elapsed_ms, 3),
@@ -953,6 +960,7 @@ def create_app(
     allow_anonymous: bool | None = None,
     deployment_environment: str | None = None,
     rule_policy: str | None = None,
+    rag_service: GroundedRagService | None = None,
 ) -> FastAPI:
     """테스트 주입과 실제 artifact 로딩을 모두 지원하는 app factory."""
 
@@ -1000,13 +1008,14 @@ def create_app(
         title=f"{PUBLIC_SERVICE_NAME} 모델 API",
         version=__version__,
         description=(
-            "화학사고 신고 구조화, 물질 후보 검색, 공식 근거 검색과 공개근거 CAMEO "
-            "스크리닝 또는 승인 Rule 조회를 "
+            "화학사고 신고 구조화, 물질 후보 검색, 공식 근거 검색, 근거 제한형 RAG와 "
+            "공개근거 CAMEO 스크리닝 또는 승인 Rule 조회를 "
             "제공하는 의사결정 지원 API입니다. 모델 출력은 현장 명령이 아닙니다."
         ),
         lifespan=lifespan,
     )
     application.state.runtime = runtime
+    application.state.rag_service = rag_service or GroundedRagService()
     application.state.startup_error = None
     application.state.deployment_environment = resolved_deployment_environment
     application.state.rule_policy = (
@@ -1284,6 +1293,7 @@ def create_app(
             "decision_support_only": True,
             "responder_confirmation_required": True,
             "conflict_review_capability": capability,
+            "grounded_rag_capability": request.app.state.rag_service.metadata(),
             "confirmation_gate_policy": CONFIRMATION_GATE_POLICY,
             "docs": "/docs",
             "openapi": "/openapi.json",
@@ -1335,15 +1345,15 @@ def create_app(
                     province=payload.location.province,
                     top_k=10,
                 )
-        elapsed_ms = (time.perf_counter() - started) * 1_000
         return _public_analysis_response(
             payload,
             result,
             active_runtime,
             request_id=_request_id(request, payload.request_id),
             analysis_id=_new_id("ANL"),
-            elapsed_ms=elapsed_ms,
+            started_at=started,
             rule_policy=request.app.state.rule_policy,
+            rag_service=request.app.state.rag_service,
             facility_history=facility_history,
         )
 

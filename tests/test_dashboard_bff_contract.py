@@ -20,6 +20,7 @@ from chemiguard119.dashboard_contract import (
     DashboardConfirmationRequest,
     DashboardConfirmationResponse,
     DashboardErrorResponse,
+    DashboardGroundedRag,
     DashboardIncidentAnalyzeRequest,
     DashboardInconclusiveAnalysisResponse,
     DashboardMaterialDiscoveryRequest,
@@ -296,6 +297,59 @@ def test_completed_analysis_requires_two_confirmations_and_ordinal_risk() -> Non
     assert response.conflict_review.result.scope == "PUBLIC_SOURCE_CAMEO_SCREENING"
     assert response.conflict_review.result.policy_mode == "PUBLIC_SOURCE_PILOT_V1"
     assert len(response.conflict_review.result.mapping_provenance) == 2
+
+
+def test_dashboard_grounded_rag_keeps_summary_and_citations_simple() -> None:
+    rag = DashboardGroundedRag.model_validate(
+        {
+            "schemaVersion": "chemicheck119-grounded-rag-v1",
+            "status": "FALLBACK_EXTRACTIVE",
+            "usedLlm": False,
+            "model": None,
+            "statements": [
+                {
+                    "text": "CAMEO 공개 근거에서 높은 충돌 위험이 확인됐습니다.",
+                    "sourceIds": ["RULE_RESULT"],
+                }
+            ],
+            "citations": [
+                {
+                    "sourceId": "RULE_RESULT",
+                    "sourceType": "CAMEO_RULE_ENGINE",
+                    "title": "확인된 두 물질의 CAMEO 충돌 스크리닝",
+                    "casNumber": None,
+                    "sourceUrls": ["https://cameochemicals.noaa.gov/reactivity"],
+                }
+            ],
+            "riskDecisionSource": "DETERMINISTIC_CAMEO_RULE_ENGINE",
+            "semanticGroundingVerified": False,
+            "fallbackReason": "EXTRACTIVE_MODE",
+            "limitations": ["LLM은 위험등급을 결정하지 않습니다."],
+        }
+    )
+
+    assert rag.statements[0].source_ids == ["RULE_RESULT"]
+    assert str(rag.citations[0].source_urls[0]).startswith(
+        "https://cameochemicals.noaa.gov/"
+    )
+
+
+def test_dashboard_grounded_rag_rejects_unknown_citation() -> None:
+    with pytest.raises(ValidationError):
+        DashboardGroundedRag.model_validate(
+            {
+                "schemaVersion": "chemicheck119-grounded-rag-v1",
+                "status": "COMPLETED",
+                "usedLlm": True,
+                "model": "test-model",
+                "statements": [{"text": "근거 없는 문장", "sourceIds": ["UNKNOWN"]}],
+                "citations": [],
+                "riskDecisionSource": "DETERMINISTIC_CAMEO_RULE_ENGINE",
+                "semanticGroundingVerified": False,
+                "fallbackReason": None,
+                "limitations": ["한계"],
+            }
+        )
 
 
 def test_completed_fixture_is_derived_from_versioned_pair_and_crosswalk() -> None:

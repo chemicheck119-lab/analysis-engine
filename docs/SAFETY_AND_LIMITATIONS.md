@@ -72,6 +72,16 @@ UI는 후보마다 “현장 확인 필요”를 표시하고, 첫 후보를 자
 
 UI는 근거가 없을 때 “정보 없음”을 명확히 표시하고 공식 MSDS 확인 링크를 제공해야 합니다.
 
+## 5.1 Grounded RAG의 한계
+
+- LLM은 위험등급을 정하지 않으며 `conflict_review`가 유일한 판정 원본입니다.
+- RAG는 현장 확인 CAS 두 개와 완료된 Rule 결과가 있을 때만 실행됩니다.
+- 모든 문장의 출처 ID 존재 여부는 검사하지만 문장 의미 전체를 과학적으로 자동 검증하지는
+  않으므로 `semantic_grounding_verified=false`입니다.
+- 외부 LLM 오류·timeout·형식 위반·알 수 없는 인용은 공식 근거 extractive 요약으로
+  전환하며 충돌 검토 자체를 실패시키지 않습니다.
+- 현재 근거는 KOSHA·CAMEO이며 검증된 유사 사고사례 corpus는 포함하지 않습니다.
+
 ## 6. 시설 이력의 한계
 
 ICIS·PRTR 시설 결과는 `REPORTED_HANDLING_HISTORY`입니다.
