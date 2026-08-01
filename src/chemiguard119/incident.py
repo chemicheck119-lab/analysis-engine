@@ -16,6 +16,55 @@ ACTION_PATTERNS = {
     "FOAM": ("포 소화", "포소화", "포 방사"),
     "DRAIN_BLOCK": ("배수로 차단", "배수 차단", "유입 차단"),
 }
+INCIDENT_PARSER_POLICY_VERSION = "incident-parser-policy-v2-national-dev-through-2020"
+
+# 신고·사고 정리문에서 같은 사건이 다양한 동사로 기록된다. 아래 표현은
+# 2020년까지의 전국 공식 사고 개발 구간에서 확인한 뒤, 뜻이 직접적인
+# 방출·연소·폭발 표현만 보수적으로 채택했다. ``파손``처럼 결과가 누출인지
+# 폭발인지 단정할 수 없는 설비 상태 표현은 포함하지 않는다.
+INCIDENT_EVENT_PATTERNS = {
+    "LEAK": re.compile(
+        r"누출|유출|누설|분출|방출|비산|새고|샌다|새는|새어|흘러|쏟|넘쳐|넘침|튀어"
+    ),
+    "FIRE": re.compile(r"화재|불이|연소|발화|착화"),
+    "EXPLOSION": re.compile(r"폭발|폭굉"),
+}
+EVENT_NEGATION_PATTERN = re.compile(r"(?:안|없|아니|아닙|아님|아닌|미발생|미확인)")
+
+# 한국어 현장 문장에서는 물질명과 설비·물성이 붙어 쓰이는 경우가 많다.
+# 이 접미사는 화학 정체성을 바꾸지 않는 문맥만 허용한다. 예를 들어
+# ``염소가스``는 염소 후보로 찾되 ``염소소독제``나 ``차아염소산``은 찾지 않는다.
+INCIDENT_ALIAS_CONTEXT_SUFFIXES = ("저장탱크", "탱크", "용기", "가스", "통")
+
+
+def _event_is_negated(text: str, start: int, end: int) -> bool:
+    left = text[max(0, start - 6) : start]
+    right = text[end : min(len(text), end + 8)]
+    return bool(
+        re.search(r"(?:안|없는|아닌|미발생|미확인).{0,4}$", left)
+        or EVENT_NEGATION_PATTERN.search(right)
+    )
+
+
+def _incident_types(text: str) -> list[str]:
+    found: list[str] = []
+    for incident_type, pattern in INCIDENT_EVENT_PATTERNS.items():
+        if any(
+            not _event_is_negated(text, match.start(), match.end())
+            for match in pattern.finditer(text)
+        ):
+            found.append(incident_type)
+    return found or ["UNKNOWN"]
+
+
+def _incident_alias_spans(text: str, alias: str) -> list[tuple[int, int, str]]:
+    """정확 별칭과 제한된 ``물질명+설비/물성`` 원문 span을 찾는다."""
+
+    return find_exact_alias_spans(
+        text,
+        alias,
+        allowed_context_suffixes=INCIDENT_ALIAS_CONTEXT_SUFFIXES,
+    )
 
 
 def _negated(text: str, surface: str) -> bool:
@@ -70,16 +119,10 @@ def _role(text: str, surface: str) -> str:
 
 
 def deterministic_parse(text: str, resolver_artifact: dict[str, Any]) -> dict[str, Any]:
-    incident_types = []
-    if re.search(r"누출|유출|새고|샌다|새는", text):
-        incident_types.append("LEAK")
-    fire_negative = bool(re.search(r"(?:불|화재).{0,5}(?:안|없|아니)", text))
-    if re.search(r"화재|불이|연소", text) and not fire_negative:
-        incident_types.append("FIRE")
-    if re.search(r"폭발", text) and not re.search(r"폭발.{0,5}(?:없|아니)", text):
-        incident_types.append("EXPLOSION")
-    if not incident_types:
-        incident_types = ["UNKNOWN"]
+    incident_types = _incident_types(text)
+    fire_negative = "FIRE" not in incident_types and bool(
+        INCIDENT_EVENT_PATTERNS["FIRE"].search(text)
+    )
 
     # 학습 artifact의 검증 별칭 중 원문에 실제 등장한 표현을 찾는다. 물질명은
     # 다른 물질명을 부분 문자열로 포함할 수 있으므로(예: 차아염소산나트륨 안의
@@ -95,7 +138,7 @@ def deterministic_parse(text: str, resolver_artifact: dict[str, Any]) -> dict[st
             continue
         # Resolver와 같은 문장 내 exact matcher를 사용해 ``염산염`` 안의
         # ``염산``처럼 다른 표현에 포함된 부분 문자열을 물질명으로 승격하지 않는다.
-        for start, end, surface in find_exact_alias_spans(text, alias):
+        for start, end, surface in _incident_alias_spans(text, alias):
             matches.append((start, end, row, surface))
 
     found_by_cas: dict[str, dict[str, Any]] = {}

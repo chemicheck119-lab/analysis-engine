@@ -1,6 +1,6 @@
 {
   "schema_version": "chemicheck119-data-source-registry-v1",
-  "reviewed_at_utc": "2026-07-28T00:00:00+00:00",
+  "reviewed_at_utc": "2026-08-01T00:00:00+00:00",
   "policy": {
     "publish_requires_all_redistribution_status": "APPROVED",
     "public_lookup_does_not_imply_redistribution_permission": true
@@ -45,6 +45,16 @@
       "redistribution_status": "REVIEW_REQUIRED",
       "review_basis": "공모전 활용은 허용되지만 공개 컨테이너에 파생 별칭 artifact를 재배포하는 조건은 별도 확인 필요",
       "reviewer": ""
+    },
+    {
+      "source_id": "CSI_NATIONAL_CHEMICAL_ACCIDENTS_2014_2025",
+      "provider": "기후에너지환경부 화학물질안전원",
+      "source_url": "https://www.data.go.kr/data/15069200/fileData.do",
+      "terms_url": "https://www.data.go.kr/data/15069200/fileData.do",
+      "runtime_artifacts": ["evaluation_only"],
+      "redistribution_status": "APPROVED",
+      "review_basis": "공공데이터포털 이용허락범위 제한 없음과 로그인 없는 파일 다운로드를 2026-08-01 확인; 원문은 runtime·Git에서 제외",
+      "reviewer": "PROJECT_DATA_GOVERNANCE_REVIEW_REQUIRED_FOR_CHANGES"
     },
     {
       "source_id": "ICIS_2024_HANDLING",

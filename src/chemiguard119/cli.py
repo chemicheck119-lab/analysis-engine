@@ -101,6 +101,7 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
         "train": "기준선 모델 학습",
         "evaluate": "모델 평가",
         "evaluate-e2e": "사고 분석 E2E 안전 평가",
+        "evaluate-official-incidents": "전국 공식 화학사고 외부 기준선 평가",
         "e2e-review": "E2E 독립 검수팩",
         "resolve": "물질 후보 검색",
         "search": "공식 근거 검색",
@@ -850,6 +851,19 @@ def _finetune_resolver(args: argparse.Namespace) -> dict[str, Any]:
     )
 
 
+def _evaluate_official_incidents(args: argparse.Namespace) -> dict[str, Any]:
+    from chemiguard119.official_incident_evaluation import (
+        evaluate_official_incidents,
+    )
+
+    return evaluate_official_incidents(
+        args.source,
+        args.resolver_model,
+        split=args.split,
+        report_path=args.report,
+    )
+
+
 def _release_manifest(args: argparse.Namespace) -> dict[str, Any]:
     from chemiguard119.release import create_runtime_manifest
 
@@ -1178,6 +1192,7 @@ def _interactive(args: argparse.Namespace) -> dict[str, Any]:
             "train",
             "evaluate",
             "evaluate-e2e",
+            "evaluate-official-incidents",
             "e2e-review",
             "resolve",
             "search",
@@ -1573,6 +1588,29 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_json_option(finetune_resolver)
     finetune_resolver.set_defaults(handler=_finetune_resolver)
+
+    official_incidents = subparsers.add_parser(
+        "evaluate-official-incidents",
+        help="화학물질안전원 전국 사고 파일로 파서 외부 기준선을 평가",
+    )
+    official_incidents.add_argument(
+        "--source",
+        type=_path,
+        default=FINAL_DATA_DIR / "09_CSI_전국_화학사고정보_20250430.csv",
+    )
+    official_incidents.add_argument(
+        "--resolver-model",
+        type=_path,
+        default=DEFAULT_RESOLVER_MODEL,
+    )
+    official_incidents.add_argument(
+        "--split",
+        choices=("development", "locked_test"),
+        required=True,
+    )
+    official_incidents.add_argument("--report", type=_path)
+    _add_json_option(official_incidents)
+    official_incidents.set_defaults(handler=_evaluate_official_incidents)
 
     pipeline = subparsers.add_parser(
         "pipeline",

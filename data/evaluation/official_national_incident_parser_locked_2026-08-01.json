@@ -1,0 +1,111 @@
+{
+  "metrics_version": "official-national-incident-parser-audit-v1",
+  "created_at_utc": "2026-08-01T13:45:30.222689+00:00",
+  "parser_policy_version": "incident-parser-policy-v2-national-dev-through-2020",
+  "resolver_artifact_sha256": "27e64582bfd4017bd73381f0d76be985bb0b5cc10f7acfefa89641f237b7db73",
+  "expert_reviewed": false,
+  "source_audit": {
+    "source_id": "CSI_NATIONAL_CHEMICAL_ACCIDENTS_2014_2025",
+    "source_page_url": "https://www.data.go.kr/data/15069200/fileData.do",
+    "source_sha256": "a1ef8e4b6b0c6ef96fb7277edce2b1cf5c1b935a88f4274c88d878713bb7fba5",
+    "source_row_count": 1026,
+    "encoding": "cp949",
+    "year_counts": {
+      "2014": 105,
+      "2015": 114,
+      "2016": 78,
+      "2017": 88,
+      "2018": 66,
+      "2019": 58,
+      "2020": 75,
+      "2021": 93,
+      "2022": 67,
+      "2023": 115,
+      "2024": 128,
+      "2025": 39
+    },
+    "invalid_date_count": 0,
+    "contains_company_or_address_fields": true,
+    "raw_or_sensitive_fields_excluded_from_report": [
+      "사고내용",
+      "사고업체명",
+      "소방접수시간",
+      "주소"
+    ]
+  },
+  "split": "locked_test",
+  "split_policy": {
+    "development_year_max": 2020,
+    "locked_test_year_min": 2021,
+    "locked_test_used_for_training": false,
+    "locked_test_diagnostics_exposed": false
+  },
+  "case_count": 442,
+  "year_counts": {
+    "2021": 93,
+    "2022": 67,
+    "2023": 115,
+    "2024": 128,
+    "2025": 39
+  },
+  "province_counts": {
+    "강원": 1,
+    "경기": 94,
+    "경남": 21,
+    "경북": 48,
+    "광주": 5,
+    "대구": 13,
+    "대전": 10,
+    "부산": 20,
+    "서울": 10,
+    "세종": 3,
+    "울산": 56,
+    "인천": 13,
+    "전남": 31,
+    "전북": 28,
+    "제주": 3,
+    "충남": 55,
+    "충북": 31
+  },
+  "official_incident_type_counts": {
+    "기타": 11,
+    "누출": 362,
+    "폭발": 31,
+    "화재": 38
+  },
+  "incident_type": {
+    "eligible_case_count": 431,
+    "recall": 0.837587,
+    "exact_set_accuracy": 0.758701,
+    "additional_type_case_rate": 0.090487
+  },
+  "substance_mention": {
+    "official_label_count": 452,
+    "observable_exact_label_count": 319,
+    "observable_case_count": 316,
+    "exact_surface_recall": 0.705329,
+    "containment_surface_recall": 0.815047,
+    "case_any_surface_recall": 0.81962,
+    "case_all_surface_recall": 0.813291,
+    "resolver_reachable_label_count": 234,
+    "resolver_reachable_recall": 0.965812,
+    "metric_scope": "공식 사고물질 문자열이 사고내용에 관찰 가능한 사례의 언급 추출; CAS 식별 정확도 아님"
+  },
+  "safety": {
+    "unsafe_rule_eligible_mention_count": 0,
+    "raw_text_in_report": false,
+    "company_or_address_in_report": false,
+    "auto_confirmation_allowed": false
+  },
+  "latency_ms": {
+    "mean": 71.650901,
+    "p95": 77.322834
+  },
+  "claim_scope": "OFFICIAL_CROSS_SOURCE_PARSER_AUDIT_NOT_FIELD_ACCURACY",
+  "limitations": [
+    "공식 원천의 사고물질 열에는 CAS 정답이 없어 물질 식별 정확도를 측정하지 않습니다.",
+    "사고내용에 공식 사고물질 문자열이 직접 관찰되는 사례만 언급 추출 분모에 포함합니다.",
+    "공식 사고유형은 단일 라벨이지만 사고내용에는 복합 사건 표현이 있을 수 있습니다.",
+    "실제 119 신고 음성 전사가 아니라 사고 정리 문장입니다."
+  ]
+}

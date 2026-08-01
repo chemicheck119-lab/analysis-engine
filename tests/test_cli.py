@@ -19,6 +19,10 @@ from chemiguard119 import cli
         (["train"], "train"),
         (["evaluate"], "evaluate"),
         (["evaluate-e2e"], "evaluate-e2e"),
+        (
+            ["evaluate-official-incidents", "--split", "development"],
+            "evaluate-official-incidents",
+        ),
         (["resolve", "염산"], "resolve"),
         (["discover", "무색 휘발성 액체"], "discover"),
         (["search", "염산 누출"], "search"),

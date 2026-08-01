@@ -57,7 +57,7 @@
 | 평가 관점 | 강점 | 구현 증거 |
 |---|---|---|
 | 문제 적합성 | 출동 중 정보 취합과 물질 혼합 위험 확인이라는 구체적 현장 문제 해결 | 통합 사고분석 API·태블릿 BFF 계약 |
-| AI 기술성 | 규칙 파서, 하이브리드 검색, Grounded RAG, 상태 기반 도구 에이전트 결합 | `src/chemiguard119/`와 자동 테스트 |
+| AI 기술성 | 규칙 파서, 하이브리드 검색, Grounded RAG, 상태 기반 도구 에이전트 결합 | 전국 공식 사고 442건 외부 보류평가와 자동 테스트 |
 | 안전성 | 모호하면 기권하고 확인된 CAS 두 개 전에는 충돌 결과를 숨김 | confirmation gate·fail-closed 검증 |
 | 근거성 | 위험 주장마다 CAMEO와 독립 공식기관 출처·문서 위치·미증명 조건 반환 | Reference Assurance registry |
 | 실현 가능성 | 외부 LLM 없이 CPU 실행 가능, FastAPI·Docker·CI·Cloud Run 배포 | 서울 preview·readiness·이미지 digest |
@@ -143,13 +143,20 @@ UI projection입니다. 전국 출동 위치·현재 위치·서버 길찾기 �
 | 공개 검증 충돌 범위 | CAS 6종·15쌍 | 지원 조합만 결정론적으로 검토 |
 | 공식기관 교차확인 | 2쌍 | 독립 공식기관 3곳 이상이 같은 위험 메커니즘 지지 |
 | CAMEO 단일체계 | 13쌍 | `PRIMARY_AUTHORITY_ONLY`로 화면에서 구분 |
-| 자동 테스트 | 402개 | 단위·통합·API·안전·배포 계약 회귀 |
+| 전국 공식 사고 외부 보류평가 | 2021~2025년 442건 | 사고유형 Recall 0.8376·관찰 가능 물질명 Recall 0.8150; CAS·현장 정확도 아님 |
+| 자동 테스트 | 426개 | 단위·통합·API·안전·배포 계약 회귀 |
 | 배포 | 서울 Cloud Run preview | 후보 0% smoke 후 100% 전환, readiness 확인 |
 
 내부 21건 Resolver, 10건 legacy Retriever, 12건 section Retriever와 8건 E2E는 **작은 DRAFT
 회귀셋**입니다. 현장 정확도나 상용 성능으로 주장하지 않습니다. 정답 없는 50건 E2E 후보는
 미확인 Rule 실행 0건과 출력 계약을 검사하는 preflight로만 사용합니다. 공모전 제출 기준과
 금지 표현은 [공모전 공식근거 보증](docs/COMPETITION_ASSURANCE.md)에 있습니다.
+
+파서에는 이와 별도로 화학물질안전원의 전국 사고 1,026건을 사용한 기관·시간 분리 감사가
+있습니다. 2014~2020년 584건에서 규칙을 개발하고, 보지 않은 2021~2025년 442건을 한 번만
+평가했습니다. 보류 결과는 사고유형 Recall 0.8376, 사고문에 공식 물질명이 직접 적힌 사례의
+언급 Recall 0.8150, p95 77.3ms였습니다. 원천에는 CAS 정답과 실제 신고 음성 전사가 없으므로
+CAS 정확도나 현장 성능으로 확대 해석하지 않습니다.
 
 ## 8. 대표 시연 시나리오
 
@@ -178,7 +185,7 @@ UI projection입니다. 전국 출동 위치·현재 위치·서버 길찾기 �
 | Docker·CI·Cloud Run preview | 구현·배포 완료 | 실제 운영용 데이터 재배포 승인 필요 |
 | 공모전 발표·시연 | `READY_WITH_DISCLOSED_LIMITATIONS` | 근거 수준·지원 범위·한계를 화면에 표시 |
 | FE·BE 실제 연동 | 부분 완료 | 배포 API를 대상으로 소비자 계약·기록저장 종단간 시험 |
-| 제한된 현장 파일럿 | `BLOCKED` | 독립 locked 평가·사용성·부하·장애 시험 |
+| 제한된 현장 파일럿 | `BLOCKED` | 실제 신고 전사 검수·사용성·부하·장애 시험 |
 | 실제 현장 운영·상용 | `BLOCKED` | 기관 승인·책임체계·운영 데이터·모니터링 |
 
 현재 충돌 검토 정책은 `PUBLIC_SOURCE_PILOT_V1`이며 모든 결과에
@@ -435,6 +442,19 @@ audit → prepare → train resolver
 CAS 확정은 0건이었습니다. 다만 과거에 없던 표현 60건과 CAS 58건에서는 개선이 없었습니다.
 따라서 이 결과는 “과거 소방 기록에 등장한 현장 표현 기억 강화”로만 해석하며 전국 현장
 정확도라고 부르지 않습니다.
+
+파서의 전국 기관·시간 분리 감사는 다음처럼 재현합니다. 원천은 고정 SHA-256으로 검증되고,
+업체명·주소·사고 원문은 결과 파일에 저장되지 않습니다.
+
+```bash
+PYTHONPATH=src python scripts/data/download_csi_official_incidents.py
+
+chemiguard119 evaluate-official-incidents \
+  --split locked_test \
+  --resolver-model artifacts/incident_adaptation/resolver_incident_adapted_through_2019.joblib \
+  --report outputs/modeling/official_national_incident_parser_locked.json \
+  --json
+```
 
 공모전 시연 물질과 다음 공식 데이터 수집 대상을 정할 때는 별도의 지원 물질
 우선순위 파이프라인을 사용합니다. 이 순위는 위험 확률이나 업체의 현재 재고 확률이

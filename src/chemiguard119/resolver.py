@@ -424,6 +424,8 @@ def _has_safe_alias_boundaries(
 def find_exact_alias_spans(
     text: str,
     alias: str,
+    *,
+    allowed_context_suffixes: tuple[str, ...] = (),
 ) -> list[tuple[int, int, str]]:
     """문장 안에서 독립된 정확 별칭의 원문 span만 반환한다.
 
@@ -459,15 +461,18 @@ def find_exact_alias_spans(
                 (match.start(), match.end())
                 for match in re.finditer(re.escape(value), text, re.IGNORECASE)
             ]
-    return [
-        (start, end, text[start:end])
-        for start, end in candidates
-        if _has_safe_alias_boundaries(
-            text,
-            start,
-            end,
-        )
-    ]
+    safe: list[tuple[int, int, str]] = []
+    for start, end in candidates:
+        if _has_safe_alias_boundaries(text, start, end):
+            safe.append((start, end, text[start:end]))
+            continue
+        for suffix in allowed_context_suffixes:
+            if text.startswith(suffix, end) and _has_safe_alias_boundaries(
+                text, start, end + len(suffix)
+            ):
+                safe.append((start, end, text[start:end]))
+                break
+    return safe
 
 
 def resolve_substance(

@@ -46,6 +46,8 @@ def resolver_artifact(tmp_path: Path) -> dict:
                 ),
                 ("7440-23-5", "나트륨", "나트륨", "CANONICAL_KO", "TEST", "VERIFIED"),
                 ("7647-01-0", "염산", "염산", "ALIAS", "TEST", "VERIFIED"),
+                ("7782-50-5", "염소", "염소", "CANONICAL_KO", "TEST", "VERIFIED"),
+                ("7697-37-2", "질산", "질산", "CANONICAL_KO", "TEST", "VERIFIED"),
             ],
         )
     model_path = tmp_path / "incident-resolver.joblib"
@@ -124,6 +126,59 @@ def test_parser_does_not_promote_embedded_korean_alias(
     assert parsed["substance_mentions"] == []
     assert parsed["missing_fields"] == ["substance"]
     assert parsed["needs_substance_confirmation"] is True
+
+
+@pytest.mark.parametrize(
+    ("source", "surface"),
+    [
+        ("염소가스가 누출됐습니다.", "염소"),
+        ("질산용기에서 유출됐습니다.", "질산"),
+    ],
+)
+def test_parser_accepts_safe_material_equipment_compounds(
+    resolver_artifact: dict,
+    source: str,
+    surface: str,
+) -> None:
+    parsed = deterministic_parse(source, resolver_artifact)
+
+    assert [item["surface_text"] for item in parsed["substance_mentions"]] == [surface]
+    assert parsed["needs_substance_confirmation"] is True
+
+
+def test_parser_does_not_treat_product_class_as_element_identity(
+    resolver_artifact: dict,
+) -> None:
+    parsed = deterministic_parse("염소소독제 냄새가 납니다.", resolver_artifact)
+
+    assert parsed["substance_mentions"] == []
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "약품이 작업자에게 비산됐습니다.",
+        "용액이 탱크 밖으로 넘쳐 바닥에 흘렀습니다.",
+        "배관에서 가스가 누설됐습니다.",
+    ],
+)
+def test_parser_recognizes_direct_release_expressions(
+    resolver_artifact: dict,
+    source: str,
+) -> None:
+    parsed = deterministic_parse(source, resolver_artifact)
+
+    assert "LEAK" in parsed["incident_types"]
+
+
+@pytest.mark.parametrize("source", ["누출 없음", "화재 미발생", "폭발은 아닙니다"])
+def test_parser_does_not_promote_negated_incident_types(
+    resolver_artifact: dict,
+    source: str,
+) -> None:
+    parsed = deterministic_parse(source, resolver_artifact)
+
+    assert parsed["incident_types"] == ["UNKNOWN"]
 
 
 def test_parser_validator_blocks_mentions_not_grounded_in_source() -> None:

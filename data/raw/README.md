@@ -12,6 +12,17 @@
 7. `13_ICIS_2024_화학물질_취급현황.csv`
 8. `19_ICIS_2024_시설후보_통합모델입력.csv`
 
+전국 파서 외부 감사에는 다음 공식 파일을 별도로 사용합니다. 이 파일은 운영 artifact가 아니며
+업체명·주소·사고 원문은 평가 결과에 포함하지 않습니다.
+
+9. `09_CSI_전국_화학사고정보_20250430.csv`
+   - 출처: `https://www.data.go.kr/data/15069200/fileData.do`
+   - SHA-256: `a1ef8e4b6b0c6ef96fb7277edce2b1cf5c1b935a88f4274c88d878713bb7fba5`
+
+```bash
+PYTHONPATH=src python scripts/data/download_csi_official_incidents.py
+```
+
 준비 후 다음 명령으로 입력 계약을 먼저 검사합니다.
 
 ```bash
