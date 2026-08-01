@@ -7,6 +7,10 @@
 
 ### Added
 
+- 금속 나트륨–염산 조합의 수소·화재·폭발 위험을 CAMEO·ILO/WHO ICSC·OSHA 3개
+  독립 공식기관으로 교차증빙
+- 공식근거 URL·최종 host·MIME·HTML 문서 위치를 주 1회 검사하고 보고서를 보관하는
+  source drift 감사 workflow
 - 전국 현장대응 에이전트가 포함된 main preview의 서울 Cloud Run 실제 배포 증빙
 - 운영 릴리스 gate와 분리된 공모전 preview 후보 smoke·Blue/Green·롤백 workflow
 

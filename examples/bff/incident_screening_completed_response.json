@@ -295,7 +295,7 @@
             "basis": "공식자료 자동 감사는 사람 전문가 서명 또는 승인이 아님"
           }
         ],
-        "registrySha256": "0373f57cb35194d16db8a1c54cf4ba89d718ea56ea48e3883f24d2afb79f994b",
+        "registrySha256": "6a02bc11210907dbf4bd22858deeb51d4d12c4744a06e479c2b87e1ff25b567c",
         "reviewedAtUtc": "2026-08-01T00:00:00Z",
         "machineChecked": true,
         "expertReviewed": false,

@@ -1104,5 +1104,5 @@
   "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
   "source_metrics_version": "verified-pair-regression-v2",
   "source_snapshot": "data/evaluation/verified_pair_snapshot_2024.json",
-  "source_snapshot_sha256": "f13df0a0caf28fc7ca58586263049238131f74933981cb283889f081d6997d3c"
+  "source_snapshot_sha256": "18ff403ff364d77ce87a42245433925816ee60c9916ac92e1441ce922d79d868"
 }

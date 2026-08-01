@@ -38,6 +38,13 @@
       "independence_group": "UKHSA",
       "authority_kind": "GOVERNMENT_PUBLIC_HEALTH",
       "allowed_hosts": ["gov.uk", "www.gov.uk"]
+    },
+    {
+      "authority_id": "US_OSHA",
+      "organization": "U.S. Occupational Safety and Health Administration",
+      "independence_group": "US_OSHA",
+      "authority_kind": "GOVERNMENT_OCCUPATIONAL_SAFETY",
+      "allowed_hosts": ["osha.gov", "www.osha.gov"]
     }
   ],
   "pair_claims": [
@@ -65,6 +72,8 @@
           "title": "SODIUM HYPOCHLORITE — CAMEO Chemicals",
           "source_url": "https://cameochemicals.noaa.gov/chemical/4503",
           "locator": "Hazards > Reactivity Profile",
+          "expected_content_type_prefix": "text/html",
+          "content_probe": "chlorine gas",
           "published_or_updated": "CAMEO Chemicals 3.1.0 rev 1",
           "relation": "SUPPORTS"
         },
@@ -75,6 +84,8 @@
           "title": "Chlorine Gas Toxicity from Mixture of Bleach with Other Cleaning Products",
           "source_url": "https://www.cdc.gov/mmwr/preview/mmwrhtml/00015111.htm",
           "locator": "Editorial Note",
+          "expected_content_type_prefix": "text/html",
+          "content_probe": "Editorial Note",
           "published_or_updated": "MMWR incident report",
           "relation": "SUPPORTS_WITH_INCIDENT_AND_MECHANISM"
         },
@@ -85,6 +96,8 @@
           "title": "Chemical Disinfectants — Chlorine and Chlorine Compounds",
           "source_url": "https://www.cdc.gov/infection-control/hcp/disinfection-sterilization/chemical-disinfectants.html",
           "locator": "Chlorine and Chlorine Compounds",
+          "expected_content_type_prefix": "text/html",
+          "content_probe": "Chlorine and Chlorine Compounds",
           "published_or_updated": "CDC web guidance",
           "relation": "SUPPORTS"
         },
@@ -95,6 +108,8 @@
           "title": "ICSC 1119 — Sodium Hypochlorite Solution, Active Chlorine >10%",
           "source_url": "https://inchem.org/documents/icsc/icsc/eics1119.htm",
           "locator": "Chemical dangers",
+          "expected_content_type_prefix": "text/html",
+          "content_probe": "toxic and corrosive gases",
           "published_or_updated": "April 2017",
           "relation": "SUPPORTS"
         },
@@ -105,7 +120,63 @@
           "title": "Sodium hypochlorite: general information",
           "source_url": "https://www.gov.uk/government/publications/sodium-hypochlorite-properties-incident-management-and-toxicology/sodium-hypochlorite-general-information",
           "locator": "How exposure to sodium hypochlorite can affect your health",
+          "expected_content_type_prefix": "text/html",
+          "content_probe": "chlorine gas",
           "published_or_updated": "2025-04-24",
+          "relation": "SUPPORTS"
+        }
+      ]
+    },
+    {
+      "claim_id": "SODIUM_HYDROCHLORIC_ACID_HYDROGEN_FIRE_V1",
+      "cas_pair": ["7440-23-5", "7647-01-0"],
+      "claim_type": "FLAMMABLE_GAS_AND_EXPLOSIVE_REACTION",
+      "claim_text_ko": "금속 나트륨이 염산과 같은 산성 물질과 실제 접촉하면 수소가 발생하고 화재·폭발 위험이 있습니다.",
+      "expected_gas_products": ["H2"],
+      "scope_conditions": [
+        "금속 나트륨과 염산 등 산성 물질의 실제 접촉",
+        "나트륨의 물리적 형태와 산의 농도·온도·혼합량에 따라 반응 정도가 달라짐"
+      ],
+      "not_proven_by_claim": [
+        "현장에 금속 나트륨과 염산이 실제 존재하는지",
+        "두 물질이 실제 접촉했는지",
+        "발생한 수소의 양과 점화 여부",
+        "특정 소화약제와 보호구가 현장 조건에 적합한지"
+      ],
+      "sources": [
+        {
+          "source_id": "CAMEO_7794_REACTIVITY_PROFILE",
+          "authority_id": "NOAA_EPA_CAMEO",
+          "source_role": "PRIMARY_REACTIVITY_DATASHEET",
+          "title": "SODIUM — CAMEO Chemicals",
+          "source_url": "https://cameochemicals.noaa.gov/chemical/7794",
+          "locator": "Hazards > Reactivity Profile",
+          "expected_content_type_prefix": "text/html",
+          "content_probe": "Explodes on contact with hydrochloric acid",
+          "published_or_updated": "CAMEO Chemicals 3.1.0 rev 1",
+          "relation": "SUPPORTS"
+        },
+        {
+          "source_id": "ICSC_0717_SODIUM",
+          "authority_id": "ILO_WHO_ICSC",
+          "source_role": "INTERNATIONAL_CHEMICAL_SAFETY_CARD",
+          "title": "ICSC 0717 — Sodium",
+          "source_url": "https://inchem.org/documents/icsc/icsc/eics0717.htm",
+          "locator": "Fire & Explosion; Chemical dangers",
+          "expected_content_type_prefix": "text/html",
+          "content_probe": "Risk of fire and explosion on contact with acids",
+          "published_or_updated": "April 2006",
+          "relation": "SUPPORTS"
+        },
+        {
+          "source_id": "OSHA_CHEMICAL_HAZARDS_INCOMPATIBLES",
+          "authority_id": "US_OSHA",
+          "source_role": "INCIDENT_OR_PUBLIC_HEALTH_CORROBORATION",
+          "title": "Chemical Hazards and SDSs — The Fearsome Incompatibles",
+          "source_url": "https://www.osha.gov/sites/default/files/2021-03/Chemical%20Hazards.pdf",
+          "locator": "The Fearsome Incompatibles, PDF page 43: acids or bases and reactive metals including sodium",
+          "expected_content_type_prefix": "application/pdf",
+          "published_or_updated": "OSHA Hazard Communication Training Tool",
           "relation": "SUPPORTS"
         }
       ]

@@ -139,6 +139,17 @@ def _validate_registry(registry: dict[str, Any]) -> dict[str, dict[str, Any]]:
                 raise ReferenceAssuranceError(
                     "공식근거 역할 또는 문서 위치가 없습니다."
                 )
+            expected_content_type = str(
+                source.get("expected_content_type_prefix") or ""
+            )
+            if expected_content_type not in {"text/html", "application/pdf"}:
+                raise ReferenceAssuranceError(
+                    "공식근거의 예상 문서 형식이 없거나 지원되지 않습니다."
+                )
+            if expected_content_type == "text/html" and not source.get("content_probe"):
+                raise ReferenceAssuranceError(
+                    "HTML 공식근거의 문서 위치 probe가 없습니다."
+                )
             if not str(source.get("relation") or "").startswith("SUPPORTS"):
                 raise ReferenceAssuranceError(
                     "반대 또는 불명확한 근거를 지지 근거로 쓸 수 없습니다."
@@ -299,9 +310,14 @@ def build_reference_assurance(
         authority = authorities[source["authority_id"]]
         independence_groups.add(str(authority["independence_group"]))
         source_roles.add(str(source["source_role"]))
+        public_source = {
+            key: value
+            for key, value in source.items()
+            if key not in {"content_probe", "expected_content_type_prefix"}
+        }
         sources.append(
             {
-                **source,
+                **public_source,
                 "organization": authority["organization"],
                 "independence_group": authority["independence_group"],
                 "authority_kind": authority["authority_kind"],

@@ -28,6 +28,17 @@ CAMEO 충돌 결과
 두 CDC 문서는 같은 독립기관 그룹 하나로 계산합니다. 따라서 문서는 5개지만 독립기관 수는
 4개입니다.
 
+금속 나트륨–염산 조합은 다음 3개 독립 공식기관의 자료를 연결했습니다.
+
+| 기관 | 자료 | 확인 범위 |
+|---|---|---|
+| NOAA/EPA | [CAMEO Sodium](https://cameochemicals.noaa.gov/chemical/7794) | 염산 접촉 시 폭발 위험 |
+| ILO/WHO | [ICSC 0717](https://inchem.org/documents/icsc/icsc/eics0717.htm) | 산 접촉 시 화재·폭발 위험 |
+| OSHA | [Chemical Hazards and SDSs](https://www.osha.gov/sites/default/files/2021-03/Chemical%20Hazards.pdf) | 산과 나트륨 등 반응성 금속 접촉 시 수소·화재·폭발 위험 |
+
+세 문헌의 공통 범위만 사용해 “실제 접촉 시 수소가 발생하고 화재·폭발 위험이 있다”고
+표현합니다. 현장의 물질 존재, 접촉 여부, 수소 발생량과 점화 여부는 별도 확인 대상입니다.
+
 ## 2. API 상태
 
 | 값 | 의미 | 화면 문구 |
@@ -67,25 +78,47 @@ API의 `reference_assurance.claim_checks`는 다음을 분리합니다.
 registry 전체 SHA-256을 결과에 포함하고 BFF도 배포된 registry checksum과 일치하는지
 검사합니다.
 
-## 5. 현재 커버리지
+## 5. 외부 근거 drift 검사
+
+공식 웹페이지가 삭제·이동되거나 문서 구조가 바뀌면 과거에 맞았던 URL도 근거로 쓰기
+어렵습니다. 다음 명령은 서비스 요청과 분리된 오프라인 검사입니다.
+
+```bash
+python scripts/data/check_reference_sources.py \
+  --config-dir config \
+  --output outputs/reference-source-drift.json
+```
+
+검사 범위는 HTTP 상태, redirect 후 최종 기관 host, MIME, HTML 본문의 고정 문구입니다.
+PDF는 별도 본문 파서를 운영 의존성에 넣지 않아 URL·기관 host·MIME과 문서 위치
+메타데이터까지만 검사하며 결과에 `METADATA_ONLY`로 남깁니다. GitHub Actions의
+`공식근거 링크 정기 검사`가 매주 실행되고 수동 실행도 가능합니다. 실패는 registry를
+자동 수정하지 않고 담당자가 공식 원문을 다시 확인하게 합니다.
+
+2026-08-01 실제 네트워크 검사 결과는 8개 URL 모두 도달·host·MIME 검사를 통과했고,
+HTML 7개는 문서 위치 probe까지 통과했습니다. OSHA PDF 1개는 위 제한 때문에
+`PASS_WITH_LIMITATIONS`입니다.
+
+## 6. 현재 커버리지
 
 실제 artifact로 공개 검증 CAS 6종의 고유 조합 15개를 다시 실행했습니다.
 
-- `REFERENCE_TRIANGULATED`: 1쌍 — 차아염소산나트륨 + 염산
-- `PRIMARY_AUTHORITY_ONLY`: 14쌍
+- `REFERENCE_TRIANGULATED`: 2쌍 — 차아염소산나트륨 + 염산, 금속 나트륨 + 염산
+- `PRIMARY_AUTHORITY_ONLY`: 13쌍
 - `expert_reviewed=true`: 0쌍
 - 위험등급 분포: 높음 8, 중간 2, 낮음 5
 
 이는 정답 정확도나 현장 성능이 아니라 공식근거 커버리지와 데이터 연결 회귀 결과입니다.
-나머지 14쌍은 조합별 독립 공식근거가 추가되기 전 교차확인으로 표시하면 안 됩니다.
+나머지 13쌍은 조합별 독립 공식근거가 추가되기 전 교차확인으로 표시하면 안 됩니다.
 
-## 6. 새 조합을 추가하는 절차
+## 7. 새 조합을 추가하는 절차
 
 1. `config/reference_assurance_registry.json`에 정규화된 CAS 두 개를 정렬해 등록합니다.
 2. 위험 문장은 원문을 과장하지 않는 한 문장으로 작성합니다.
 3. CAMEO 물질·반응성 근거와 별도의 사고보고 또는 공중보건 자료를 연결합니다.
 4. 같은 기관의 여러 문서는 하나의 `independence_group`으로 묶습니다.
-5. 자료의 정확한 절 위치 `locator`, 버전·갱신일, URL을 기록합니다.
+5. 자료의 정확한 절 위치 `locator`, HTML `content_probe`, 예상 MIME, 버전·갱신일, URL을
+   기록합니다.
 6. 예상 생성물과 CAMEO 결과가 일치하는지 평가합니다.
 7. 전체 15쌍 회귀, API 계약, BFF 계약을 실행합니다.
 

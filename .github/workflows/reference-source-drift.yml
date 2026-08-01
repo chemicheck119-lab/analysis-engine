@@ -1,0 +1,48 @@
+name: 공식근거 링크 정기 검사
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 1 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reference-source-drift
+  cancel-in-progress: false
+
+jobs:
+  check-reference-sources:
+    name: URL·기관 host·문서 위치 검사
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v6
+
+      - name: Python 3.11 설정
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11.15"
+          cache: pip
+
+      - name: 패키지 설치
+        run: python -m pip install -e .
+
+      - name: 공식근거 drift 검사
+        run: |
+          python scripts/data/check_reference_sources.py \
+            --config-dir config \
+            --output outputs/reference-source-drift.json \
+            --timeout 20
+
+      - name: 검사 보고서 보관
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reference-source-drift-${{ github.run_id }}
+          path: outputs/reference-source-drift.json
+          if-no-files-found: warn
+          retention-days: 30

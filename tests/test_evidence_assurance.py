@@ -12,6 +12,7 @@ from chemiguard119.evidence_assurance import (
     reference_assurance_configuration_status,
     validate_reference_assurance,
 )
+from chemiguard119.dashboard_contract import DashboardReferenceAssurance
 from chemiguard119.paths import CONFIG_DIR
 
 
@@ -57,8 +58,8 @@ def test_configuration_status_exposes_scope_without_claiming_expert_review() -> 
     status = reference_assurance_configuration_status(CONFIG_DIR)
 
     assert status["ready"] is True
-    assert status["authority_count"] == 4
-    assert status["triangulated_pair_count"] == 1
+    assert status["authority_count"] == 5
+    assert status["triangulated_pair_count"] == 2
     assert status["registry_sha256"]
     assert status["expert_reviewed"] is False
     assert status["human_expert_substitute"] is False
@@ -86,6 +87,24 @@ def test_unregistered_pair_stays_primary_authority_only() -> None:
     assert validate_reference_assurance(result, "64-17-5", "67-64-1") == []
 
 
+def test_sodium_hydrochloric_acid_pair_is_triangulated() -> None:
+    result = build_reference_assurance(
+        _rule_result("7440-23-5", "7647-01-0", gas_products=["H2"]), CONFIG_DIR
+    )
+
+    assert result["status"] == "REFERENCE_TRIANGULATED"
+    assert result["claim_id"] == "SODIUM_HYDROCHLORIC_ACID_HYDROGEN_FIRE_V1"
+    assert result["reference_count"] == 3
+    assert result["independent_authority_count"] == 3
+    assert result["expected_gas_products"] == ["H2"]
+    assert result["expert_reviewed"] is False
+    assert validate_reference_assurance(result, "7440-23-5", "7647-01-0") == []
+    assert (
+        DashboardReferenceAssurance.model_validate(result).claim_id
+        == result["claim_id"]
+    )
+
+
 def test_claim_gas_mismatch_fails_closed() -> None:
     with pytest.raises(ReferenceAssuranceError, match="예상 생성물"):
         build_reference_assurance(_rule_result(gas_products=[]), CONFIG_DIR)
@@ -101,6 +120,19 @@ def test_untrusted_source_host_invalidates_registry(tmp_path: Path) -> None:
     )
 
     with pytest.raises(ReferenceAssuranceError, match="allowlist"):
+        build_reference_assurance(_rule_result(), config_dir)
+
+
+def test_html_source_without_locator_probe_invalidates_registry(tmp_path: Path) -> None:
+    config_dir, payload = _copy_registry(tmp_path)
+    forged = deepcopy(payload)
+    forged["pair_claims"][0]["sources"][0].pop("content_probe")
+    (config_dir / "reference_assurance_registry.json").write_text(
+        json.dumps(forged, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ReferenceAssuranceError, match="문서 위치 probe"):
         build_reference_assurance(_rule_result(), config_dir)
 
 

@@ -132,7 +132,7 @@ python scripts/evaluation/evaluate_verified_pairs.py \
 
 2026-08-01 스냅샷에서는 공개 검증 6종의 고유 조합 15개를 모두 실행했고 15개 모두
 `SCREENING_COMPLETED`였습니다. 서수 등급 분포는 `HIGH=8`, `MEDIUM=2`, `LOW=5`입니다.
-공식근거 보증은 `REFERENCE_TRIANGULATED=1`, `PRIMARY_AUTHORITY_ONLY=14`입니다.
+공식근거 보증은 `REFERENCE_TRIANGULATED=2`, `PRIMARY_AUTHORITY_ONLY=13`입니다.
 이는 15개 데이터 연결이 실행된다는 회귀 결과이며, 낮음 조합의 안전 보장이나 실제
 사고확률·현장 정확도를 뜻하지 않습니다.
 

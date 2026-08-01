@@ -600,7 +600,8 @@ API는 두 현장 확인 게이트를 통과한 뒤 `PUBLIC_SOURCE_PILOT_V1`로 
 }
 ```
 
-현재 대표 조합 1개만 `REFERENCE_TRIANGULATED`이며 다른 14개는
+현재 차아염소산나트륨–염산과 금속 나트륨–염산 2개 조합이
+`REFERENCE_TRIANGULATED`이며 다른 13개는
 `PRIMARY_AUTHORITY_ONLY`입니다. registry 누락·변조 또는 생성물 불일치는 완료 결과가 아니라
 Rule `VERIFY_REQUIRED`로 반환됩니다.
 
