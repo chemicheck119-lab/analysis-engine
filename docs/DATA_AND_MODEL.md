@@ -440,8 +440,18 @@ LM Studio 백엔드는 다음 실험에만 사용할 수 있습니다.
 
 ## 14. 파인튜닝 위치
 
-현재 운영 파이프라인에 파인튜닝 모델은 필수가 아닙니다. 신고문 구조화용 학습 데이터가 충분히
-쌓였을 때만 선택적으로 검토합니다.
+물질 후보 Resolver에는 소방 사고 기록의 물질명–CAS 표현을 추가 적응한
+`resolver-char-tfidf-v3-incident-adapted`가 구현되었습니다. 이는 생성형 LLM이 아니라 기존
+문자 TF-IDF 후보 모델의 학습 어휘를 시간 순서대로 확장한 CPU 모델입니다.
+
+- 원천: 소방안전 빅데이터 플랫폼 유해물질판단 2015~2020
+- 학습: 2015~2019, 공개 표현 241개 추가
+- 잠금 평가: 2020, 419건
+- 학습 제외: 위험등급, 대응명령, 시설 현재 재고, 주소와 개인 정보
+- 안전: 모든 결과는 후보이며 현장 확인 전 Rule 입력 금지
+
+신고문 생성형 LLM QLoRA는 별도입니다. 현재 원천은 구조화 사고표이지 실제 신고 음성 전사와
+완전한 개체 라벨이 아니므로, LLM을 억지로 학습해 현장 파서로 채택하지 않습니다.
 
 파인튜닝 전에는 다음을 확인해야 합니다.
 
@@ -454,6 +464,8 @@ LM Studio 백엔드는 다음 실험에만 사용할 수 있습니다.
 `chemiguard119 finetune-check`는 데이터 준비도만 검사합니다. 파인튜닝 여부와 관계없이 운영
 Rule Engine은 결정적 공개 근거 경로를 유지합니다.
 
+세부 판단과 재현 명령은 [파인튜닝 문서](FINETUNING.md)를 참고하세요.
+
 ## 15. 재현 가능한 학습
 
 ```bash
@@ -462,6 +474,7 @@ chemiguard119 pipeline \
   --db artifacts/chemiguard119.sqlite \
   --resolver-model artifacts/resolver.joblib \
   --retriever-model artifacts/retriever.joblib \
+  --incident-adaptation-csv data/raw/07_울산소방_화학사고별_유해물질판단.csv \
   --config-dir config \
   --report-dir outputs/modeling \
   --include-hash \

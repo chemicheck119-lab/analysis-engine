@@ -346,6 +346,12 @@ chemiguard119 resolve "아세톤"
 # 물질명을 모를 때 관찰 정보로 후보와 출처 검색
 chemiguard119 discover "무색 투명하고 박하 냄새가 나는 휘발성 액체"
 
+# 소방 사고–CAS 공개 기록으로 Resolver 파인튜닝·시간 분할 평가
+chemiguard119 finetune-resolver \
+  --base-model artifacts/resolver.joblib \
+  --incidents data/raw/07_울산소방_화학사고별_유해물질판단.csv \
+  --output-dir artifacts/incident_adaptation
+
 # 임의 신고문을 전체 파이프라인으로 실행
 chemiguard119 incident "황산 저장탱크에서 누출 중이며 옆 창고에 아세톤이 있습니다."
 
@@ -406,11 +412,29 @@ chemiguard119 evaluate \
   --json
 ```
 
-파이프라인은 다음 순서로 실행됩니다.
+파이프라인은 다음 순서로 실행됩니다. `--incident-adaptation-csv`를 지정한 릴리스는
+적응학습 gate를 통과한 모델로 Resolver를 교체한 뒤 동일한 회귀평가와 manifest 생성을
+계속합니다.
 
 ```text
-audit → prepare → train resolver → train retriever → evaluate → release manifest
+audit → prepare → train resolver
+      → optional incident source adaptation + temporal gate
+      → train retriever → evaluate → release manifest
 ```
+
+단독 실험에서는 source adaptation을 별도로 실행할 수도 있습니다.
+
+```text
+기존 Resolver + 2015~2019 소방 사고 물질명–CAS
+→ incident-adapted Resolver
+→ 2020년 잠금 테스트
+→ 기존 성능·안전 회귀 무하락 시 배포 후보
+```
+
+2020년 419개 공개 물질 표현에서 Top-1은 0.3246에서 0.6706으로 상승했고 잘못된 단일
+CAS 확정은 0건이었습니다. 다만 과거에 없던 표현 60건과 CAS 58건에서는 개선이 없었습니다.
+따라서 이 결과는 “과거 소방 기록에 등장한 현장 표현 기억 강화”로만 해석하며 전국 현장
+정확도라고 부르지 않습니다.
 
 공모전 시연 물질과 다음 공식 데이터 수집 대상을 정할 때는 별도의 지원 물질
 우선순위 파이프라인을 사용합니다. 이 순위는 위험 확률이나 업체의 현재 재고 확률이
@@ -543,6 +567,7 @@ python -m pip check
 - [FE·BE 인수인계](docs/FE_BE_HANDOFF.md): 실제 FE 코드 차이, BFF DTO, 적용 체크리스트
 - [데이터와 모델](docs/DATA_AND_MODEL.md): 출처, 전처리, 모델 역할과 평가
 - [모델 평가](docs/EVALUATION.md): 지표 정의, 기준선, 실패 원인 분리
+- [파인튜닝](docs/FINETUNING.md): 소방 사고 표현 source adaptation 결과와 LLM 보류 근거
 - [평가 V2](docs/EVALUATION_V2.md): 21·10·6의 출처, 상용 타당성, 공모전 AI 고도화 기준
 - [E2E 독립 검수](docs/E2E_REVIEW_GUIDE.md): 정답 없는 50건 후보를 이중 검수 locked set으로 만드는 절차
 - [공식근거 교차검증](docs/EVIDENCE_ASSURANCE.md): 주장별 공식 출처, 독립기관 수, fail-closed 정책

@@ -166,6 +166,7 @@ python scripts/evaluation/evaluate_verified_pairs.py \
 | `retrieval_section_regression.jsonl` | 12 | 질문별 핵심·보조 MSDS 절 순위 검사 | 내부 초안 |
 | `incident_parser_seed.jsonl` | 6 | 신고문 구조화 데이터 형식 시드 | 학습·성능평가 불가 |
 | `material_ranker_self_retrieval_2026-08-01.json` | 300 | 공개 물성 프로필 검색·재순위화 회귀 | 자기검색, 현장 정확도 아님 |
+| `incident_adapted_resolver_temporal_2026-08-01.json` | 353/419 | 2019 검증·2020 잠금 시간 분할 | 반복 표현 적응 평가, 전국 정확도 아님 |
 
 세 파일은 표본설계로 정한 규모가 아니라 2026-07-23 커밋 `6246c49`에서 함께 추가된
 정적 fixture입니다. 원본 표본추출 기록, 외부 검증자와 현장 대표성 근거가 없습니다.
@@ -189,6 +190,25 @@ Top-3 0.8000, MRR 0.7452로 기준선과 같았으며 77.33%의 사례에서 후
 
 이 평가는 같은 프로필에서 질의를 만든 자기검색 일관성 감사입니다. 실제 신고문·제품명·오인
 관찰에 대한 독립 성능이 아니며, 지도학습·파인튜닝 근거로 사용하지 않습니다.
+
+### 2.2 소방 사고 표현 source adaptation
+
+소방안전 빅데이터 플랫폼의 2015~2020 유해물질판단 1,868행에서 checksum이 유효한 단일
+CAS와 비모호 한글·영문 물질 표현 1,530건을 추출했습니다. 2015~2018년으로 검증 모델을
+학습해 2019년 353건에서 확인한 뒤, 2015~2019년 최종 모델을 2020년 잠금 419건에 한 번
+평가했습니다.
+
+| 2020 잠금 지표 | 기준선 | 적응 모델 |
+|---|---:|---:|
+| Top-1 | 0.3246 | 0.6706 |
+| Top-3 Recall | 0.3461 | 0.6754 |
+| MRR | 0.3333 | 0.6722 |
+| 잘못된 단일 exact 확정 | 0 | 0 |
+| 처음 보는 표현 Top-1, 60건 | 0.2833 | 0.2833 |
+| 처음 보는 CAS Top-3, 58건 | 0.3103 | 0.3103 |
+
+전체 향상은 과거 연도에 이미 등장한 표현을 다시 인식한 효과입니다. 처음 보는 물질 표현과
+CAS 일반화는 개선되지 않았으므로 전국 현장 정확도나 미등록 물질 해결로 해석하지 않습니다.
 
 ## 3. 재현 명령
 
@@ -223,6 +243,17 @@ python scripts/evaluation/evaluate_material_ranker.py \
   --db artifacts/chemiguard119.sqlite \
   --max-cases 300 \
   --output data/evaluation/material_ranker_self_retrieval_2026-08-01.json
+```
+
+소방 사고 표현 Resolver 파인튜닝:
+
+```bash
+chemiguard119 finetune-resolver \
+  --base-model artifacts/resolver.joblib \
+  --incidents data/raw/07_울산소방_화학사고별_유해물질판단.csv \
+  --output-dir artifacts/incident_adaptation \
+  --report outputs/modeling/incident_adapted_resolver_evaluation.json \
+  --json
 ```
 
 ## 4. Resolver 지표

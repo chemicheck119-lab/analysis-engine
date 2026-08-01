@@ -115,6 +115,7 @@ jobs:
               "04_CAMEO_반응성그룹_목록.csv",
               "05_CAMEO_반응성그룹_호환성_고유조합.csv",
               "06_울산소방_화학물정보.csv",
+              "07_울산소방_화학사고별_유해물질판단.csv",
               "13_ICIS_2024_화학물질_취급현황.csv",
               "19_ICIS_2024_시설후보_통합모델입력.csv",
           }
@@ -336,6 +337,7 @@ jobs:
             --resolver-model "$GITHUB_WORKSPACE/artifacts/resolver.joblib" \
             --retriever-model "$GITHUB_WORKSPACE/artifacts/retriever.joblib" \
             --config-dir "$GITHUB_WORKSPACE/config" \
+            --incident-adaptation-csv "$GITHUB_WORKSPACE/data/raw/07_울산소방_화학사고별_유해물질판단.csv" \
             --resolver-evaluation "$GITHUB_WORKSPACE/release-evidence/resolver_locked.csv" \
             --resolver-safety-evaluation "$GITHUB_WORKSPACE/release-evidence/resolver_hint_safety_locked.csv" \
             --retriever-evaluation "$GITHUB_WORKSPACE/release-evidence/retriever_legacy_locked.csv" \

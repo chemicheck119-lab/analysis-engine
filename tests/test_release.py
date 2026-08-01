@@ -23,7 +23,10 @@ from chemiguard119.release import (
     release_attestation_signature,
     verify_runtime_release,
 )
-from chemiguard119.resolver import MODEL_SCHEMA_VERSION as RESOLVER_SCHEMA_VERSION
+from chemiguard119.resolver import (
+    INCIDENT_ADAPTED_MODEL_SCHEMA_VERSION,
+    MODEL_SCHEMA_VERSION as RESOLVER_SCHEMA_VERSION,
+)
 from chemiguard119.retrieval import MODEL_SCHEMA_VERSION as RETRIEVER_SCHEMA_VERSION
 
 
@@ -34,6 +37,7 @@ def _runtime_fixture(
     tmp_path: Path,
     *,
     redistribution_approved: bool = True,
+    resolver_schema_version: str = RESOLVER_SCHEMA_VERSION,
 ) -> tuple[Path, Path, Path, Path]:
     artifact_dir = tmp_path / "artifacts"
     config_dir = tmp_path / "config"
@@ -56,7 +60,7 @@ def _runtime_fixture(
             connection.execute(f"CREATE TABLE {table} (id TEXT)")
     joblib.dump(
         {
-            "schema_version": RESOLVER_SCHEMA_VERSION,
+            "schema_version": resolver_schema_version,
             "task": "substance_candidate_retrieval",
         },
         resolver_path,
@@ -298,10 +302,12 @@ def _qualified_manifest(
     retriever_high_relevance_fact_coverage: float = 0.99,
     retriever_fact_complete_lower: float = 0.96,
     valid_signature: bool = True,
+    resolver_schema_version: str = RESOLVER_SCHEMA_VERSION,
 ) -> tuple[dict, Path, Path, Path, Path]:
     db_path, resolver_path, retriever_path, config_dir = _runtime_fixture(
         tmp_path,
         redistribution_approved=redistribution_approved,
+        resolver_schema_version=resolver_schema_version,
     )
     evidence = _evaluation_evidence(
         tmp_path,
@@ -370,6 +376,31 @@ def test_release_manifest_verifies_bound_reviewed_evidence(
     ]
     assert unsafe["total_failures"] == 0
     assert unsafe["one_sided_upper_rate"] <= 0.01
+
+
+def test_release_manifest_accepts_incident_adapted_resolver_schema(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    created, db_path, resolver_path, retriever_path, config_dir = _qualified_manifest(
+        tmp_path,
+        monkeypatch,
+        resolver_schema_version=INCIDENT_ADAPTED_MODEL_SCHEMA_VERSION,
+    )
+    monkeypatch.setenv("CHEMIGUARD119_GIT_COMMIT", "a" * 40)
+
+    verified = verify_runtime_release(
+        db_path=db_path,
+        resolver_model_path=resolver_path,
+        retriever_model_path=retriever_path,
+        config_dir=config_dir,
+        environment="production",
+        expected_manifest_sha256=created["manifest_sha256"],
+    )
+
+    assert verified["manifest_contract"]["resolver_schema_version"] == (
+        INCIDENT_ADAPTED_MODEL_SCHEMA_VERSION
+    )
 
 
 def test_production_runtime_does_not_receive_attestation_signing_key(
@@ -847,6 +878,18 @@ def test_release_workflow_keeps_signing_key_out_of_runtime_and_records_digest() 
     assert "GCP_WORKLOAD_IDENTITY_PROVIDER" in workflow
     assert "Artifact Registry digest" in workflow
     assert "service_account_key" not in workflow.lower()
+
+
+def test_release_workflow_adopts_incident_adapted_resolver_before_manifest() -> None:
+    workflow = (
+        CONFIG_DIR.parent / ".github" / "workflows" / "release-model.yml"
+    ).read_text(encoding="utf-8")
+
+    assert '"07_울산소방_화학사고별_유해물질판단.csv"' in workflow
+    assert "--incident-adaptation-csv" in workflow
+    assert workflow.index("--incident-adaptation-csv") < workflow.index(
+        "Runtime manifest SHA-256 추출"
+    )
 
 
 def test_cloud_run_workflow_uses_oidc_and_staging_environment() -> None:

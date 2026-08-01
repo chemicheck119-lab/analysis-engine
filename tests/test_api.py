@@ -406,6 +406,7 @@ def test_health_and_readiness_with_injected_runtime(runtime: ModelRuntime) -> No
         },
         "loaded_at_utc": "2026-07-21T00:00:00+00:00",
         "resolver_schema": "resolver-test-v1",
+        "resolver_training_metadata": {},
         "retriever_schema": "retriever-test-v1",
         "material_discovery_capability": {
             "ready": True,

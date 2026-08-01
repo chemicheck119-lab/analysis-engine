@@ -1164,7 +1164,7 @@ def _verify_manifest_contract(
 ) -> dict[str, Any]:
     """파일을 역직렬화하기 전에 코드와 manifest의 정적 계약을 비교한다."""
 
-    from chemiguard119.resolver import MODEL_SCHEMA_VERSION as RESOLVER_SCHEMA_VERSION
+    from chemiguard119.resolver import SUPPORTED_MODEL_SCHEMA_VERSIONS
     from chemiguard119.retrieval import MODEL_SCHEMA_VERSION as RETRIEVER_SCHEMA_VERSION
 
     expected_top_level = {
@@ -1180,7 +1180,7 @@ def _verify_manifest_contract(
     artifact_entries = payload.get("artifacts") or {}
     expected_models = {
         "resolver": {
-            "model_schema_version": RESOLVER_SCHEMA_VERSION,
+            "model_schema_version": SUPPORTED_MODEL_SCHEMA_VERSIONS,
             "task": "substance_candidate_retrieval",
         },
         "retriever": {
@@ -1192,9 +1192,13 @@ def _verify_manifest_contract(
         entry = artifact_entries.get(model_name) or {}
         for field, expected in fields.items():
             actual = entry.get(field)
-            if actual != expected:
+            if (isinstance(expected, (set, frozenset)) and actual not in expected) or (
+                not isinstance(expected, (set, frozenset)) and actual != expected
+            ):
                 mismatches[f"artifacts.{model_name}.{field}"] = {
-                    "expected": expected,
+                    "expected": sorted(expected)
+                    if isinstance(expected, (set, frozenset))
+                    else expected,
                     "actual": actual,
                 }
 
@@ -1317,7 +1321,9 @@ def _verify_manifest_contract(
         "service": SERVICE_ID,
         "package_version": __version__,
         "git_commit": git_commit,
-        "resolver_schema_version": RESOLVER_SCHEMA_VERSION,
+        "resolver_schema_version": (payload.get("artifacts") or {})
+        .get("resolver", {})
+        .get("model_schema_version"),
         "retriever_schema_version": RETRIEVER_SCHEMA_VERSION,
         "public_container_redistribution_ready": manifest_data_governance.get(
             "public_container_redistribution_ready"

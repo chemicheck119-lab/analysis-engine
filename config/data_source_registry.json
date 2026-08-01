@@ -37,6 +37,16 @@
       "reviewer": "PROJECT_DATA_GOVERNANCE_REVIEW_REQUIRED_FOR_CHANGES"
     },
     {
+      "source_id": "NFA_BIGDATA119_ULSAN_HAZARDOUS_SUBSTANCE_JUDGMENT_2015_2020",
+      "provider": "소방청·소방안전 빅데이터 플랫폼",
+      "source_url": "https://bigdata-119.kr/goods/goodsInfo?goods_mng_sn=5",
+      "terms_url": "https://bigdata-119.kr/",
+      "runtime_artifacts": ["resolver"],
+      "redistribution_status": "REVIEW_REQUIRED",
+      "review_basis": "공모전 활용은 허용되지만 공개 컨테이너에 파생 별칭 artifact를 재배포하는 조건은 별도 확인 필요",
+      "reviewer": ""
+    },
+    {
       "source_id": "ICIS_2024_HANDLING",
       "provider": "환경부 화학물질안전원",
       "source_url": "https://icis.mcee.go.kr/search/searchType6.do",

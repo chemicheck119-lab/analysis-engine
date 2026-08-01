@@ -7,6 +7,14 @@
 
 ### Added
 
+- 소방안전 빅데이터 플랫폼 2015~2020 사고–CAS 기록을 시간 분할해 기존 Resolver에
+  source adaptation하고 2020년 잠금셋·기존 안전 회귀를 비교하는 학습 파이프라인
+- 2015~2019 공개 표현 241개를 추가한 `resolver-char-tfidf-v3-incident-adapted`, artifact
+  checksum·학습 provenance·배포 채택 gate와 `finetune-resolver` CLI
+- 모델 릴리스 workflow가 07번 소방 사고 CSV를 검증하고, 적응학습 gate 통과 후 v3 Resolver를
+  동일 회귀평가·runtime manifest·컨테이너 경로에 포함하도록 연결
+- 2020년 419건에서 Top-1 0.3246→0.6706, Top-3 0.3461→0.6754와 처음 보는 표현·CAS
+  무개선 한계를 함께 고정한 시간 분할 평가 스냅샷
 - 기존 BM25 순위를 보존하면서 정확 식별·출처·물성·공식근거를 설명 가능한 특징으로 결합하는
   `material-evidence-ranker-v1`과 정보이득 기반 다음 현장 확인 정책
 - 공개 물성 프로필 300건 자기검색에서 기준선 Top-1·Top-3 무회귀와 다음 구분 확인 77.33%를

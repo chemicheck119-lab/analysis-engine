@@ -96,6 +96,7 @@ staging·production에서 익명 접근을 켜거나 올바른 API Key가 없으
 - runtime manifest 무결성
 - API 인증 구성
 - `PUBLIC_SOURCE_PILOT_V1` 충돌 정책과 공개 검증 crosswalk 준비 상태
+- Resolver schema와 `resolver_training_metadata` source-adaptation provenance
 
 준비되면 HTTP `200`, 아니면 HTTP `503`입니다. 배포 플랫폼의 readiness probe는 이 경로를
 사용해야 합니다.

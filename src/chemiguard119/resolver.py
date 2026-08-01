@@ -29,6 +29,11 @@ from chemiguard119.utils import (
 
 
 MODEL_SCHEMA_VERSION = "resolver-char-tfidf-v2"
+INCIDENT_ADAPTED_MODEL_SCHEMA_VERSION = "resolver-char-tfidf-v3-incident-adapted"
+SUPPORTED_MODEL_SCHEMA_VERSIONS = {
+    MODEL_SCHEMA_VERSION,
+    INCIDENT_ADAPTED_MODEL_SCHEMA_VERSION,
+}
 RUNTIME_INDEX_VERSION = "resolver-runtime-index-v2"
 RUNTIME_INDEX_KEY = "_runtime_index"
 
@@ -121,15 +126,21 @@ def _load_alias_rows(db_path: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def train_resolver(
-    db_path: Path, model_path: Path = DEFAULT_RESOLVER_MODEL
+def fit_resolver_rows(
+    rows: list[dict[str, Any]],
+    model_path: Path,
+    *,
+    schema_version: str = MODEL_SCHEMA_VERSION,
+    training_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """별칭 문자열을 문자 2~5-gram TF-IDF 공간에 적합한다.
+    """검증된 별칭 행으로 문자 TF-IDF 후보 모델을 적합한다.
 
-    이는 화학 위험 분류가 아니라 물질 후보 검색 모델이다.
+    별도 공개 데이터로 source adaptation을 수행할 때도 resolver의 동일한
+    전처리·후보 계약을 재사용하기 위한 낮은 수준의 학습 함수다.
     """
 
-    rows = _load_alias_rows(db_path)
+    if not rows:
+        raise RuntimeError("학습할 검증 별칭이 없습니다.")
     texts = [normalize_text(row["alias_text"]) for row in rows]
     vectorizer = TfidfVectorizer(
         analyzer="char_wb",
@@ -140,7 +151,7 @@ def train_resolver(
     )
     matrix = vectorizer.fit_transform(texts)
     artifact = {
-        "schema_version": MODEL_SCHEMA_VERSION,
+        "schema_version": schema_version,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "task": "substance_candidate_retrieval",
         "safety_note": "위험등급이나 대응을 예측하지 않으며 모든 이름 기반 결과는 대원 확인이 필요함",
@@ -152,6 +163,7 @@ def train_resolver(
         "vectorizer": vectorizer,
         "matrix": matrix,
         "rows": rows,
+        "training_metadata": dict(training_metadata or {}),
     }
     model_path.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(artifact, model_path)
@@ -160,8 +172,20 @@ def train_resolver(
         "alias_count": len(rows),
         "substance_count": len({row["cas_number"] for row in rows}),
         "feature_count": matrix.shape[1],
-        "schema_version": MODEL_SCHEMA_VERSION,
+        "schema_version": schema_version,
+        "training_metadata": dict(training_metadata or {}),
     }
+
+
+def train_resolver(
+    db_path: Path, model_path: Path = DEFAULT_RESOLVER_MODEL
+) -> dict[str, Any]:
+    """별칭 문자열을 문자 2~5-gram TF-IDF 공간에 적합한다.
+
+    이는 화학 위험 분류가 아니라 물질 후보 검색 모델이다.
+    """
+
+    return fit_resolver_rows(_load_alias_rows(db_path), model_path)
 
 
 def load_resolver(model_path: Path = DEFAULT_RESOLVER_MODEL) -> dict[str, Any]:
@@ -170,7 +194,7 @@ def load_resolver(model_path: Path = DEFAULT_RESOLVER_MODEL) -> dict[str, Any]:
             f"resolver 모델이 없습니다: {model_path}. `train`을 먼저 실행하세요."
         )
     artifact = joblib.load(model_path)
-    if artifact.get("schema_version") != MODEL_SCHEMA_VERSION:
+    if artifact.get("schema_version") not in SUPPORTED_MODEL_SCHEMA_VERSIONS:
         raise RuntimeError(
             "지원하지 않는 resolver artifact 버전입니다. 다시 학습하세요."
         )
@@ -548,7 +572,11 @@ def resolve_substance(
                 else (
                     "PRODUCT_OR_COMMON_NAME"
                     if alias_class == "PRODUCT_OR_COMMON_NAME"
-                    else "AUTHORITATIVE_ALIAS"
+                    else (
+                        "AUTHORITATIVE_ALIAS"
+                        if alias_class == "AUTHORITATIVE_NAME"
+                        else "REPORTED_ALIAS"
+                    )
                 )
             ),
             confirmation_reason=(

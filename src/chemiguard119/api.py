@@ -461,6 +461,9 @@ class ModelRuntime:
             "artifacts": artifact_checks,
             "loaded_at_utc": self.loaded_at_utc,
             "resolver_schema": self.resolver_artifact.get("schema_version"),
+            "resolver_training_metadata": self.resolver_artifact.get(
+                "training_metadata", {}
+            ),
             "retriever_schema": self.retriever_artifact.get("schema_version"),
             "material_discovery_capability": material_discovery,
             "facility_history_coverage": (
@@ -1005,6 +1008,9 @@ def _public_analysis_response(
             "api_schema_version": API_SCHEMA_VERSION,
             "pipeline_schema_version": PIPELINE_SCHEMA_VERSION,
             "resolver_schema_version": runtime.resolver_artifact.get("schema_version"),
+            "resolver_training_metadata": runtime.resolver_artifact.get(
+                "training_metadata", {}
+            ),
             "retriever_schema_version": runtime.retriever_artifact.get(
                 "schema_version"
             ),

@@ -26,6 +26,7 @@ from chemiguard119 import cli
         (["incident", "염산 탱크 누출"], "incident"),
         (["review", "7681-52-9", "7647-01-0"], "review"),
         (["finetune-check"], "finetune-check"),
+        (["finetune-resolver"], "finetune-resolver"),
         (["pipeline"], "pipeline"),
         (["release-manifest"], "release-manifest"),
         (["interactive"], "interactive"),
@@ -36,6 +37,15 @@ def test_all_commands_have_callable_handlers(argv: list[str], command: str) -> N
 
     assert args.command == command
     assert callable(args.handler)
+
+
+def test_pipeline_accepts_incident_source_adaptation_csv(tmp_path: Path) -> None:
+    source = tmp_path / "incidents.csv"
+    args = cli.build_parser().parse_args(
+        ["pipeline", "--incident-adaptation-csv", str(source)]
+    )
+
+    assert args.incident_adaptation_csv == source.resolve()
 
 
 @pytest.mark.parametrize("argv", [["--json", "doctor"], ["doctor", "--json"]])

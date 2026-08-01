@@ -15,6 +15,7 @@ import os
 import platform
 import re
 import shlex
+import shutil
 import sys
 from datetime import datetime, timezone
 from importlib import metadata
@@ -107,6 +108,7 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
         "incident": "사고 전체 분석",
         "review": "대응 충돌 검토",
         "finetune-check": "파인튜닝 준비도 점검",
+        "finetune-resolver": "소방 사고–CAS Resolver 파인튜닝",
         "pipeline": "전체 모델링 파이프라인",
         "release-manifest": "배포 무결성 Manifest",
         "interactive": "대화형 CLI",
@@ -837,6 +839,17 @@ def _finetune_check(args: argparse.Namespace) -> dict[str, Any]:
     return payload
 
 
+def _finetune_resolver(args: argparse.Namespace) -> dict[str, Any]:
+    from chemiguard119.incident_adaptation import run_training_and_evaluation
+
+    return run_training_and_evaluation(
+        args.base_model,
+        args.incidents,
+        args.output_dir,
+        args.report,
+    )
+
+
 def _release_manifest(args: argparse.Namespace) -> dict[str, Any]:
     from chemiguard119.release import create_runtime_manifest
 
@@ -897,6 +910,11 @@ def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
             "report_dir": str(args.report_dir),
             "config_dir": str(args.config_dir),
             "evaluation_profile": args.evaluation_profile,
+            "incident_adaptation_csv": (
+                str(args.incident_adaptation_csv)
+                if args.incident_adaptation_csv is not None
+                else None
+            ),
         },
         "stages": {},
         "last_completed_stage": None,
@@ -940,6 +958,39 @@ def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
         )
         report["last_completed_stage"] = "train_resolver"
         _write_json(report_path, report)
+
+        if args.incident_adaptation_csv is not None:
+            from chemiguard119.incident_adaptation import (
+                run_training_and_evaluation,
+            )
+
+            adaptation_dir = args.resolver_model.parent / "incident_adaptation"
+            adaptation_report_path = (
+                args.report_dir / "incident_adapted_resolver_evaluation.json"
+            )
+            adaptation = run_training_and_evaluation(
+                args.resolver_model,
+                args.incident_adaptation_csv,
+                adaptation_dir,
+                adaptation_report_path,
+            )
+            if adaptation["adoption_gate"]["passed"] is not True:
+                raise RuntimeError(
+                    "사고 표현 Resolver adaptation 품질·안전 gate가 실패했습니다."
+                )
+            final_model_path = adaptation_dir / str(
+                adaptation["artifacts"]["final"]["model_path"]
+            )
+            shutil.copy2(final_model_path, args.resolver_model)
+            report["stages"]["incident_source_adaptation"] = {
+                "status": "ADOPTED",
+                "report_path": str(adaptation_report_path),
+                "resolver_model_path": str(args.resolver_model),
+                "artifact_sha256": adaptation["artifacts"]["final"]["artifact_sha256"],
+                "adoption_gate": adaptation["adoption_gate"],
+            }
+            report["last_completed_stage"] = "incident_source_adaptation"
+            _write_json(report_path, report)
 
         report["stages"]["train_retriever"] = train_retriever(
             args.db,
@@ -1134,6 +1185,7 @@ def _interactive(args: argparse.Namespace) -> dict[str, Any]:
             "incident",
             "review",
             "finetune-check",
+            "finetune-resolver",
             "pipeline",
             "release-manifest",
             "interactive",
@@ -1493,6 +1545,35 @@ def build_parser() -> argparse.ArgumentParser:
     _add_json_option(finetune)
     finetune.set_defaults(handler=_finetune_check)
 
+    finetune_resolver = subparsers.add_parser(
+        "finetune-resolver",
+        help="소방 사고–CAS 공개 기록으로 물질 후보 Resolver를 시간 분할 파인튜닝",
+    )
+    finetune_resolver.add_argument(
+        "--base-model",
+        type=_path,
+        default=DEFAULT_RESOLVER_MODEL,
+        help="기존 Resolver artifact",
+    )
+    finetune_resolver.add_argument(
+        "--incidents",
+        type=_path,
+        default=FINAL_DATA_DIR / "07_울산소방_화학사고별_유해물질판단.csv",
+        help="소방안전 빅데이터 플랫폼 사고–CAS CSV",
+    )
+    finetune_resolver.add_argument(
+        "--output-dir",
+        type=_path,
+        default=DEFAULT_ARTIFACT_DIR / "incident_adaptation",
+    )
+    finetune_resolver.add_argument(
+        "--report",
+        type=_path,
+        default=DEFAULT_REPORT_DIR / "incident_adapted_resolver_evaluation.json",
+    )
+    _add_json_option(finetune_resolver)
+    finetune_resolver.set_defaults(handler=_finetune_resolver)
+
     pipeline = subparsers.add_parser(
         "pipeline",
         help="audit→prepare→train→evaluate→release manifest 전체 파이프라인",
@@ -1503,6 +1584,14 @@ def build_parser() -> argparse.ArgumentParser:
     pipeline.add_argument("--config-dir", type=_path, default=CONFIG_DIR)
     pipeline.add_argument("--include-hash", action="store_true")
     pipeline.add_argument("--max-features", type=int, default=30_000)
+    pipeline.add_argument(
+        "--incident-adaptation-csv",
+        type=_path,
+        help=(
+            "소방 사고 물질명-CAS 공개 CSV. 지정하면 baseline 학습 뒤 시간 분할 "
+            "품질·안전 gate를 통과한 source-adapted Resolver만 채택"
+        ),
+    )
     pipeline.add_argument(
         "--resolver-evaluation",
         type=_path,
