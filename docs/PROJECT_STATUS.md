@@ -1,6 +1,6 @@
 # 케미체크119 AI 저장소 실제 상태
 
-기준일: 2026-08-01
+기준일: 2026-08-02
 대상: `chemicheck119/llm`
 
 이 문서는 계획이 아니라 코드, 로컬 실행 결과와 저장소에 존재하는 파일을 기준으로 작성합니다.
@@ -11,7 +11,7 @@
 | 영역 | 상태 | 직접 확인한 내용 |
 |---|---|---|
 | 신고문 구조화 | 외부 감사 완료·현장 검증 전 | 전국 공식 사고 미래 보류 442건: 사고유형 Recall 0.8376·관찰 가능 물질명 Recall 0.8150 |
-| 물질 후보 검색 | 부분 완료 | 4,300개 카탈로그, 내부 회귀 21건 Top-1 0.9524·Top-3 Recall 1.0 |
+| 물질 후보 검색 | 부분 완료 | 기본 4,300개 + 소방기록 exact-only 35 CAS, 내부 회귀 21건 Top-1 0.9524·Top-3 Recall 1.0 |
 | 관찰 기반 물질 탐색 | 회귀 감사 완료 | 성상 프로필 749 CAS, 300건 자기검색, 최소 두 영역 일치·현장 확인 gate |
 | 후보 재순위화·다음 확인 | 구현 | 설명 가능한 6특징 Ranker, BM25 Top-1 무회귀, 77.33% 구분 확인 생성 |
 | 자동 CAS 힌트 안전성 | 부분 완료 | 합성·내부 회귀 12건 통과, 부분 문자열 위험 힌트 0건 |
@@ -23,7 +23,7 @@
 | 충돌 검토 | 파일럿 | 공개 검증 CAMEO CAS 6종, 15개 조합 회귀 검사·pair별 표시 계약 |
 | 공식근거 보증 | 구현 | 2쌍은 독립 공식기관 3곳 이상 교차증빙, 나머지 13쌍 단일 공식체계 표시·주간 링크 drift 검사 |
 | 유사 사고사례 검색 | 미완료 | 출처와 대응 라벨이 검증된 corpus 없음; 공식 근거 RAG와 별도 범위 |
-| 물질 Resolver 파인튜닝 | 배포 후보 구현 | 소방 사고 2015~2019 표현 241개를 추가 학습, 2020 잠금 419건 Top-1 0.3246→0.6706; 미관측 표현 성능은 무개선 |
+| 물질 Resolver 파인튜닝 | v4 배포 후보 구현 | 기본 카탈로그 표현 241개와 source-only 35 CAS·113개 표현을 추가, 2020 잠금 419건 Top-1 0.3246→0.8974; 미관측 표현 성능은 무개선 |
 | 생성형 신고문 파인튜닝 | 보류 | 실제 신고 전사·검수된 개체 라벨이 없어 QLoRA 일반화 성능을 입증할 수 없음 |
 | FastAPI | 구현 | 통합 분석·agent step·보조 API, 인증·오류 계약·확인 게이트 구현 |
 | 실행 에이전트 | 구현·preview 배포 | 외부 memory, 6개 도구, PLAN·ACT·OBSERVE·REPLAN, 안전 재검증 |
@@ -32,7 +32,7 @@
 | 대시보드 표시 계약 | 구현 | BFF OpenAPI·TypeScript 타입·fixture, 확인 전 위험 결과 금지, 15쌍별 정확한 값 고정 |
 | 운영 로그 | 구현 | 안전 JSON 로그, Uvicorn 원 URL access log와 traceback 비활성화 |
 | Docker | 부분 완료 | 일반·bundle Dockerfile과 CI 구성 존재, 로컬 Docker CLI 없음 |
-| 실제 배포 | development preview | main `af71ab3`·v3 Resolver를 서울 Cloud Run revision `paf71ab31509001`에 Blue/Green 배포·외부 smoke 통과; reviewed staging·production은 차단 |
+| 실제 배포 | development preview | main `af71ab3`·v3 Resolver를 서울 Cloud Run revision `paf71ab31509001`에 Blue/Green 배포·외부 smoke 통과; v4는 아직 PR 배포 후보이며 reviewed staging·production은 차단 |
 | FE·BE 연동 자료 | 완료 | 모델·BFF OpenAPI, TypeScript 타입, 성공·실패 fixture와 체크리스트 |
 | FE·BE 실제 연동 | 미완료 | 현재 FE는 물질검색 mock·legacy DTO, BE는 BFF 구현 필요 |
 

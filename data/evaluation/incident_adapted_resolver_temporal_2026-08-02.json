@@ -1,0 +1,1847 @@
+{
+  "metrics_version": "incident-adapted-resolver-temporal-evaluation-v1",
+  "created_at_utc": "2026-08-02T00:33:59.128888+00:00",
+  "training_policy_version": "incident-alias-temporal-adaptation-v2-source-catalog",
+  "task": "substance_candidate_retrieval_only",
+  "source_audit": {
+    "source_dataset_id": "NFA_BIGDATA119_ULSAN_HAZARDOUS_SUBSTANCE_JUDGMENT_2015_2020",
+    "source_url": "https://bigdata-119.kr/goods/goodsInfo?goods_mng_sn=5",
+    "source_file": "07_울산소방_화학사고별_유해물질판단.csv",
+    "source_sha256": "f013ebed301c5306178ad72f8dbbb62bdb5ecae1122ae3dfe7d1050f7ea0d765",
+    "source_row_count": 1868,
+    "valid_alias_record_count": 1530,
+    "pre_ambiguity_filter_record_count": 1539,
+    "invalid_year_row_count": 0,
+    "invalid_or_composite_cas_row_count": 212,
+    "ambiguous_surface_count": 2,
+    "year_counts": {
+      "2015": 73,
+      "2016": 250,
+      "2017": 254,
+      "2018": 181,
+      "2019": 353,
+      "2020": 419
+    },
+    "contains_personal_data": false,
+    "released_fields": [
+      "발생연도",
+      "CAS번호",
+      "화학물질명_한글",
+      "화학물질명_영문",
+      "일반명_한글",
+      "일반명_영문"
+    ]
+  },
+  "split_policy": {
+    "validation_train_year_max": 2018,
+    "validation_year": 2019,
+    "final_train_year_max": 2019,
+    "locked_test_year": 2020,
+    "locked_test_used_for_tuning": false
+  },
+  "validation": {
+    "base": {
+      "all": {
+        "case_count": 353,
+        "top1_accuracy": 0.331445,
+        "top3_recall": 0.359773,
+        "mrr": 0.34372,
+        "wrong_unique_resolution_rate": 0.0,
+        "catalog_coverage_rate": 0.78187,
+        "catalog_missing_case_count": 77
+      },
+      "unseen_surface": {
+        "case_count": 91,
+        "top1_accuracy": 0.263736,
+        "top3_recall": 0.285714,
+        "mrr": 0.274725,
+        "wrong_unique_resolution_rate": 0.0,
+        "catalog_coverage_rate": 0.857143,
+        "catalog_missing_case_count": 13
+      },
+      "unseen_cas": {
+        "case_count": 90,
+        "top1_accuracy": 0.266667,
+        "top3_recall": 0.288889,
+        "mrr": 0.277778,
+        "wrong_unique_resolution_rate": 0.0,
+        "catalog_coverage_rate": 0.855556,
+        "catalog_missing_case_count": 13
+      },
+      "latency_ms": {
+        "mean": 2.412489,
+        "p95": 3.892208
+      },
+      "failure_examples": [
+        {
+          "query": "에틸벤젠",
+          "expected_cas": "100-41-4",
+          "ranking": [
+            "1973-22-4",
+            "1585-07-5",
+            "135-01-3"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Stylene Monomer",
+          "expected_cas": "100-42-5",
+          "ranking": [
+            "123-39-7",
+            "106-88-7",
+            "111-76-2"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "스티렌모노머",
+          "expected_cas": "100-42-5",
+          "ranking": [
+            "15245-44-0",
+            "873-66-5"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "스틸렌",
+          "expected_cas": "100-42-5",
+          "ranking": [
+            "75-01-4",
+            "75-21-8",
+            "123-91-1"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Benzyl chloride",
+          "expected_cas": "100-44-7",
+          "ranking": [
+            "965-32-2",
+            "1344-13-4",
+            "120-51-4"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "α-Chlorotoluene",
+          "expected_cas": "100-44-7",
+          "ranking": [
+            "95-49-8",
+            "106-43-4",
+            "95-75-0"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "α-클로로톨루엔",
+          "expected_cas": "100-44-7",
+          "ranking": [
+            "108-41-8",
+            "32768-54-0",
+            "88-72-2"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Triethanol amine",
+          "expected_cas": "102-71-6",
+          "ranking": [
+            "64-17-5",
+            "80778-56-9",
+            "105-59-9"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "p-Xylene",
+          "expected_cas": "106-42-3",
+          "ranking": [
+            "41051-88-1",
+            "108-69-0",
+            "106-88-7"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "p-Xylene [Xylene]",
+          "expected_cas": "106-42-3",
+          "ranking": [
+            "41051-88-1",
+            "108-69-0",
+            "106-88-7"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "파라-자일렌 [자일렌]",
+          "expected_cas": "106-42-3",
+          "ranking": [
+            "1330-20-7",
+            "106-42-3",
+            "576-22-7"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Epichlorohydrin",
+          "expected_cas": "106-89-8",
+          "ranking": [
+            "67843-74-7",
+            "51594-55-9",
+            "16940-66-2"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "1-BUTENE",
+          "expected_cas": "106-98-9",
+          "ranking": [
+            "6117-80-2",
+            "870-63-3",
+            "558-37-2"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "1-부텐",
+          "expected_cas": "106-98-9",
+          "ranking": [
+            "78-94-4",
+            "513-35-9",
+            "110-57-6"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Acrylonitrile",
+          "expected_cas": "107-13-1",
+          "ranking": [
+            "2206-26-0",
+            "107-14-2",
+            "4786-20-3"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "1,2-Ethanediamine",
+          "expected_cas": "107-15-3",
+          "ranking": [
+            "142-25-6",
+            "110-18-9",
+            "6291-84-5"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Ethylenediamine",
+          "expected_cas": "107-15-3",
+          "ranking": [
+            "110-72-5",
+            "462-94-2",
+            "142-25-6"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "에틸렌 글리콜",
+          "expected_cas": "107-21-1",
+          "ranking": [
+            "818-61-1",
+            "111-46-6",
+            "57-55-6"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "VAM",
+          "expected_cas": "108-05-4",
+          "ranking": [
+            "7440-62-2",
+            "109-52-4"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "비닐 아세테이트",
+          "expected_cas": "108-05-4",
+          "ranking": [
+            "123-86-4",
+            "628-63-7",
+            "122-79-2"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        }
+      ]
+    },
+    "adapted": {
+      "all": {
+        "case_count": 353,
+        "top1_accuracy": 0.810198,
+        "top3_recall": 0.818697,
+        "mrr": 0.814448,
+        "wrong_unique_resolution_rate": 0.0,
+        "catalog_coverage_rate": 0.963173,
+        "catalog_missing_case_count": 13
+      },
+      "unseen_surface": {
+        "case_count": 91,
+        "top1_accuracy": 0.274725,
+        "top3_recall": 0.296703,
+        "mrr": 0.285714,
+        "wrong_unique_resolution_rate": 0.0,
+        "catalog_coverage_rate": 0.857143,
+        "catalog_missing_case_count": 13
+      },
+      "unseen_cas": {
+        "case_count": 90,
+        "top1_accuracy": 0.266667,
+        "top3_recall": 0.288889,
+        "mrr": 0.277778,
+        "wrong_unique_resolution_rate": 0.0,
+        "catalog_coverage_rate": 0.855556,
+        "catalog_missing_case_count": 13
+      },
+      "latency_ms": {
+        "mean": 0.736706,
+        "p95": 3.876125
+      },
+      "failure_examples": [
+        {
+          "query": "Stylene Monomer",
+          "expected_cas": "100-42-5",
+          "ranking": [
+            "123-39-7",
+            "106-88-7",
+            "111-76-2"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "스티렌모노머",
+          "expected_cas": "100-42-5",
+          "ranking": [
+            "15245-44-0",
+            "98-83-9"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "스틸렌",
+          "expected_cas": "100-42-5",
+          "ranking": [
+            "75-01-4",
+            "107-21-1",
+            "123-91-1"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Benzyl chloride",
+          "expected_cas": "100-44-7",
+          "ranking": [
+            "965-32-2",
+            "74-87-3",
+            "1344-13-4"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "α-Chlorotoluene",
+          "expected_cas": "100-44-7",
+          "ranking": [
+            "95-49-8",
+            "106-43-4",
+            "95-75-0"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "α-클로로톨루엔",
+          "expected_cas": "100-44-7",
+          "ranking": [
+            "108-41-8",
+            "32768-54-0",
+            "88-72-2"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Acrylonitrile",
+          "expected_cas": "107-13-1",
+          "ranking": [
+            "2206-26-0",
+            "107-14-2",
+            "4786-20-3"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "2,6-Dimethyl-4-heptanol",
+          "expected_cas": "108-82-7",
+          "ranking": [
+            "111-70-6",
+            "926-82-9",
+            "78-69-3"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Diisobutylcarbinol",
+          "expected_cas": "108-82-7",
+          "ranking": [
+            "141-04-8",
+            "358730-88-8",
+            "1191-15-7"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "다이아이소뷰틸 카보닐",
+          "expected_cas": "108-82-7",
+          "ranking": [
+            "108-83-8",
+            "110-19-0",
+            "6846-50-0"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "디이소부틸카르비놀",
+          "expected_cas": "108-82-7",
+          "ranking": [
+            "84-69-5",
+            "78-81-9",
+            "78-83-1"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Isobutyl acetate",
+          "expected_cas": "110-19-0",
+          "ranking": [
+            "123-86-4",
+            "105-46-4",
+            "97-85-8"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "아이소부틸 아세테이트",
+          "expected_cas": "110-19-0",
+          "ranking": [
+            "108-10-1",
+            "123-86-4",
+            "108-05-4"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "2-(2-Methoxyethoxy)ethanol",
+          "expected_cas": "111-77-3",
+          "ranking": [
+            "143-24-8",
+            "109-59-1",
+            "534-15-6"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Ethylene Glycol Methyl ether",
+          "expected_cas": "111-77-3",
+          "ranking": [
+            "107-21-1",
+            "111-76-2",
+            "108-65-6"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "에틸렌 글리콜 메틸 에테르",
+          "expected_cas": "111-77-3",
+          "ranking": [
+            "107-21-1",
+            "107-98-2",
+            "108-65-6"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "2-(2-ETHOXYETHOXY)ETHANOL",
+          "expected_cas": "111-90-0",
+          "ranking": [
+            "143-24-8",
+            "109-59-1",
+            "157057-20-0"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "이산화탄소",
+          "expected_cas": "124-38-9",
+          "ranking": [
+            "630-08-0",
+            "75-15-0",
+            "10049-04-4"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Sodium Methylate",
+          "expected_cas": "124-41-4",
+          "ranking": [
+            "7440-23-5",
+            "7782-92-5",
+            "555-75-9"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Sodium methanolate",
+          "expected_cas": "124-41-4",
+          "ranking": [
+            "865-34-9",
+            "141-52-6",
+            "7440-23-5"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        }
+      ]
+    }
+  },
+  "locked_test": {
+    "base": {
+      "all": {
+        "case_count": 419,
+        "top1_accuracy": 0.324582,
+        "top3_recall": 0.346062,
+        "mrr": 0.333333,
+        "wrong_unique_resolution_rate": 0.0,
+        "catalog_coverage_rate": 0.742243,
+        "catalog_missing_case_count": 108
+      },
+      "unseen_surface": {
+        "case_count": 60,
+        "top1_accuracy": 0.283333,
+        "top3_recall": 0.316667,
+        "mrr": 0.294444,
+        "wrong_unique_resolution_rate": 0.0,
+        "catalog_coverage_rate": 0.783333,
+        "catalog_missing_case_count": 13
+      },
+      "unseen_cas": {
+        "case_count": 58,
+        "top1_accuracy": 0.275862,
+        "top3_recall": 0.310345,
+        "mrr": 0.287356,
+        "wrong_unique_resolution_rate": 0.0,
+        "catalog_coverage_rate": 0.793103,
+        "catalog_missing_case_count": 12
+      },
+      "latency_ms": {
+        "mean": 2.259003,
+        "p95": 3.856209
+      },
+      "failure_examples": [
+        {
+          "query": "에틸벤젠",
+          "expected_cas": "100-41-4",
+          "ranking": [
+            "1973-22-4",
+            "1585-07-5",
+            "135-01-3"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Stylene Monomer",
+          "expected_cas": "100-42-5",
+          "ranking": [
+            "123-39-7",
+            "106-88-7",
+            "111-76-2"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "스티렌모노머",
+          "expected_cas": "100-42-5",
+          "ranking": [
+            "15245-44-0",
+            "873-66-5"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "스틸렌",
+          "expected_cas": "100-42-5",
+          "ranking": [
+            "75-01-4",
+            "75-21-8",
+            "123-91-1"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Benzyl chloride",
+          "expected_cas": "100-44-7",
+          "ranking": [
+            "965-32-2",
+            "1344-13-4",
+            "120-51-4"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "α-Chlorotoluene",
+          "expected_cas": "100-44-7",
+          "ranking": [
+            "95-49-8",
+            "106-43-4",
+            "95-75-0"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "α-클로로톨루엔",
+          "expected_cas": "100-44-7",
+          "ranking": [
+            "108-41-8",
+            "32768-54-0",
+            "88-72-2"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "BENZYLAMINE",
+          "expected_cas": "100-46-9",
+          "ranking": [
+            "104-86-9",
+            "3886-69-9",
+            "618-36-0"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Diphenylmethane 4,4'-diisocyanate",
+          "expected_cas": "101-68-8",
+          "ranking": [
+            "2536-05-2",
+            "91-97-4",
+            "111-36-4"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "MDI",
+          "expected_cas": "101-68-8",
+          "ranking": [
+            "626-23-3",
+            "2206-27-1",
+            "870-08-6"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Triethanol amine",
+          "expected_cas": "102-71-6",
+          "ranking": [
+            "64-17-5",
+            "80778-56-9",
+            "105-59-9"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "1,3,5-Tri-2-propenyl-1,3,5-triazin-2,4,6(1H,3H,5H)-trione",
+          "expected_cas": "1025-15-6",
+          "ranking": [
+            "2451-62-9",
+            "59653-74-6",
+            "108-74-7"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "TRIALLYL ISOCYANURATE",
+          "expected_cas": "1025-15-6",
+          "ranking": [
+            "51580-86-0",
+            "102-70-5",
+            "2451-62-9"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "트라이알릴 아이소사이아누레이트",
+          "expected_cas": "1025-15-6",
+          "ranking": [
+            "2451-62-9",
+            "624-83-9",
+            "109-90-0"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "트리알릴 아이소시아누르산염",
+          "expected_cas": "1025-15-6",
+          "ranking": [
+            "108-77-0",
+            "26471-62-5",
+            "3173-56-6"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "2-Ethyl hexyl acrylate",
+          "expected_cas": "103-11-7",
+          "ranking": [
+            "7328-17-8",
+            "101-43-9",
+            "2439-35-2"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "SEC-부틸 아세테이트",
+          "expected_cas": "105-46-4",
+          "ranking": [
+            "123-86-4",
+            "628-63-7",
+            "122-79-2"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "초산 제2부틸",
+          "expected_cas": "105-46-4",
+          "ranking": [
+            "141-78-6",
+            "1600-27-7",
+            "79-11-8"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "p-Xylene",
+          "expected_cas": "106-42-3",
+          "ranking": [
+            "41051-88-1",
+            "108-69-0",
+            "106-88-7"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "p-Xylene [Xylene]",
+          "expected_cas": "106-42-3",
+          "ranking": [
+            "41051-88-1",
+            "108-69-0",
+            "106-88-7"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        }
+      ]
+    },
+    "adapted": {
+      "all": {
+        "case_count": 419,
+        "top1_accuracy": 0.897375,
+        "top3_recall": 0.902148,
+        "mrr": 0.898966,
+        "wrong_unique_resolution_rate": 0.0,
+        "catalog_coverage_rate": 0.97136,
+        "catalog_missing_case_count": 12
+      },
+      "unseen_surface": {
+        "case_count": 60,
+        "top1_accuracy": 0.283333,
+        "top3_recall": 0.316667,
+        "mrr": 0.294444,
+        "wrong_unique_resolution_rate": 0.0,
+        "catalog_coverage_rate": 0.8,
+        "catalog_missing_case_count": 12
+      },
+      "unseen_cas": {
+        "case_count": 58,
+        "top1_accuracy": 0.275862,
+        "top3_recall": 0.310345,
+        "mrr": 0.287356,
+        "wrong_unique_resolution_rate": 0.0,
+        "catalog_coverage_rate": 0.793103,
+        "catalog_missing_case_count": 12
+      },
+      "latency_ms": {
+        "mean": 0.565169,
+        "p95": 3.869
+      },
+      "failure_examples": [
+        {
+          "query": "Diphenylmethane 4,4'-diisocyanate",
+          "expected_cas": "101-68-8",
+          "ranking": [
+            "2536-05-2",
+            "91-97-4",
+            "111-36-4"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "MDI",
+          "expected_cas": "101-68-8",
+          "ranking": [
+            "626-23-3",
+            "2206-27-1",
+            "870-08-6"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "2-Ethyl hexyl acrylate",
+          "expected_cas": "103-11-7",
+          "ranking": [
+            "96-33-3",
+            "141-32-2",
+            "7328-17-8"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "n-부탄",
+          "expected_cas": "106-97-8",
+          "ranking": [
+            "111-92-2",
+            "71-36-3",
+            "102-82-9"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "부탄",
+          "expected_cas": "106-97-8",
+          "ranking": [
+            "71-36-3",
+            "13952-84-6",
+            "111-92-2"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "GLYOXAL",
+          "expected_cas": "107-22-2",
+          "ranking": [
+            "107-21-1",
+            "56-81-5",
+            "144-62-7"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Oxalaldehyde",
+          "expected_cas": "107-22-2",
+          "ranking": [
+            "90-02-8",
+            "123-11-5",
+            "19901-15-6"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "글리옥살",
+          "expected_cas": "107-22-2",
+          "ranking": [
+            "94-36-0",
+            "7722-84-1"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Propylene glycol methyl ether",
+          "expected_cas": "107-98-2",
+          "ranking": [
+            "108-65-6",
+            "111-77-3",
+            "57-55-6"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Propylene glycol monomethyl ether",
+          "expected_cas": "107-98-2",
+          "ranking": [
+            "108-65-6",
+            "57-55-6",
+            "111-77-3"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "AIR",
+          "expected_cas": "132259-10-0",
+          "ranking": [
+            "155614-01-0"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "압축된 공기",
+          "expected_cas": "132259-10-0",
+          "ranking": [],
+          "status": "UNRESOLVED"
+        },
+        {
+          "query": "TERT-DODECYL MERCAPTAN",
+          "expected_cas": "25103-58-6",
+          "ranking": [
+            "75-08-1",
+            "107-03-9",
+            "111-88-6"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "tert-Dodecanethiol",
+          "expected_cas": "25103-58-6",
+          "ranking": [
+            "2885-00-9",
+            "75-08-1",
+            "513-53-1"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "POLY OXY PROPYLENE GLYCOL",
+          "expected_cas": "25322-69-4",
+          "ranking": [
+            "57-55-6",
+            "25265-71-8",
+            "108-65-6"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "P-멘탄하이드로퍼옥사이드",
+          "expected_cas": "26762-92-5",
+          "ranking": [
+            "110-05-4",
+            "110-00-9",
+            "1120-71-4"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Para Methane Hydroperoxide (PMH)",
+          "expected_cas": "26762-92-5",
+          "ranking": [
+            "75-91-2",
+            "26762-93-6",
+            "7722-84-1"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Toluene diisocyanate",
+          "expected_cas": "584-84-9",
+          "ranking": [
+            "108-88-3",
+            "2536-05-2",
+            "111-36-4"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "Toluene-2|4-diisocyanate (TDI)",
+          "expected_cas": "584-84-9",
+          "ranking": [
+            "108-88-3",
+            "2536-05-2",
+            "111-36-4"
+          ],
+          "status": "FUZZY_CANDIDATE"
+        },
+        {
+          "query": "톨루엔 디이소시아네이트",
+          "expected_cas": "584-84-9",
+          "ranking": [
+            "1321-38-6",
+            "26471-62-5",
+            "584-84-9"
+          ],
+          "status": "AMBIGUOUS_ALIAS"
+        }
+      ]
+    }
+  },
+  "locked_test_top1_delta": 0.572793,
+  "locked_test_top3_delta": 0.556086,
+  "adoption_gate": {
+    "passed": true,
+    "requires_non_regression_top1": true,
+    "requires_non_regression_top3": true,
+    "requires_no_wrong_unique_resolution_increase": true,
+    "runtime_default_change_allowed": true,
+    "requires_unseen_surface_and_cas_non_regression": true,
+    "unseen_surface_and_cas_non_regression": true,
+    "legacy_regression_and_hint_safety_passed": true
+  },
+  "claim_scope": "TEMPORAL_PUBLIC_RECORD_EVALUATION_NOT_FIELD_ACCURACY",
+  "safety": {
+    "risk_or_response_training_included": false,
+    "candidate_score_is_probability": false,
+    "auto_confirmation_allowed": false,
+    "rule_execution_allowed": false
+  },
+  "limitations": [
+    "동일 물질과 동일 표현이 여러 연도에 반복될 수 있는 시간 분할 평가입니다.",
+    "울산 2015~2020 공개 기록이므로 전국 현장 정확도를 의미하지 않습니다.",
+    "유효 checksum 단일 CAS와 비모호 물질 표현만 사용했습니다.",
+    "기본 카탈로그 밖 CAS는 과거 소방 기록의 정확 표현에만 후보로 노출하며 유사도 검색에서는 제외합니다."
+  ],
+  "legacy_regression": {
+    "resolver": {
+      "metrics_version": "resolver-evaluation-v2",
+      "dataset": "resolver_regression_queries.csv",
+      "dataset_status": "내부 회귀셋이며 현장 성능 주장 금지",
+      "case_count": 21,
+      "top1_accuracy": 0.9523809523809523,
+      "top3_recall": 1.0,
+      "mrr": 1.0,
+      "candidate_top1_hit_rate": 1.0,
+      "candidate_top3_recall": 1.0,
+      "candidate_mrr": 1.0,
+      "unique_resolution_accuracy": 0.9523809523809523,
+      "ambiguous_case_count": 1,
+      "metric_notice": "candidate_*는 후보 목록 적중률이고, top1_accuracy와 unique_resolution_accuracy는 단일 exact 식별 성공만 계산합니다.",
+      "rows": [
+        {
+          "query": "7647-01-0",
+          "query_type": "cas",
+          "expected_cas": "7647-01-0",
+          "rank": 1,
+          "top1": "7647-01-0",
+          "status": "EXACT_IDENTIFIER_MATCH",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "염산",
+          "query_type": "korean_alias",
+          "expected_cas": "7647-01-0",
+          "rank": 1,
+          "top1": "7647-01-0",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "HCl",
+          "query_type": "formula",
+          "expected_cas": "7647-01-0",
+          "rank": 1,
+          "top1": "7647-01-0",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "염화 수소",
+          "query_type": "spacing_variant",
+          "expected_cas": "7647-01-0",
+          "rank": 1,
+          "top1": "7647-01-0",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "차아염소산나트륨",
+          "query_type": "korean_name",
+          "expected_cas": "7681-52-9",
+          "rank": 1,
+          "top1": "7681-52-9",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "차아염소산 나트륨",
+          "query_type": "spacing_variant",
+          "expected_cas": "7681-52-9",
+          "rank": 1,
+          "top1": "7681-52-9",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "NaOCl",
+          "query_type": "formula",
+          "expected_cas": "7681-52-9",
+          "rank": 1,
+          "top1": "7681-52-9",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "가성소다",
+          "query_type": "field_alias",
+          "expected_cas": "1310-73-2",
+          "rank": 1,
+          "top1": "1310-73-2",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "NaOH",
+          "query_type": "formula",
+          "expected_cas": "1310-73-2",
+          "rank": 1,
+          "top1": "1310-73-2",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "에틸알코올",
+          "query_type": "korean_alias",
+          "expected_cas": "64-17-5",
+          "rank": 1,
+          "top1": "64-17-5",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "EtOH",
+          "query_type": "formula_alias",
+          "expected_cas": "64-17-5",
+          "rank": 1,
+          "top1": "64-17-5",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "Acetone",
+          "query_type": "english_name",
+          "expected_cas": "67-64-1",
+          "rank": 1,
+          "top1": "67-64-1",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "아세톤",
+          "query_type": "korean_name",
+          "expected_cas": "67-64-1",
+          "rank": 1,
+          "top1": "67-64-1",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "NH3",
+          "query_type": "formula",
+          "expected_cas": "7664-41-7",
+          "rank": 1,
+          "top1": "7664-41-7",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "암모니아",
+          "query_type": "korean_name",
+          "expected_cas": "7664-41-7",
+          "rank": 1,
+          "top1": "7664-41-7",
+          "status": "AMBIGUOUS_ALIAS",
+          "candidate_count": 2,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": false
+        },
+        {
+          "query": "HNO3",
+          "query_type": "formula",
+          "expected_cas": "7697-37-2",
+          "rank": 1,
+          "top1": "7697-37-2",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "질산",
+          "query_type": "korean_name",
+          "expected_cas": "7697-37-2",
+          "rank": 1,
+          "top1": "7697-37-2",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "Toluene",
+          "query_type": "english_name",
+          "expected_cas": "108-88-3",
+          "rank": 1,
+          "top1": "108-88-3",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "톨루엔",
+          "query_type": "korean_name",
+          "expected_cas": "108-88-3",
+          "rank": 1,
+          "top1": "108-88-3",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "Sodium metal",
+          "query_type": "english_alias",
+          "expected_cas": "7440-23-5",
+          "rank": 1,
+          "top1": "7440-23-5",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        },
+        {
+          "query": "금속 나트륨",
+          "query_type": "korean_alias",
+          "expected_cas": "7440-23-5",
+          "rank": 1,
+          "top1": "7440-23-5",
+          "status": "EXACT_ALIAS_CANDIDATE",
+          "candidate_count": 1,
+          "candidate_top1_hit": true,
+          "unique_resolution_correct": true
+        }
+      ]
+    },
+    "hint_safety": {
+      "metrics_version": "resolver-hint-safety-v1",
+      "dataset": "resolver_hint_safety_queries.csv",
+      "dataset_sha256": "edb103038aa96d00995ba6daa0299be6b2f57a15788dcece8d4c3ff9abb6a060",
+      "model": "resolver_incident_adapted_through_2019.joblib",
+      "model_sha256": "e80d612bc3e44bddcb1b4466091a2f45e976e5997774875929e6612669b3f22a",
+      "model_schema_version": "resolver-char-tfidf-v4-incident-catalog-expanded",
+      "dataset_status": "합성·내부 안전 회귀셋이며 현장 정확도나 전국 물질 성능 주장 금지",
+      "case_count": 12,
+      "passed_count": 12,
+      "safety_pass_rate": 1.0,
+      "unsafe_auto_hint_count": 0,
+      "wrong_cas_auto_hint_count": 0,
+      "missing_expected_hint_count": 0,
+      "resolver_rule_eligibility_violation_count": 0,
+      "ambiguous_preservation_rate": 1.0,
+      "latency_ms": {
+        "mean": 6.658101,
+        "p95": 15.587804
+      },
+      "query_type_counts": {
+        "ambiguous_alias": 1,
+        "authoritative_name": 2,
+        "embedded_ascii_suffix": 1,
+        "embedded_korean_suffix": 5,
+        "korean_postposition": 2,
+        "multiple_substances": 1
+      },
+      "split_counts": {
+        "locked_safety_regression": 12
+      },
+      "review_status_counts": {
+        "DRAFT_INTERNAL_REGRESSION": 12
+      },
+      "metric_notice": "unsafe_auto_hint_count와 resolver_rule_eligibility_violation_count는 0이어야 합니다. 후자는 Resolver 계약만 검사하며 실제 pipeline의 Rule 미실행은 별도 통합 테스트로 검증합니다. 지연시간은 실행 장비의 개발용 측정치입니다.",
+      "rows": [
+        {
+          "case_id": "HINT-POS-HCL-001",
+          "query": "염산 누출",
+          "query_type": "authoritative_name",
+          "expected_behavior": "ALLOW_EXACT_HINT",
+          "expected_cas": [
+            "7647-01-0"
+          ],
+          "resolution_status": "FUZZY_CANDIDATE",
+          "candidate_cas": [
+            "3647-69-6",
+            "75-00-3",
+            "7647-01-0"
+          ],
+          "automatic_cas_hint": "7647-01-0",
+          "passed": true,
+          "rule_eligibility_violation": false,
+          "latency_ms": 6.649208,
+          "review_status": "DRAFT_INTERNAL_REGRESSION",
+          "source_type": "SYNTHETIC_SAFETY_REGRESSION",
+          "source_reference": "embedded-alias-v1",
+          "split": "locked_safety_regression",
+          "duplicate_group": "hcl-positive"
+        },
+        {
+          "case_id": "HINT-POS-HCL-002",
+          "query": "염산이 누출됨",
+          "query_type": "korean_postposition",
+          "expected_behavior": "ALLOW_EXACT_HINT",
+          "expected_cas": [
+            "7647-01-0"
+          ],
+          "resolution_status": "FUZZY_CANDIDATE",
+          "candidate_cas": [
+            "75-00-3",
+            "7647-01-0"
+          ],
+          "automatic_cas_hint": "7647-01-0",
+          "passed": true,
+          "rule_eligibility_violation": false,
+          "latency_ms": 25.708125,
+          "review_status": "DRAFT_INTERNAL_REGRESSION",
+          "source_type": "SYNTHETIC_SAFETY_REGRESSION",
+          "source_reference": "embedded-alias-v1",
+          "split": "locked_safety_regression",
+          "duplicate_group": "hcl-positive"
+        },
+        {
+          "case_id": "HINT-POS-HCL-003",
+          "query": "시설에 염산이 있습니다",
+          "query_type": "korean_postposition",
+          "expected_behavior": "ALLOW_EXACT_HINT",
+          "expected_cas": [
+            "7647-01-0"
+          ],
+          "resolution_status": "FUZZY_CANDIDATE",
+          "candidate_cas": [
+            "75-00-3",
+            "7647-01-0"
+          ],
+          "automatic_cas_hint": "7647-01-0",
+          "passed": true,
+          "rule_eligibility_violation": false,
+          "latency_ms": 5.171083,
+          "review_status": "DRAFT_INTERNAL_REGRESSION",
+          "source_type": "SYNTHETIC_SAFETY_REGRESSION",
+          "source_reference": "embedded-alias-v1",
+          "split": "locked_safety_regression",
+          "duplicate_group": "hcl-positive"
+        },
+        {
+          "case_id": "HINT-POS-NAOCL-001",
+          "query": "차아염소산나트륨 저장탱크 누출",
+          "query_type": "authoritative_name",
+          "expected_behavior": "ALLOW_EXACT_HINT",
+          "expected_cas": [
+            "7681-52-9"
+          ],
+          "resolution_status": "FUZZY_CANDIDATE",
+          "candidate_cas": [
+            "10034-82-9",
+            "10102-18-8",
+            "10588-01-9",
+            "7440-23-5",
+            "7631-99-4",
+            "7632-00-0",
+            "7681-52-9",
+            "7758-19-2",
+            "7775-09-9",
+            "7775-11-3",
+            "7778-54-3"
+          ],
+          "automatic_cas_hint": "7681-52-9",
+          "passed": true,
+          "rule_eligibility_violation": false,
+          "latency_ms": 5.03025,
+          "review_status": "DRAFT_INTERNAL_REGRESSION",
+          "source_type": "SYNTHETIC_SAFETY_REGRESSION",
+          "source_reference": "embedded-alias-v1",
+          "split": "locked_safety_regression",
+          "duplicate_group": "naocl-positive"
+        },
+        {
+          "case_id": "HINT-NEG-HCL-001",
+          "query": "염산염 누출 신고",
+          "query_type": "embedded_korean_suffix",
+          "expected_behavior": "WITHHOLD_AUTO_HINT",
+          "expected_cas": [
+            "7647-01-0"
+          ],
+          "resolution_status": "FUZZY_CANDIDATE",
+          "candidate_cas": [
+            "1158533-82-4",
+            "20325-40-0",
+            "25952-53-8",
+            "32289-58-0",
+            "5341-61-7",
+            "541-69-5",
+            "615-28-1",
+            "624-18-0",
+            "7647-01-0"
+          ],
+          "automatic_cas_hint": null,
+          "passed": true,
+          "rule_eligibility_violation": false,
+          "latency_ms": 5.154917,
+          "review_status": "DRAFT_INTERNAL_REGRESSION",
+          "source_type": "SYNTHETIC_SAFETY_REGRESSION",
+          "source_reference": "embedded-alias-v1",
+          "split": "locked_safety_regression",
+          "duplicate_group": "hcl-embedded"
+        },
+        {
+          "case_id": "HINT-NEG-HCL-002",
+          "query": "염산성 세척제 누출",
+          "query_type": "embedded_korean_suffix",
+          "expected_behavior": "WITHHOLD_AUTO_HINT",
+          "expected_cas": [
+            "7647-01-0"
+          ],
+          "resolution_status": "FUZZY_CANDIDATE",
+          "candidate_cas": [
+            "7647-01-0"
+          ],
+          "automatic_cas_hint": null,
+          "passed": true,
+          "rule_eligibility_violation": false,
+          "latency_ms": 4.9425,
+          "review_status": "DRAFT_INTERNAL_REGRESSION",
+          "source_type": "SYNTHETIC_SAFETY_REGRESSION",
+          "source_reference": "embedded-alias-v1",
+          "split": "locked_safety_regression",
+          "duplicate_group": "hcl-embedded"
+        },
+        {
+          "case_id": "HINT-NEG-TOL-001",
+          "query": "톨루엔느 누출 신고",
+          "query_type": "embedded_korean_suffix",
+          "expected_behavior": "WITHHOLD_AUTO_HINT",
+          "expected_cas": [
+            "108-88-3"
+          ],
+          "resolution_status": "FUZZY_CANDIDATE",
+          "candidate_cas": [
+            "106-49-0",
+            "108-44-1",
+            "108-88-3",
+            "1321-38-6",
+            "133-59-5",
+            "1576-35-8",
+            "25376-45-8",
+            "26471-62-5",
+            "26915-12-8",
+            "26966-75-6",
+            "584-84-9",
+            "6369-59-1",
+            "823-40-5",
+            "91-08-7",
+            "95-53-4",
+            "95-70-5",
+            "95-80-7"
+          ],
+          "automatic_cas_hint": null,
+          "passed": true,
+          "rule_eligibility_violation": false,
+          "latency_ms": 4.777041,
+          "review_status": "DRAFT_INTERNAL_REGRESSION",
+          "source_type": "SYNTHETIC_SAFETY_REGRESSION",
+          "source_reference": "embedded-alias-v1",
+          "split": "locked_safety_regression",
+          "duplicate_group": "toluene-embedded"
+        },
+        {
+          "case_id": "HINT-NEG-TOL-002",
+          "query": "톨루엔계 용제 누출",
+          "query_type": "embedded_korean_suffix",
+          "expected_behavior": "WITHHOLD_AUTO_HINT",
+          "expected_cas": [
+            "108-88-3"
+          ],
+          "resolution_status": "FUZZY_CANDIDATE",
+          "candidate_cas": [
+            "108-88-3",
+            "1321-38-6",
+            "133-59-5",
+            "1576-35-8",
+            "25376-45-8",
+            "26471-62-5",
+            "26915-12-8",
+            "26966-75-6",
+            "584-84-9",
+            "6369-59-1",
+            "823-40-5",
+            "91-08-7",
+            "95-70-5",
+            "95-80-7"
+          ],
+          "automatic_cas_hint": null,
+          "passed": true,
+          "rule_eligibility_violation": false,
+          "latency_ms": 4.778125,
+          "review_status": "DRAFT_INTERNAL_REGRESSION",
+          "source_type": "SYNTHETIC_SAFETY_REGRESSION",
+          "source_reference": "embedded-alias-v1",
+          "split": "locked_safety_regression",
+          "duplicate_group": "toluene-embedded"
+        },
+        {
+          "case_id": "HINT-NEG-ETOH-001",
+          "query": "에탄올성 용제 누출",
+          "query_type": "embedded_korean_suffix",
+          "expected_behavior": "WITHHOLD_AUTO_HINT",
+          "expected_cas": [
+            "64-17-5"
+          ],
+          "resolution_status": "FUZZY_CANDIDATE",
+          "candidate_cas": [
+            "108-01-0",
+            "109-83-1",
+            "111-41-1",
+            "111-45-5",
+            "111-77-3",
+            "112-35-6",
+            "112-50-5",
+            "141-43-5",
+            "628-89-7",
+            "64-17-5",
+            "7580-85-0",
+            "818-61-1"
+          ],
+          "automatic_cas_hint": null,
+          "passed": true,
+          "rule_eligibility_violation": false,
+          "latency_ms": 5.171666,
+          "review_status": "DRAFT_INTERNAL_REGRESSION",
+          "source_type": "SYNTHETIC_SAFETY_REGRESSION",
+          "source_reference": "embedded-alias-v1",
+          "split": "locked_safety_regression",
+          "duplicate_group": "ethanol-embedded"
+        },
+        {
+          "case_id": "HINT-NEG-MEOH-001",
+          "query": "methanolic solvent leak",
+          "query_type": "embedded_ascii_suffix",
+          "expected_behavior": "WITHHOLD_AUTO_HINT",
+          "expected_cas": [
+            "67-56-1"
+          ],
+          "resolution_status": "FUZZY_CANDIDATE",
+          "candidate_cas": [
+            "10380-30-0",
+            "109-59-1",
+            "124-41-4",
+            "14742-26-8",
+            "1849-29-2",
+            "32479-98-4",
+            "33270-70-1",
+            "492-80-8",
+            "52256-37-8",
+            "61901-87-9",
+            "64-17-5",
+            "64741-91-9",
+            "64741-95-3",
+            "64742-06-9",
+            "64742-11-6",
+            "64742-95-6",
+            "67-56-1",
+            "8052-41-3",
+            "811-98-3",
+            "865-34-9"
+          ],
+          "automatic_cas_hint": null,
+          "passed": true,
+          "rule_eligibility_violation": false,
+          "latency_ms": 7.307542,
+          "review_status": "DRAFT_INTERNAL_REGRESSION",
+          "source_type": "SYNTHETIC_SAFETY_REGRESSION",
+          "source_reference": "embedded-alias-v1",
+          "split": "locked_safety_regression",
+          "duplicate_group": "methanol-embedded"
+        },
+        {
+          "case_id": "HINT-MULTI-001",
+          "query": "염산과 질산이 누출",
+          "query_type": "multiple_substances",
+          "expected_behavior": "WITHHOLD_AUTO_HINT",
+          "expected_cas": [
+            "7647-01-0",
+            "7697-37-2"
+          ],
+          "resolution_status": "FUZZY_CANDIDATE",
+          "candidate_cas": [
+            "10022-31-8",
+            "3251-23-8",
+            "7647-01-0",
+            "7697-37-2"
+          ],
+          "automatic_cas_hint": null,
+          "passed": true,
+          "rule_eligibility_violation": false,
+          "latency_ms": 5.189583,
+          "review_status": "DRAFT_INTERNAL_REGRESSION",
+          "source_type": "SYNTHETIC_SAFETY_REGRESSION",
+          "source_reference": "embedded-alias-v1",
+          "split": "locked_safety_regression",
+          "duplicate_group": "multiple-substances"
+        },
+        {
+          "case_id": "HINT-AMB-NH3-001",
+          "query": "암모니아",
+          "query_type": "ambiguous_alias",
+          "expected_behavior": "PRESERVE_AMBIGUITY",
+          "expected_cas": [
+            "62948-80-5",
+            "7664-41-7"
+          ],
+          "resolution_status": "AMBIGUOUS_ALIAS",
+          "candidate_cas": [
+            "62948-80-5",
+            "7664-41-7"
+          ],
+          "automatic_cas_hint": null,
+          "passed": true,
+          "rule_eligibility_violation": false,
+          "latency_ms": 0.017167,
+          "review_status": "DRAFT_INTERNAL_REGRESSION",
+          "source_type": "ACTUAL_CATALOG_AMBIGUITY",
+          "source_reference": "artifacts/chemiguard119.sqlite alias surface",
+          "split": "locked_safety_regression",
+          "duplicate_group": "ammonia-ambiguous"
+        }
+      ],
+      "deployment_gate": {
+        "passed": true,
+        "required": {
+          "safety_pass_rate": 1.0,
+          "unsafe_auto_hint_count": 0,
+          "wrong_cas_auto_hint_count": 0,
+          "resolver_rule_eligibility_violation_count": 0,
+          "ambiguous_preservation_rate": 1.0
+        }
+      }
+    }
+  },
+  "artifacts": {
+    "validation": {
+      "model_path": "resolver_incident_adapted_through_2018.joblib",
+      "alias_count": 9968,
+      "substance_count": 4331,
+      "feature_count": 47636,
+      "schema_version": "resolver-char-tfidf-v4-incident-catalog-expanded",
+      "training_metadata": {
+        "base_alias_count": 9685,
+        "added_alias_count": 283,
+        "added_source_only_alias_count": 101,
+        "added_source_only_cas_count": 31,
+        "excluded_cas_not_in_catalog_count": 0,
+        "source_only_exact_match_required": true,
+        "excluded_ambiguous_record_count": 0,
+        "ambiguity_filter_uses_future_records": false,
+        "excluded_after_cutoff_count": 778,
+        "training_year_max": 2018,
+        "training_source": "NFA_BIGDATA119_ULSAN_HAZARDOUS_SUBSTANCE_JUDGMENT_2015_2020",
+        "training_policy_version": "incident-alias-temporal-adaptation-v2-source-catalog",
+        "fine_tuned": true,
+        "task": "substance_alias_candidate_retrieval_only",
+        "risk_or_response_training_included": false,
+        "source_audit": {
+          "source_dataset_id": "NFA_BIGDATA119_ULSAN_HAZARDOUS_SUBSTANCE_JUDGMENT_2015_2020",
+          "source_url": "https://bigdata-119.kr/goods/goodsInfo?goods_mng_sn=5",
+          "source_file": "07_울산소방_화학사고별_유해물질판단.csv",
+          "source_sha256": "f013ebed301c5306178ad72f8dbbb62bdb5ecae1122ae3dfe7d1050f7ea0d765",
+          "source_row_count": 1868,
+          "valid_alias_record_count": 1530,
+          "pre_ambiguity_filter_record_count": 1539,
+          "invalid_year_row_count": 0,
+          "invalid_or_composite_cas_row_count": 212,
+          "ambiguous_surface_count": 2,
+          "year_counts": {
+            "2015": 73,
+            "2016": 250,
+            "2017": 254,
+            "2018": 181,
+            "2019": 353,
+            "2020": 419
+          },
+          "contains_personal_data": false,
+          "released_fields": [
+            "발생연도",
+            "CAS번호",
+            "화학물질명_한글",
+            "화학물질명_영문",
+            "일반명_한글",
+            "일반명_영문"
+          ]
+        }
+      },
+      "base_alias_count": 9685,
+      "added_alias_count": 283,
+      "added_source_only_alias_count": 101,
+      "added_source_only_cas_count": 31,
+      "excluded_cas_not_in_catalog_count": 0,
+      "source_only_exact_match_required": true,
+      "excluded_ambiguous_record_count": 0,
+      "ambiguity_filter_uses_future_records": false,
+      "excluded_after_cutoff_count": 778,
+      "training_year_max": 2018,
+      "training_source": "NFA_BIGDATA119_ULSAN_HAZARDOUS_SUBSTANCE_JUDGMENT_2015_2020",
+      "training_policy_version": "incident-alias-temporal-adaptation-v2-source-catalog",
+      "fine_tuned": true,
+      "task": "substance_alias_candidate_retrieval_only",
+      "risk_or_response_training_included": false,
+      "source_audit": {
+        "source_dataset_id": "NFA_BIGDATA119_ULSAN_HAZARDOUS_SUBSTANCE_JUDGMENT_2015_2020",
+        "source_url": "https://bigdata-119.kr/goods/goodsInfo?goods_mng_sn=5",
+        "source_file": "07_울산소방_화학사고별_유해물질판단.csv",
+        "source_sha256": "f013ebed301c5306178ad72f8dbbb62bdb5ecae1122ae3dfe7d1050f7ea0d765",
+        "source_row_count": 1868,
+        "valid_alias_record_count": 1530,
+        "pre_ambiguity_filter_record_count": 1539,
+        "invalid_year_row_count": 0,
+        "invalid_or_composite_cas_row_count": 212,
+        "ambiguous_surface_count": 2,
+        "year_counts": {
+          "2015": 73,
+          "2016": 250,
+          "2017": 254,
+          "2018": 181,
+          "2019": 353,
+          "2020": 419
+        },
+        "contains_personal_data": false,
+        "released_fields": [
+          "발생연도",
+          "CAS번호",
+          "화학물질명_한글",
+          "화학물질명_영문",
+          "일반명_한글",
+          "일반명_영문"
+        ]
+      },
+      "artifact_sha256": "5e79e21d4add30f1a357f090a2fb4b458365f65aa49eb5364b16472a291fc952"
+    },
+    "final": {
+      "model_path": "resolver_incident_adapted_through_2019.joblib",
+      "alias_count": 10039,
+      "substance_count": 4335,
+      "feature_count": 47917,
+      "schema_version": "resolver-char-tfidf-v4-incident-catalog-expanded",
+      "training_metadata": {
+        "base_alias_count": 9685,
+        "added_alias_count": 354,
+        "added_source_only_alias_count": 113,
+        "added_source_only_cas_count": 35,
+        "excluded_cas_not_in_catalog_count": 0,
+        "source_only_exact_match_required": true,
+        "excluded_ambiguous_record_count": 7,
+        "ambiguity_filter_uses_future_records": false,
+        "excluded_after_cutoff_count": 421,
+        "training_year_max": 2019,
+        "training_source": "NFA_BIGDATA119_ULSAN_HAZARDOUS_SUBSTANCE_JUDGMENT_2015_2020",
+        "training_policy_version": "incident-alias-temporal-adaptation-v2-source-catalog",
+        "fine_tuned": true,
+        "task": "substance_alias_candidate_retrieval_only",
+        "risk_or_response_training_included": false,
+        "source_audit": {
+          "source_dataset_id": "NFA_BIGDATA119_ULSAN_HAZARDOUS_SUBSTANCE_JUDGMENT_2015_2020",
+          "source_url": "https://bigdata-119.kr/goods/goodsInfo?goods_mng_sn=5",
+          "source_file": "07_울산소방_화학사고별_유해물질판단.csv",
+          "source_sha256": "f013ebed301c5306178ad72f8dbbb62bdb5ecae1122ae3dfe7d1050f7ea0d765",
+          "source_row_count": 1868,
+          "valid_alias_record_count": 1530,
+          "pre_ambiguity_filter_record_count": 1539,
+          "invalid_year_row_count": 0,
+          "invalid_or_composite_cas_row_count": 212,
+          "ambiguous_surface_count": 2,
+          "year_counts": {
+            "2015": 73,
+            "2016": 250,
+            "2017": 254,
+            "2018": 181,
+            "2019": 353,
+            "2020": 419
+          },
+          "contains_personal_data": false,
+          "released_fields": [
+            "발생연도",
+            "CAS번호",
+            "화학물질명_한글",
+            "화학물질명_영문",
+            "일반명_한글",
+            "일반명_영문"
+          ]
+        }
+      },
+      "base_alias_count": 9685,
+      "added_alias_count": 354,
+      "added_source_only_alias_count": 113,
+      "added_source_only_cas_count": 35,
+      "excluded_cas_not_in_catalog_count": 0,
+      "source_only_exact_match_required": true,
+      "excluded_ambiguous_record_count": 7,
+      "ambiguity_filter_uses_future_records": false,
+      "excluded_after_cutoff_count": 421,
+      "training_year_max": 2019,
+      "training_source": "NFA_BIGDATA119_ULSAN_HAZARDOUS_SUBSTANCE_JUDGMENT_2015_2020",
+      "training_policy_version": "incident-alias-temporal-adaptation-v2-source-catalog",
+      "fine_tuned": true,
+      "task": "substance_alias_candidate_retrieval_only",
+      "risk_or_response_training_included": false,
+      "source_audit": {
+        "source_dataset_id": "NFA_BIGDATA119_ULSAN_HAZARDOUS_SUBSTANCE_JUDGMENT_2015_2020",
+        "source_url": "https://bigdata-119.kr/goods/goodsInfo?goods_mng_sn=5",
+        "source_file": "07_울산소방_화학사고별_유해물질판단.csv",
+        "source_sha256": "f013ebed301c5306178ad72f8dbbb62bdb5ecae1122ae3dfe7d1050f7ea0d765",
+        "source_row_count": 1868,
+        "valid_alias_record_count": 1530,
+        "pre_ambiguity_filter_record_count": 1539,
+        "invalid_year_row_count": 0,
+        "invalid_or_composite_cas_row_count": 212,
+        "ambiguous_surface_count": 2,
+        "year_counts": {
+          "2015": 73,
+          "2016": 250,
+          "2017": 254,
+          "2018": 181,
+          "2019": 353,
+          "2020": 419
+        },
+        "contains_personal_data": false,
+        "released_fields": [
+          "발생연도",
+          "CAS번호",
+          "화학물질명_한글",
+          "화학물질명_영문",
+          "일반명_한글",
+          "일반명_영문"
+        ]
+      },
+      "artifact_sha256": "e80d612bc3e44bddcb1b4466091a2f45e976e5997774875929e6612669b3f22a"
+    }
+  }
+}

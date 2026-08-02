@@ -87,14 +87,14 @@ staging·production 서버가 시작할 때 외부에서 주입한 manifest SHA-
 export CHEMIGUARD119_RESOLVER_MODEL=/app/artifacts/resolver_incident_adapted_through_2019.joblib
 ```
 
-해당 artifact의 schema는 `resolver-char-tfidf-v3-incident-adapted`이며 runtime manifest에
+해당 artifact의 schema는 `resolver-char-tfidf-v4-incident-catalog-expanded`이며 runtime manifest에
 파일 SHA-256과 schema가 함께 고정돼야 합니다. 모델 파일만 바꾸고 기존 manifest를 재사용하면
 readiness가 실패하는 것이 정상입니다. 원천 파생 별칭의 공개 컨테이너 재배포 조건은
 `config/data_source_registry.json`에서 `REVIEW_REQUIRED`로 유지합니다.
 
 `release-model.yml`은 검증된 데이터 번들에 07번 사고 CSV가 있을 때
 `--incident-adaptation-csv`를 전달합니다. 시간 분할·기존 회귀·CAS 힌트 안전 gate를 모두
-통과하면 `artifacts/resolver.joblib`을 v3으로 교체한 후 평가와 runtime manifest를 생성합니다.
+통과하면 `artifacts/resolver.joblib`을 v4로 교체한 후 평가와 runtime manifest를 생성합니다.
 따라서 공식 릴리스에서는 모델 파일과 manifest가 서로 어긋나지 않습니다.
 
 ## 4. Artifact가 없는 개발 환경

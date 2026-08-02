@@ -35,9 +35,10 @@ from chemiguard119.paths import EVALUATION_DIR
 
 SOURCE_DATASET_ID = "NFA_BIGDATA119_ULSAN_HAZARDOUS_SUBSTANCE_JUDGMENT_2015_2020"
 SOURCE_URL = "https://bigdata-119.kr/goods/goodsInfo?goods_mng_sn=5"
-TRAINING_POLICY_VERSION = "incident-alias-temporal-adaptation-v1"
+TRAINING_POLICY_VERSION = "incident-alias-temporal-adaptation-v2-source-catalog"
 DEFAULT_TRAINING_YEAR_MAX = 2019
 DEFAULT_LOCKED_TEST_YEAR = 2020
+SOURCE_ONLY_CATALOG_SCOPE = "NFA_BIGDATA119_INCIDENT_CATALOG_CANDIDATE"
 
 SURFACE_FIELDS = {
     "화학물질명_한글": "fire_incident_name_ko",
@@ -100,18 +101,28 @@ def load_incident_alias_records(path: Path) -> dict[str, Any]:
         surface for surface, cas_values in surface_cas.items() if len(cas_values) > 1
     }
 
-    deduplicated: dict[tuple[int, str, str], dict[str, Any]] = {}
+    deduplicated_all: dict[tuple[int, str, str], dict[str, Any]] = {}
     for row in extracted:
-        if row["normalized_text"] in ambiguous_surfaces:
-            continue
         key = (row["year"], row["cas_number"], row["normalized_text"])
-        deduplicated.setdefault(key, row)
+        deduplicated_all.setdefault(key, row)
+    training_records = sorted(
+        deduplicated_all.values(),
+        key=lambda row: (row["year"], row["cas_number"], row["normalized_text"]),
+    )
+    # 하나의 정답 CAS를 가질 수 없는 표현은 평가 사례에서는 제외한다. 학습은
+    # 미래 연도를 보지 않도록 아래 전체 레코드에서 cutoff 시점의 모호성만 다시
+    # 계산한다.
     records = sorted(
-        deduplicated.values(),
+        (
+            row
+            for row in training_records
+            if row["normalized_text"] not in ambiguous_surfaces
+        ),
         key=lambda row: (row["year"], row["cas_number"], row["normalized_text"]),
     )
     return {
         "records": records,
+        "training_records": training_records,
         "audit": {
             "source_dataset_id": SOURCE_DATASET_ID,
             "source_url": SOURCE_URL,
@@ -119,6 +130,7 @@ def load_incident_alias_records(path: Path) -> dict[str, Any]:
             "source_sha256": sha256_file(path),
             "source_row_count": len(source_rows),
             "valid_alias_record_count": len(records),
+            "pre_ambiguity_filter_record_count": len(training_records),
             "invalid_year_row_count": invalid_year,
             "invalid_or_composite_cas_row_count": invalid_cas,
             "ambiguous_surface_count": len(ambiguous_surfaces),
@@ -135,13 +147,20 @@ def _base_catalog(artifact: dict[str, Any]) -> dict[str, dict[str, Any]]:
         cas_number = str(row.get("cas_number") or "")
         current = by_cas.setdefault(
             cas_number,
-            {"has_kosha_detail": False, "catalog_scope": "LEGACY_OR_TEST_REGISTRY"},
+            {
+                "has_kosha_detail": False,
+                "catalog_scope": "LEGACY_OR_TEST_REGISTRY",
+                "resolver_candidate_only": False,
+            },
         )
         current["has_kosha_detail"] = bool(current["has_kosha_detail"]) or bool(
             row.get("has_kosha_detail")
         )
         if row.get("catalog_scope"):
             current["catalog_scope"] = str(row["catalog_scope"])
+        current["resolver_candidate_only"] = bool(
+            current["resolver_candidate_only"]
+        ) or bool(row.get("resolver_candidate_only"))
     return by_cas
 
 
@@ -161,21 +180,49 @@ def _training_alias_rows(
         for row in base_rows
     }
     additions: list[dict[str, Any]] = []
-    excluded_cas_not_in_catalog = 0
+    source_only_alias_count = 0
+    source_only_cas: set[str] = set()
     excluded_after_cutoff = 0
+    cutoff_records = [
+        record for record in records if int(record["year"]) <= training_year_max
+    ]
+    cutoff_surface_cas: dict[str, set[str]] = defaultdict(set)
+    for record in cutoff_records:
+        cutoff_surface_cas[str(record["normalized_text"])].add(
+            str(record["cas_number"])
+        )
+    ambiguous_at_cutoff = {
+        surface
+        for surface, cas_values in cutoff_surface_cas.items()
+        if len(cas_values) > 1
+    }
+    excluded_ambiguous_records = 0
     for record in records:
         if int(record["year"]) > training_year_max:
             excluded_after_cutoff += 1
             continue
-        cas_number = str(record["cas_number"])
-        if cas_number not in catalog:
-            excluded_cas_not_in_catalog += 1
+        if str(record["normalized_text"]) in ambiguous_at_cutoff:
+            excluded_ambiguous_records += 1
             continue
+        cas_number = str(record["cas_number"])
         key = (cas_number, str(record["normalized_text"]))
         if key in existing:
             continue
         existing.add(key)
-        scope = catalog[cas_number]
+        source_only = cas_number not in catalog or (
+            catalog[cas_number].get("catalog_scope") == SOURCE_ONLY_CATALOG_SCOPE
+        )
+        if source_only:
+            source_only_alias_count += 1
+            source_only_cas.add(cas_number)
+        scope = catalog.get(
+            cas_number,
+            {
+                "has_kosha_detail": False,
+                "catalog_scope": SOURCE_ONLY_CATALOG_SCOPE,
+                "resolver_candidate_only": True,
+            },
+        )
         additions.append(
             {
                 "cas_number": cas_number,
@@ -186,13 +233,25 @@ def _training_alias_rows(
                 "verification_status": "SOURCE_EXACT_VALID_CAS",
                 "catalog_scope": str(scope["catalog_scope"]),
                 "has_kosha_detail": int(bool(scope["has_kosha_detail"])),
-                "resolver_candidate_only": 0,
+                # 원천에는 CAS-물질명 관계가 있지만 현재 재고나 상세 MSDS까지
+                # 보장하지 않는다. 따라서 항상 현장 확인 후보로만 반환한다.
+                "resolver_candidate_only": int(
+                    source_only or bool(scope.get("resolver_candidate_only"))
+                ),
+                # source-only CAS는 정확히 다시 등장한 표현만 인식한다. 유사도
+                # 검색에서 제외해 철자가 비슷한 다른 물질을 오답 후보로 올리지 않는다.
+                "fuzzy_search_eligible": not source_only,
             }
         )
     return base_rows + additions, {
         "base_alias_count": len(base_rows),
         "added_alias_count": len(additions),
-        "excluded_cas_not_in_catalog_count": excluded_cas_not_in_catalog,
+        "added_source_only_alias_count": source_only_alias_count,
+        "added_source_only_cas_count": len(source_only_cas),
+        "excluded_cas_not_in_catalog_count": 0,
+        "source_only_exact_match_required": True,
+        "excluded_ambiguous_record_count": excluded_ambiguous_records,
+        "ambiguity_filter_uses_future_records": False,
         "excluded_after_cutoff_count": excluded_after_cutoff,
         "training_year_max": training_year_max,
         "training_source": SOURCE_DATASET_ID,
@@ -214,7 +273,7 @@ def train_incident_adapted_resolver(
     source = load_incident_alias_records(incident_csv_path)
     rows, metadata = _training_alias_rows(
         base_artifact,
-        source["records"],
+        source["training_records"],
         training_year_max=training_year_max,
     )
     trained = fit_resolver_rows(
@@ -263,6 +322,9 @@ def _evaluate_cases(
         for row in training_records
     }
     training_cas = {cas for _surface, cas in training_pairs}
+    artifact_cas = {
+        str(row.get("cas_number") or "") for row in artifact.get("rows", [])
+    }
     rows: list[dict[str, Any]] = []
     latencies: list[float] = []
     for case in cases:
@@ -281,6 +343,7 @@ def _evaluate_cases(
                 "surface_seen_in_training": (str(case["normalized_query"]), expected)
                 in training_pairs,
                 "cas_seen_in_training": expected in training_cas,
+                "cas_present_in_artifact": expected in artifact_cas,
                 "wrong_unique_resolution": bool(
                     len(ranking) == 1
                     and rank != 1
@@ -314,6 +377,12 @@ def _evaluate_cases(
             ),
             "wrong_unique_resolution_rate": round(
                 sum(row["wrong_unique_resolution"] for row in selected) / count, 6
+            ),
+            "catalog_coverage_rate": round(
+                sum(row["cas_present_in_artifact"] for row in selected) / count, 6
+            ),
+            "catalog_missing_case_count": sum(
+                not row["cas_present_in_artifact"] for row in selected
             ),
         }
 
@@ -425,6 +494,7 @@ def evaluate_temporal_adaptation(
             "동일 물질과 동일 표현이 여러 연도에 반복될 수 있는 시간 분할 평가입니다.",
             "울산 2015~2020 공개 기록이므로 전국 현장 정확도를 의미하지 않습니다.",
             "유효 checksum 단일 CAS와 비모호 물질 표현만 사용했습니다.",
+            "기본 카탈로그 밖 CAS는 과거 소방 기록의 정확 표현에만 후보로 노출하며 유사도 검색에서는 제외합니다.",
         ],
     }
 

@@ -29,9 +29,13 @@ from chemiguard119.utils import (
 
 
 MODEL_SCHEMA_VERSION = "resolver-char-tfidf-v2"
-INCIDENT_ADAPTED_MODEL_SCHEMA_VERSION = "resolver-char-tfidf-v3-incident-adapted"
+INCIDENT_ADAPTED_MODEL_SCHEMA_VERSION = (
+    "resolver-char-tfidf-v4-incident-catalog-expanded"
+)
+LEGACY_INCIDENT_ADAPTED_MODEL_SCHEMA_VERSION = "resolver-char-tfidf-v3-incident-adapted"
 SUPPORTED_MODEL_SCHEMA_VERSIONS = {
     MODEL_SCHEMA_VERSION,
+    LEGACY_INCIDENT_ADAPTED_MODEL_SCHEMA_VERSION,
     INCIDENT_ADAPTED_MODEL_SCHEMA_VERSION,
 }
 RUNTIME_INDEX_VERSION = "resolver-runtime-index-v2"
@@ -605,6 +609,11 @@ def resolve_substance(
     scores = (artifact["matrix"] @ query_vector.T).toarray().ravel()
     best_by_cas: dict[str, tuple[float, int]] = {}
     for index, score in enumerate(scores):
+        # 소방 사고 원천만으로 새로 확장한 CAS는 과거에 실제로 기록된 정확
+        # 표현에는 노출하되, 비슷한 철자의 다른 물질까지 자동 유사 후보로
+        # 끌어오지 않는다. exact 경로는 위에서 이미 별도로 처리된다.
+        if rows[index].get("fuzzy_search_eligible") is False:
+            continue
         cas = rows[index]["cas_number"]
         if cas not in best_by_cas or score > best_by_cas[cas][0]:
             best_by_cas[cas] = (float(score), index)

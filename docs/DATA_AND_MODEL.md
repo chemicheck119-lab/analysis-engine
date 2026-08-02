@@ -450,12 +450,13 @@ LM Studio 백엔드는 다음 실험에만 사용할 수 있습니다.
 ## 14. 파인튜닝 위치
 
 물질 후보 Resolver에는 소방 사고 기록의 물질명–CAS 표현을 추가 적응한
-`resolver-char-tfidf-v3-incident-adapted`가 구현되었습니다. 이는 생성형 LLM이 아니라 기존
+`resolver-char-tfidf-v4-incident-catalog-expanded`가 구현되었습니다. 이는 생성형 LLM이 아니라 기존
 문자 TF-IDF 후보 모델의 학습 어휘를 시간 순서대로 확장한 CPU 모델입니다.
 
 - 원천: 소방안전 빅데이터 플랫폼 유해물질판단 2015~2020
-- 학습: 2015~2019, 공개 표현 241개 추가
+- 학습: 2015~2019, 기본 카탈로그 CAS 표현 241개와 source-only 35 CAS·113개 표현 추가
 - 잠금 평가: 2020, 419건
+- source-only 정책: 과거 정확 표현에만 후보 반환, fuzzy 검색 제외, `catalog_candidate_only=true`
 - 학습 제외: 위험등급, 대응명령, 시설 현재 재고, 주소와 개인 정보
 - 안전: 모든 결과는 후보이며 현장 확인 전 Rule 입력 금지
 

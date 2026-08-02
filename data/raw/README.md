@@ -50,6 +50,10 @@ GitHub Actions 릴리스에서는 이 8개 파일을 루트에 담은 `tar.gz` �
 사용합니다. 2015~2018년으로 검증 모델을 학습하고 2019년으로 검증한 뒤,
 2015~2019년 최종 후보 모델을 2020년 잠금셋에서 한 번 평가합니다.
 
+기본 카탈로그에 없는 유효 CAS는 현재 재고나 상세 MSDS로 승격하지 않습니다. 과거 소방
+기록에 나온 정확 표현에서만 `catalog_candidate_only` 후보로 반환하고 fuzzy 검색에서는
+제외합니다.
+
 ```bash
 chemiguard119 finetune-resolver \
   --base-model artifacts/resolver.joblib \
