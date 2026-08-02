@@ -456,6 +456,41 @@ cold start 가능성은 있습니다. 상시 대기 인스턴스 1개는 비용 
 `GCP_MIN_INSTANCES=1`로 변경합니다. GCP 초기 설정과 실제 실행 명령은
 [Cloud Run 무중단 배포](CLOUD_RUN_DEPLOYMENT.md)를 따릅니다.
 
+### 10.2 Resolver v4 공모전 preview 배포 증빙
+
+2026-08-02에 병합된 main commit `63b7a176740e955a93d1ccdae4e401e7c053254b`를 기준으로
+Resolver v4와 전국 시설 이력 DB, 근거 Retriever를 다시 묶어 서울 리전 Cloud Run에
+Blue/Green 배포했습니다.
+
+| 항목 | 확인값 |
+|---|---|
+| 서비스 URL | `https://chemicheck119-model-api-staging-w6s6lwanpa-du.a.run.app` |
+| Cloud Run revision | `chemicheck119-model-api-staging-p63b7a173622491` |
+| Artifact Registry digest | `sha256:560a82dddc95f1a31d1d409994b8765392e8a3ea0f9507257a5ecd77de34d3c7` |
+| Runtime manifest SHA-256 | `29bf0234de89ffe963d164ada90f7ddb65e85760c62755180ae3300d21d7b4f5` |
+| Resolver schema | `resolver-char-tfidf-v4-incident-catalog-expanded` |
+| GitHub Actions | [공모전 preview 배포 run 30726362249](https://github.com/chemicheck119/llm/actions/runs/30726362249) |
+| 트래픽 | 신규 v4 revision 100% |
+
+외부 smoke에서 `/health/live`, `/health/ready`, `/api/v1/meta`,
+`/api/v1/incidents/analyze`, `/api/v1/substances/discover`를 확인했습니다. readiness에는 다음
+상태가 포함됐습니다.
+
+- runtime manifest와 main commit 무결성 `VERIFIED`
+- 물질 탐색 프로필 749건과 FTS 인덱스 준비
+- 전국 시설 과거 이력 범위 `NATIONWIDE_KOREA_HISTORICAL_CANDIDATES`
+- 사고 분석 확인 게이트 `AWAITING_SUBSTANCE_CONFIRMATION`
+- `expert_reviewed=false`, `decision_support_only=true`
+
+첫 후보 이미지는 기본 artifact DB에 `substance_profile`이 없어 startup readiness가 503으로
+실패했습니다. 이 후보에는 트래픽이 배정되지 않았고 기존 revision이 계속 100% 요청을
+처리했습니다. 완전 DB로 bundle·manifest·image를 새로 생성하고 로컬 및 후보 URL smoke를
+통과한 후에만 신규 revision으로 전환했습니다.
+
+이 URL은 FE·BE 통합과 공모전 시연을 위한 `development preview`입니다. 데이터 재배포 검토,
+독립 검수 평가와 서명된 release attestation이 충족되지 않았으므로 reviewed staging 또는
+production 배포 완료로 표현하지 않습니다.
+
 ## 11. 시작 후 smoke test
 
 ### 11.1 Readiness

@@ -7,6 +7,11 @@
 
 ### Added
 
+- 병합된 main `63b7a17`의 Resolver v4를 서울 Cloud Run preview revision
+  `p63b7a173622491`에 Blue/Green 배포하고, 물질 프로필 749건·전국 시설 이력·통합 분석
+  외부 smoke를 통과한 재현 증빙
+- 불완전 DB 후보를 startup readiness가 트래픽 전환 전에 차단하고 기존 revision을 유지한 뒤,
+  완전 bundle로 재배포한 fail-closed 운영 검증
 - 소방안전 빅데이터 플랫폼의 유효 사고 CAS가 기본 ICIS 카탈로그에 없다는 이유로 버려지지
   않도록 35개 CAS·113개 표현을 exact-only 확인 후보로 격리한
   `resolver-char-tfidf-v4-incident-catalog-expanded`

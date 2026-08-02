@@ -23,7 +23,7 @@
 | 충돌 검토 | 파일럿 | 공개 검증 CAMEO CAS 6종, 15개 조합 회귀 검사·pair별 표시 계약 |
 | 공식근거 보증 | 구현 | 2쌍은 독립 공식기관 3곳 이상 교차증빙, 나머지 13쌍 단일 공식체계 표시·주간 링크 drift 검사 |
 | 유사 사고사례 검색 | 미완료 | 출처와 대응 라벨이 검증된 corpus 없음; 공식 근거 RAG와 별도 범위 |
-| 물질 Resolver 파인튜닝 | v4 배포 후보 구현 | 기본 카탈로그 표현 241개와 source-only 35 CAS·113개 표현을 추가, 2020 잠금 419건 Top-1 0.3246→0.8974; 미관측 표현 성능은 무개선 |
+| 물질 Resolver 파인튜닝 | v4 preview 배포 | 기본 카탈로그 표현 241개와 source-only 35 CAS·113개 표현을 추가, 2020 잠금 419건 Top-1 0.3246→0.8974; 미관측 표현 성능은 무개선 |
 | 생성형 신고문 파인튜닝 | 보류 | 실제 신고 전사·검수된 개체 라벨이 없어 QLoRA 일반화 성능을 입증할 수 없음 |
 | FastAPI | 구현 | 통합 분석·agent step·보조 API, 인증·오류 계약·확인 게이트 구현 |
 | 실행 에이전트 | 구현·preview 배포 | 외부 memory, 6개 도구, PLAN·ACT·OBSERVE·REPLAN, 안전 재검증 |
@@ -32,7 +32,7 @@
 | 대시보드 표시 계약 | 구현 | BFF OpenAPI·TypeScript 타입·fixture, 확인 전 위험 결과 금지, 15쌍별 정확한 값 고정 |
 | 운영 로그 | 구현 | 안전 JSON 로그, Uvicorn 원 URL access log와 traceback 비활성화 |
 | Docker | 부분 완료 | 일반·bundle Dockerfile과 CI 구성 존재, 로컬 Docker CLI 없음 |
-| 실제 배포 | development preview | main `af71ab3`·v3 Resolver를 서울 Cloud Run revision `paf71ab31509001`에 Blue/Green 배포·외부 smoke 통과; v4는 아직 PR 배포 후보이며 reviewed staging·production은 차단 |
+| 실제 배포 | development preview | main `63b7a17`·v4 Resolver를 서울 Cloud Run revision `p63b7a173622491`에 Blue/Green 배포·외부 smoke 통과; reviewed staging·production은 차단 |
 | FE·BE 연동 자료 | 완료 | 모델·BFF OpenAPI, TypeScript 타입, 성공·실패 fixture와 체크리스트 |
 | FE·BE 실제 연동 | 미완료 | 현재 FE는 물질검색 mock·legacy DTO, BE는 BFF 구현 필요 |
 
@@ -45,12 +45,33 @@
 Python 3.11.15 환경에서 다음을 확인했습니다.
 
 ```text
-전체 테스트: 426 passed
+전체 테스트: 428 passed
 Ruff: 통과
 형식 검사: 통과
 compileall: 통과
 pip check: 통과
 ```
+
+Resolver v4 preview 배포 재검증:
+
+```text
+main commit: 63b7a176740e955a93d1ccdae4e401e7c053254b
+Cloud Run revision: chemicheck119-model-api-staging-p63b7a173622491
+runtime manifest SHA-256: 29bf0234de89ffe963d164ada90f7ddb65e85760c62755180ae3300d21d7b4f5
+resolver schema: resolver-char-tfidf-v4-incident-catalog-expanded
+물질 탐색 프로필: 749
+전국 시설 이력 범위: NATIONWIDE_KOREA_HISTORICAL_CANDIDATES
+외부 통합 smoke: PASSED
+현재 트래픽: v4 revision 100%
+expert_reviewed: false
+decision_support_only: true
+```
+
+첫 배포 후보는 `substance_profile`이 없는 불완전 DB를 포함해 readiness가 HTTP 503으로
+차단했습니다. 기존 v3 트래픽은 그대로 유지됐고, 프로필·FTS 각각 749건이 포함된 검증 DB로
+새 bundle과 manifest를 생성한 뒤 후보 smoke와 서비스 URL 재검사를 통과한 경우에만 v4로
+전환했습니다. 이는 실패를 숨긴 것이 아니라 Blue/Green·readiness 보호가 실제로 작동한
+운영 증빙입니다.
 
 전국 현장대응 에이전트 추가 검증:
 
