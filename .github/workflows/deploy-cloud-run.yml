@@ -82,7 +82,7 @@ jobs:
           [[ "$RELEASE_GIT_COMMIT" =~ ^[0-9a-f]{40}$ ]]
 
       - name: Python 3.11 설정
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11.15"
           cache: pip
