@@ -23,7 +23,7 @@ REFERENCE_DRIFT_SCHEMA_VERSION = "chemicheck119-reference-source-drift-v1"
 MAX_RESPONSE_BYTES = 8_000_000
 USER_AGENT = (
     "Mozilla/5.0 (compatible; ChemiCheck119ReferenceAudit/1.0; "
-    "+https://github.com/chemicheck119/llm)"
+    "+https://github.com/chemicheck119-lab/llm)"
 )
 
 

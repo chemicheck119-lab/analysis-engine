@@ -50,7 +50,7 @@ flowchart LR
 ## 2. 현재 FE 코드에서 확인된 연동 문제
 
 확인 대상:
-[`src/app/App.tsx`](https://github.com/chemicheck119/FE_Repository/blob/main/src/app/App.tsx)
+[`src/app/App.tsx`](https://github.com/chemicheck119-lab/front/blob/main/src/app/App.tsx)
 
 | 실제 줄 | 현재 동작 | 문제 | 바꿀 방향 |
 |---|---|---|---|

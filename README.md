@@ -181,7 +181,7 @@ POST /api/v1/incidents/analyze
 ## 빠른 시작
 
 ```bash
-git clone https://github.com/chemicheck119/llm.git
+git clone https://github.com/chemicheck119-lab/llm.git
 cd llm
 
 python3.11 -m venv .venv
