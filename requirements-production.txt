@@ -1,5 +1,5 @@
 # Python 3.11.15 릴리스 환경에서 검증한 운영 의존성 잠금입니다.
-annotated-doc==0.0.4
+annotated-doc==0.0.5
 annotated-types==0.7.0
 anyio==4.14.2
 click==8.4.2
