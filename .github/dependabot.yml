@@ -4,56 +4,32 @@ updates:
     directory: /
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
+    assignees:
+      - hywznn
     labels:
       - dependencies
+      - security:update
       - area:llm
-    groups:
-      minor-and-patch:
-        patterns:
-          - "*"
-        update-types:
-          - minor
-          - patch
-    ignore:
-      - dependency-name: "*"
-        update-types:
-          - version-update:semver-major
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
+    assignees:
+      - hywznn
     labels:
       - dependencies
+      - security:update
       - area:container
-    groups:
-      minor-and-patch:
-        patterns:
-          - "*"
-        update-types:
-          - minor
-          - patch
-    ignore:
-      - dependency-name: "*"
-        update-types:
-          - version-update:semver-major
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
+    assignees:
+      - hywznn
     labels:
       - dependencies
+      - security:update
       - area:ci
-    groups:
-      minor-and-patch:
-        patterns:
-          - "*"
-        update-types:
-          - minor
-          - patch
-    ignore:
-      - dependency-name: "*"
-        update-types:
-          - version-update:semver-major
