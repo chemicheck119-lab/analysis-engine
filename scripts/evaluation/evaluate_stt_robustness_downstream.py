@@ -15,6 +15,7 @@ from chemiguard119.stt_downstream_evaluation import (
 from chemiguard119.stt_robustness_downstream_evaluation import (
     build_robustness_report,
     evaluate_robustness_conditions,
+    load_priority_terms,
     load_robustness_private_records,
     load_robustness_summary,
     sha256_file,
@@ -26,6 +27,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--records-private", type=Path, required=True)
     parser.add_argument("--speech-summary", type=Path, required=True)
+    parser.add_argument("--priority-terms", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--model-api-base-url", required=True)
     parser.add_argument("--api-key-env", default="CHEMIGUARD119_API_KEY")
@@ -36,14 +38,19 @@ def main() -> int:
     parser.add_argument("--timeout-seconds", type=float, default=15.0)
     parser.add_argument("--max-retries", type=int, default=2, choices=range(0, 6))
     parser.add_argument("--evaluator-git-commit", required=True)
+    parser.add_argument("--speech-image-digest", required=True)
     parser.add_argument("--service-revision", required=True)
     parser.add_argument("--service-git-commit", required=True)
     parser.add_argument("--runtime-manifest-sha256", required=True)
     args = parser.parse_args()
 
     rows_by_condition = load_robustness_private_records(args.records_private)
+    priority_terms = load_priority_terms(args.priority_terms)
     speech_summary = load_robustness_summary(
-        args.speech_summary, rows_by_condition=rows_by_condition
+        args.speech_summary,
+        rows_by_condition=rows_by_condition,
+        priority_terms=priority_terms,
+        priority_terms_sha256=sha256_file(args.priority_terms),
     )
     client = ModelApiClient(
         base_url=args.model_api_base_url,
@@ -73,6 +80,7 @@ def main() -> int:
     metrics, private_rows = evaluate_robustness_conditions(
         rows_by_condition,
         client.analyze,
+        priority_terms=priority_terms,
         workers=args.workers,
         progress=progress,
     )
@@ -81,6 +89,7 @@ def main() -> int:
         metrics=metrics,
         records_sha256=sha256_file(args.records_private),
         speech_summary_sha256=sha256_file(args.speech_summary),
+        speech_image_digest=args.speech_image_digest,
         evaluator_git_commit=args.evaluator_git_commit,
         service_revision=args.service_revision,
         service_git_commit=args.service_git_commit,
