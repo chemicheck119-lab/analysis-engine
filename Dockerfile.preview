@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 # 공모전 FE-BE 통합용 비운영 preview 전용 이미지입니다.
 # PILOT_REVIEWED 운영 릴리스는 반드시 Dockerfile.bundle을 사용해야 합니다.
-FROM python:3.11.15-slim
+FROM python:3.14.7-slim
 
 ARG RUNTIME_MANIFEST_SHA256
 ARG MODEL_GIT_COMMIT
