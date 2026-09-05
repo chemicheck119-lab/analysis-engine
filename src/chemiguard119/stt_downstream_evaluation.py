@@ -377,8 +377,11 @@ def _analyze_one(
         return _failed_observation(type(exc).__name__)
 
 
-def _request_id(record_key: str, side: str) -> str:
-    digest = hashlib.sha256(f"{record_key}:{side}".encode("utf-8")).hexdigest()[:24]
+def _request_id(record_key: str, side: str, namespace: str | None = None) -> str:
+    material = f"{record_key}:{side}"
+    if namespace:
+        material = f"{namespace}:{material}"
+    digest = hashlib.sha256(material.encode("utf-8")).hexdigest()[:24]
     return f"stt-silver-{side}-{digest}"
 
 
@@ -406,6 +409,7 @@ def evaluate_pairs(
     analyze: Analyze,
     *,
     workers: int = 4,
+    request_namespace: str | None = None,
     progress: Callable[[int, int], None] | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     if workers <= 0 or workers > MAX_WORKERS:
@@ -420,7 +424,9 @@ def evaluate_pairs(
                     _analyze_one,
                     analyze,
                     text=str(row["reference"]),
-                    request_id=_request_id(str(row["record_key"]), "reference"),
+                    request_id=_request_id(
+                        str(row["record_key"]), "reference", request_namespace
+                    ),
                 )
             ] = (index, "reference")
             if row.get("status") == "completed" and str(row["hypothesis"]).strip():
@@ -429,7 +435,9 @@ def evaluate_pairs(
                         _analyze_one,
                         analyze,
                         text=str(row["hypothesis"]),
-                        request_id=_request_id(str(row["record_key"]), "hypothesis"),
+                        request_id=_request_id(
+                            str(row["record_key"]), "hypothesis", request_namespace
+                        ),
                     )
                 ] = (index, "hypothesis")
             else:

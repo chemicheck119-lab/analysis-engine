@@ -243,6 +243,7 @@ scripts/             데이터 준비·학습·평가·artifact 도구
 - [데이터와 모델](docs/DATA_AND_MODEL.md) — 데이터 출처·전처리·모델 역할
 - [모델 평가](docs/EVALUATION.md) — 평가셋·지표·실패 사례·재현 방법
 - [STT 후단 실버 평가](docs/STT_DOWNSTREAM_SILVER_EVALUATION.md) — 참조 전사 대비 Parser·Resolver 후보 보존 평가
+- [모의 통신 왜곡 STT 후단 평가](docs/STT_RADIO_SIM_DOWNSTREAM_EVALUATION.md) — `radio-sim-v1` 18조건 후보 보존·확인 Gate 회귀 평가
 - [API](docs/API.md) — 요청·응답·오류 계약
 - [FE·BE 연동](docs/FE_BE_HANDOFF.md) — 대시보드 DTO와 연동 체크리스트
 - [배포](docs/DEPLOYMENT.md) — Docker·Cloud Run·Secret·롤백

@@ -146,6 +146,25 @@ def test_failed_stt_is_kept_in_denominator_without_empty_api_call() -> None:
     )
 
 
+def test_request_namespace_separates_channel_variant_audit_ids() -> None:
+    request_ids: list[str] = []
+
+    def analyze(_text: str, request_id: str) -> dict:
+        request_ids.append(request_id)
+        return _response()
+
+    evaluate_pairs(
+        [_rows()[0]], analyze, workers=1, request_namespace="radio-sim-v1:clean"
+    )
+    clean_ids = set(request_ids)
+    request_ids.clear()
+    evaluate_pairs(
+        [_rows()[0]], analyze, workers=1, request_namespace="radio-sim-v1:wind_snr10"
+    )
+
+    assert clean_ids.isdisjoint(request_ids)
+
+
 def test_loaders_bind_baseline_rows_to_speech_summary(tmp_path: Path) -> None:
     records = tmp_path / "records.private.jsonl"
     records.write_text(
