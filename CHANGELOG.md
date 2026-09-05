@@ -7,6 +7,8 @@
 
 ### Added
 
+- `radio-sim-v1` clean+17개 왜곡 STT 결과를 조건별 Parser·Resolver 실버 보존율과 2-CAS
+  Gate 위반으로 평가하고, 독립 지역 비교 전에는 LoRA 결정을 보류하는 비공개 평가기
 - 병합된 main `63b7a17`의 Resolver v4를 서울 Cloud Run preview revision
   `p63b7a173622491`에 Blue/Green 배포하고, 물질 프로필 749건·전국 시설 이력·통합 분석
   외부 smoke를 통과한 재현 증빙
