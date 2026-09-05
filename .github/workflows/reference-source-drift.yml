@@ -40,7 +40,7 @@ jobs:
 
       - name: 검사 보고서 보관
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: reference-source-drift-${{ github.run_id }}
           path: outputs/reference-source-drift.json
