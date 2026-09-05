@@ -38,6 +38,9 @@ updates:
       - dependency-name: "*"
         update-types:
           - version-update:semver-major
+      - dependency-name: python
+        update-types:
+          - version-update:semver-minor
   - package-ecosystem: github-actions
     directory: /
     schedule:
