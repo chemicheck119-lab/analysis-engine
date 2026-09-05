@@ -39,9 +39,25 @@
 clean 대비 변화는 같은 record set의 **집계 차이**이며 paired 신뢰구간이 아닙니다. CAS
 정답이 없으므로 잘못된 단일 CAS 확정 정답 건수는 `null`로 유지합니다.
 
-한 지역에서 분모 20 이상인 우선용어 Recall 0.80 미만 또는 참조 후보 Top-3 보존율
-0.90 미만이 나타나도 LoRA 실행을 결정하지 않습니다. 서울과 인천에서 같은 오류 유형이
-반복되는지 확인한 다음에만 광주 Training 기반 학습 가설을 세웁니다.
+한 지역에서 전체 우선용어 분모 20 이상·Recall 0.80 미만이면서 특정 공개 용어도 분모 5
+이상·Recall 0.80 미만일 때만 반복 가능한 용어 누락 서명으로 기록합니다. 참조 후보
+Top-3 보존율이 낮더라도 공통 후보 오류 서명을 만들 수 없으면 미해결 신호로 남깁니다.
+서울과 인천에서 동일 조건·동일 공개 용어 누락이 반복되는지 확인한 다음에만 광주
+Training 기반 학습 가설을 세웁니다.
+
+두 지역 보고서가 준비되면 다음 비교 Gate를 실행합니다. 서로 다른 source manifest,
+동일한 우선용어 목록·STT 설정·후단 평가기·Model API artifact가 아니면 비교를
+거부합니다. 같은 조건과 같은 공개 용어 누락이 반복되어도 자동 학습을 허용하지 않고
+제한된 LoRA 실험 설계 자격만 부여합니다.
+
+```bash
+python scripts/evaluation/evaluate_stt_robustness_lora_gate.py \
+  --incheon-report /private/incheon/downstream-silver/report.json \
+  --seoul-report /private/seoul/downstream-silver/report.json \
+  --priority-terms /workspace/speech-service/config/domain_hotwords.txt \
+  --evaluator-git-commit "$(git rev-parse HEAD)" \
+  --output /private/radio-sim-v1-cross-region-lora-gate.json
+```
 
 ## 실행
 
@@ -56,9 +72,11 @@ CHEMICHECK119_IDENTITY_TOKEN="$(gcloud auth print-identity-token)" \
 python scripts/evaluation/evaluate_stt_robustness_downstream.py \
   --records-private /private/radio-sim-v1/records.private.jsonl \
   --speech-summary /private/radio-sim-v1/summary.json \
+  --priority-terms /workspace/speech-service/config/domain_hotwords.txt \
   --output-dir /private/radio-sim-v1/downstream-silver \
   --model-api-base-url https://PRIVATE_MODEL_API_URL \
   --evaluator-git-commit "$(git rev-parse HEAD)" \
+  --speech-image-digest sha256:SPEECH_IMAGE_DIGEST \
   --service-revision MODEL_API_REVISION \
   --service-git-commit MODEL_API_GIT_COMMIT \
   --runtime-manifest-sha256 MODEL_API_RUNTIME_MANIFEST_SHA256

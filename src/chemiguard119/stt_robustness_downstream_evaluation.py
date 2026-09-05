@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 import re
 from typing import Any, Callable, Iterable
+import unicodedata
 
 from chemiguard119.stt_downstream_evaluation import (
     MAX_TEXT_LENGTH,
@@ -27,10 +28,15 @@ from chemiguard119.stt_downstream_evaluation import (
 SCHEMA_VERSION = "stt-radio-sim-downstream-silver-eval-v1"
 PROFILE_ID = "radio-sim-v1"
 MAX_INPUT_BYTES = 512 * 1024 * 1024
+MAX_PRIORITY_TERMS_BYTES = 64 * 1024
+MAX_PRIORITY_TERMS = 100
 MAX_RECORDS_PER_CONDITION = 200
 RECORD_KEY_PATTERN = re.compile(r"^[0-9a-f]{16}$")
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 GIT_COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
+CONTAINER_DIGEST_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
+NON_TEXT_PATTERN = re.compile(r"[^0-9a-zA-Z가-힣\s]")
+SPACE_PATTERN = re.compile(r"\s+")
 CONDITIONS = frozenset(
     {
         "clean",
@@ -65,6 +71,76 @@ def sha256_file(path: Path) -> str:
 
 def _record_key_set_sha256(keys: Iterable[str]) -> str:
     return hashlib.sha256("\n".join(sorted(keys)).encode("ascii")).hexdigest()
+
+
+def load_priority_terms(path: Path) -> list[str]:
+    size = path.stat().st_size
+    if size <= 0 or size > MAX_PRIORITY_TERMS_BYTES:
+        raise DownstreamEvaluationError(
+            f"우선용어 파일 크기가 허용 범위를 벗어났습니다: {size}"
+        )
+    terms = [
+        line.strip()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    if (
+        not terms
+        or len(terms) > MAX_PRIORITY_TERMS
+        or len(terms) != len(set(terms))
+        or any(len(term) > 64 for term in terms)
+    ):
+        raise DownstreamEvaluationError(
+            "우선용어 목록이 비었거나 중복·상한이 있습니다."
+        )
+    return terms
+
+
+def _normalize_for_presence(value: str) -> str:
+    normalized = unicodedata.normalize("NFKC", value).casefold()
+    normalized = NON_TEXT_PATTERN.sub(" ", normalized)
+    return SPACE_PATTERN.sub(" ", normalized).strip().replace(" ", "")
+
+
+def _priority_term_by_term(
+    rows: list[dict[str, Any]], priority_terms: list[str]
+) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for term in priority_terms:
+        normalized_term = _normalize_for_presence(term)
+        true_positive = false_negative = false_insertion = 0
+        for row in rows:
+            reference = _normalize_for_presence(str(row["reference"]))
+            hypothesis = _normalize_for_presence(str(row["hypothesis"]))
+            in_reference = normalized_term in reference
+            in_hypothesis = normalized_term in hypothesis
+            true_positive += int(in_reference and in_hypothesis)
+            false_negative += int(in_reference and not in_hypothesis)
+            false_insertion += int(not in_reference and in_hypothesis)
+        recall_denominator = true_positive + false_negative
+        precision_denominator = true_positive + false_insertion
+        recall = true_positive / recall_denominator if recall_denominator else None
+        precision = (
+            true_positive / precision_denominator if precision_denominator else None
+        )
+        f1 = (
+            2 * recall * precision / (recall + precision)
+            if recall is not None and precision is not None and recall + precision
+            else None
+        )
+        result.append(
+            {
+                "term": term,
+                "reference_positive_count": recall_denominator,
+                "true_positive": true_positive,
+                "false_negative": false_negative,
+                "false_insertion": false_insertion,
+                "recall": recall,
+                "precision": precision,
+                "f1": f1,
+            }
+        )
+    return result
 
 
 def load_robustness_private_records(
@@ -147,6 +223,8 @@ def load_robustness_summary(
     path: Path,
     *,
     rows_by_condition: dict[str, list[dict[str, Any]]],
+    priority_terms: list[str],
+    priority_terms_sha256: str,
 ) -> dict[str, Any]:
     """speech-service 강건성 summary와 비공개 레코드의 범위를 결합 검증한다."""
 
@@ -196,6 +274,7 @@ def load_robustness_summary(
         or simulation.get("profile_id") != PROFILE_ID
         or not isinstance(simulation.get("source_manifest_sha256"), str)
         or not SHA256_PATTERN.fullmatch(simulation["source_manifest_sha256"])
+        or simulation.get("priority_terms_sha256") != priority_terms_sha256
         or simulation.get("variant_count") != len(CONDITIONS)
         or not isinstance(simulation.get("selected"), dict)
         or simulation["selected"].get("total") != record_count
@@ -208,6 +287,7 @@ def load_robustness_summary(
         or runtime.get("device") != "cpu"
         or runtime.get("compute_type") != "int8"
         or variant_contract_invalid
+        or not priority_terms
     ):
         raise DownstreamEvaluationError(
             "강건성 summary와 18조건 비공개 레코드의 평가 범위가 다릅니다."
@@ -232,6 +312,7 @@ def evaluate_robustness_conditions(
     rows_by_condition: dict[str, list[dict[str, Any]]],
     analyze: Analyze,
     *,
+    priority_terms: list[str],
     workers: int = 4,
     progress: Callable[[str, int, int], None] | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -241,6 +322,8 @@ def evaluate_robustness_conditions(
         raise DownstreamEvaluationError(f"workers는 1~{MAX_WORKERS} 범위여야 합니다.")
     if set(rows_by_condition) != CONDITIONS:
         raise DownstreamEvaluationError("평가 입력은 clean+17개 조건이어야 합니다.")
+    if not priority_terms or len(priority_terms) != len(set(priority_terms)):
+        raise DownstreamEvaluationError("중복 없는 우선용어 목록이 필요합니다.")
 
     by_condition: dict[str, dict[str, Any]] = {}
     private_rows: list[dict[str, Any]] = []
@@ -260,6 +343,9 @@ def evaluate_robustness_conditions(
             workers=workers,
             request_namespace=f"{PROFILE_ID}:{condition}",
             progress=condition_progress,
+        )
+        metrics["priority_term_by_term"] = _priority_term_by_term(
+            rows_by_condition[condition], priority_terms
         )
         by_condition[condition] = metrics
         private_rows.extend({**row, "channel_variant": condition} for row in rows)
@@ -368,41 +454,75 @@ def evaluate_robustness_conditions(
 
 def _lora_signals(
     speech_summary: dict[str, Any], metrics: dict[str, Any]
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     signals: list[dict[str, Any]] = []
+    unresolved: list[dict[str, Any]] = []
     for condition in sorted(CONDITIONS):
         terms = speech_summary["variants"][condition]["priority_term_presence"]
+        term_rows = metrics["by_condition"][condition]["priority_term_by_term"]
+        aggregate = {
+            key: sum(int(row[key]) for row in term_rows)
+            for key in ("true_positive", "false_negative", "false_insertion")
+        }
+        if any(aggregate[key] != int(terms.get(key, -1)) for key in aggregate):
+            raise DownstreamEvaluationError(
+                f"우선용어 세부 집계와 STT summary가 다릅니다: {condition}"
+            )
         term_denominator = int(terms.get("true_positive", 0)) + int(
             terms.get("false_negative", 0)
         )
         term_recall = terms.get("recall")
         resolver = metrics["by_condition"][condition]["resolver_silver"]
         top3 = resolver["reference_candidate_top3_retention"]
-        reasons: list[str] = []
-        if (
+        aggregate_term_low = (
             term_denominator >= 20
             and isinstance(term_recall, (int, float))
             and float(term_recall) < 0.8
-        ):
-            reasons.append("PRIORITY_TERM_AGGREGATE_RECALL_BELOW_0_80")
+        )
+        specific_terms = [
+            row
+            for row in term_rows
+            if row["reference_positive_count"] >= 5
+            and isinstance(row.get("recall"), (int, float))
+            and float(row["recall"]) < 0.8
+        ]
+        if aggregate_term_low and specific_terms:
+            for row in specific_terms:
+                signals.append(
+                    {
+                        "condition": condition,
+                        "reason": "SPECIFIC_PRIORITY_TERM_RECALL_BELOW_0_80",
+                        "public_term": row["term"],
+                        "priority_term_aggregate_denominator": term_denominator,
+                        "priority_term_aggregate_recall": term_recall,
+                        "term_denominator": row["reference_positive_count"],
+                        "term_recall": row["recall"],
+                        "term_false_insertion": row["false_insertion"],
+                    }
+                )
+        elif aggregate_term_low:
+            unresolved.append(
+                {
+                    "condition": condition,
+                    "reason": "AGGREGATE_LOW_RECALL_WITHOUT_TERM_DENOMINATOR_5",
+                    "denominator": term_denominator,
+                    "rate": term_recall,
+                }
+            )
         if (
             int(top3.get("denominator") or 0) >= 20
             and isinstance(top3.get("rate"), (int, float))
             and float(top3["rate"]) < 0.9
         ):
-            reasons.append("REFERENCE_CANDIDATE_TOP3_RETENTION_BELOW_0_90")
-        if reasons:
-            signals.append(
+            unresolved.append(
                 {
                     "condition": condition,
-                    "reasons": reasons,
-                    "priority_term_denominator": term_denominator,
-                    "priority_term_recall": term_recall,
-                    "reference_candidate_top3_denominator": top3.get("denominator"),
-                    "reference_candidate_top3_retention": top3.get("rate"),
+                    "reason": "TOP3_LOW_WITHOUT_SHARED_CANDIDATE_ERROR_SIGNATURE",
+                    "denominator": top3.get("denominator"),
+                    "rate": top3.get("rate"),
                 }
             )
-    return signals
+    return signals, unresolved
 
 
 def build_robustness_report(
@@ -411,6 +531,7 @@ def build_robustness_report(
     metrics: dict[str, Any],
     records_sha256: str,
     speech_summary_sha256: str,
+    speech_image_digest: str,
     evaluator_git_commit: str,
     service_revision: str,
     service_git_commit: str,
@@ -432,6 +553,10 @@ def build_robustness_report(
             raise DownstreamEvaluationError(f"{label} Git commit이 올바르지 않습니다.")
     if not service_revision.strip() or len(service_revision) > 128:
         raise DownstreamEvaluationError("Model API revision이 올바르지 않습니다.")
+    if not CONTAINER_DIGEST_PATTERN.fullmatch(speech_image_digest):
+        raise DownstreamEvaluationError(
+            "Speech 평가 이미지 digest가 올바르지 않습니다."
+        )
     if (
         metrics.get("profile_id") != PROFILE_ID
         or metrics.get("condition_count") != len(CONDITIONS)
@@ -444,7 +569,7 @@ def build_robustness_report(
             "강건성 STT summary와 후단 집계의 평가 범위가 다릅니다."
         )
 
-    signals = _lora_signals(speech_summary, metrics)
+    signals, unresolved_signals = _lora_signals(speech_summary, metrics)
     simulation = speech_summary["simulation_run"]
     return {
         "schema_version": SCHEMA_VERSION,
@@ -467,12 +592,19 @@ def build_robustness_report(
             "speech_summary_sha256": speech_summary_sha256,
             "private_records_sha256": records_sha256,
             "private_records_committed_to_git": False,
+            "priority_terms_sha256": speech_summary["simulation_run"][
+                "priority_terms_sha256"
+            ],
         },
         "evaluation_runtime": {
             "repository": "chemicheck119-lab/analysis-engine",
             "git_commit": evaluator_git_commit,
         },
         "stt_runtime": speech_summary.get("runtime"),
+        "speech_evaluator_artifact": {
+            "repository": "chemicheck119-lab/speech-service",
+            "container_image_digest": speech_image_digest,
+        },
         "model_api_runtime": {
             "service_revision": service_revision,
             "service_git_commit": service_git_commit,
@@ -484,6 +616,7 @@ def build_robustness_report(
         "whisper_lora_gate": {
             "decision": "NOT_DECIDABLE_FROM_ONE_REGION",
             "signals": signals,
+            "unresolved_aggregate_signals": unresolved_signals,
             "requires_same_error_across_seoul_and_incheon": True,
             "reason": (
                 "같은 원본의 여러 왜곡 조건은 독립 지역 표본이 아니므로 한 지역만으로 "
@@ -528,6 +661,7 @@ __all__ = [
     "PROFILE_ID",
     "build_robustness_report",
     "evaluate_robustness_conditions",
+    "load_priority_terms",
     "load_robustness_private_records",
     "load_robustness_summary",
     "sha256_file",
