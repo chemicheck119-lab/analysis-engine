@@ -70,7 +70,8 @@ gcloud run deploy "$GCP_CLOUD_RUN_SERVICE" \
   --revision-suffix "$revision_suffix" \
   --tag "$candidate_tag" \
   --no-traffic \
-  --allow-unauthenticated \
+  --no-allow-unauthenticated \
+  --invoker-iam-check \
   --ingress all \
   --execution-environment gen2 \
   --service-account "$GCP_RUNTIME_SERVICE_ACCOUNT" \
@@ -129,6 +130,10 @@ fi
 
 smoke() {
   local base_url="$1"
+  local audience="$2"
+  local identity_token
+  identity_token="$(gcloud auth print-identity-token --audiences="$audience")"
+  test -n "$identity_token"
   local ready_file
   ready_file="$(mktemp)"
   local http_code="000"
@@ -136,6 +141,7 @@ smoke() {
     http_code="$(curl --silent --show-error \
       --output "$ready_file" \
       --write-out '%{http_code}' \
+      --header "Authorization: Bearer $identity_token" \
       "$base_url/health/ready" || true)"
     if [ "$http_code" = "200" ]; then
       break
@@ -158,13 +164,15 @@ if payload.get("ready") is not True or integrity.get("status") != "VERIFIED":
 PY
   rm -f "$ready_file"
   CHEMICHECK119_MODEL_API_KEY="$CHEMIGUARD119_API_KEY" \
+    CHEMICHECK119_MODEL_API_ID_TOKEN="$identity_token" \
     PYTHONPATH=src \
     python scripts/integration/smoke_model_api.py \
       --base-url "$base_url" \
-      --api-key-env CHEMICHECK119_MODEL_API_KEY
+      --api-key-env CHEMICHECK119_MODEL_API_KEY \
+      --identity-token-env CHEMICHECK119_MODEL_API_ID_TOKEN
 }
 
-smoke "$candidate_url"
+smoke "$candidate_url" "$service_url"
 
 promoted=false
 rollback() {
@@ -194,7 +202,7 @@ gcloud run services update-traffic "$GCP_CLOUD_RUN_SERVICE" \
   --quiet
 promoted=true
 
-smoke "$service_url"
+smoke "$service_url" "$service_url"
 
 if [ -n "${GITHUB_OUTPUT:-}" ]; then
   {

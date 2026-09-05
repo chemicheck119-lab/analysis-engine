@@ -47,7 +47,7 @@ jobs:
           GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
           GCP_REGION: ${{ vars.GCP_REGION }}
           GCP_ARTIFACT_REPOSITORY: ${{ vars.GCP_ARTIFACT_REPOSITORY }}
-          GCP_CLOUD_RUN_SERVICE: ${{ vars.GCP_CLOUD_RUN_SERVICE }}
+          GCP_CLOUD_RUN_SERVICE: ${{ vars.GCP_PREVIEW_CLOUD_RUN_SERVICE }}
           GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           GCP_DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
           GCP_RUNTIME_SERVICE_ACCOUNT: ${{ vars.GCP_RUNTIME_SERVICE_ACCOUNT }}
@@ -110,7 +110,7 @@ jobs:
           GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
           GCP_REGION: ${{ vars.GCP_REGION }}
           GCP_ARTIFACT_REPOSITORY: ${{ vars.GCP_ARTIFACT_REPOSITORY }}
-          GCP_CLOUD_RUN_SERVICE: ${{ vars.GCP_CLOUD_RUN_SERVICE }}
+          GCP_CLOUD_RUN_SERVICE: ${{ vars.GCP_PREVIEW_CLOUD_RUN_SERVICE }}
           GCP_RUNTIME_SERVICE_ACCOUNT: ${{ vars.GCP_RUNTIME_SERVICE_ACCOUNT }}
           GCP_MODEL_API_KEY_SECRET: ${{ vars.GCP_MODEL_API_KEY_SECRET }}
           GCP_MODEL_API_KEY_SECRET_VERSION: ${{ vars.GCP_MODEL_API_KEY_SECRET_VERSION }}
@@ -125,7 +125,7 @@ jobs:
           {
             echo "## Cloud Run 공모전 preview 배포 완료"
             echo
-            echo "- Service: \`${{ vars.GCP_CLOUD_RUN_SERVICE }}\`"
+            echo "- Service: \`${{ vars.GCP_PREVIEW_CLOUD_RUN_SERVICE }}\`"
             echo "- Region: \`${{ vars.GCP_REGION }}\`"
             echo "- Revision: \`${{ steps.deploy.outputs.revision }}\`"
             echo "- URL: \`${{ steps.deploy.outputs.service_url }}\`"

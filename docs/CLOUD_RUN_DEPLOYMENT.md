@@ -15,7 +15,8 @@ main의 검증된 코드·데이터
 ```
 
 태블릿 FE는 이 URL을 직접 호출하지 않습니다. 서비스 BE만 Cloud Run URL과 모델 API Key를
-사용합니다. Cloud Run 호출 자체는 공개이지만 `/api/v1/*`는 `X-API-Key`가 없으면 차단됩니다.
+사용합니다. Cloud Run 호출은 IAM으로 비공개이며, `/api/v1/*`는 추가로 `X-API-Key`가 없으면
+차단됩니다. 배포 스모크 테스트도 배포 서비스 계정의 ID 토큰과 API Key를 함께 사용합니다.
 
 ## 2. 현재 준비 상태
 

@@ -76,7 +76,8 @@ deploy_args=(
   --platform managed
   --image "$IMAGE_DIGEST"
   --revision-suffix "$revision_suffix"
-  --allow-unauthenticated
+  --no-allow-unauthenticated
+  --invoker-iam-check
   --ingress all
   --execution-environment gen2
   --service-account "$GCP_RUNTIME_SERVICE_ACCOUNT"
@@ -148,11 +149,16 @@ fi
 
 smoke() {
   local base_url="$1"
+  local audience="$2"
+  local identity_token
+  identity_token="$(gcloud auth print-identity-token --audiences="$audience")"
+  test -n "$identity_token"
   local http_code="000"
   for _attempt in $(seq 1 40); do
     http_code="$(curl --silent --show-error \
       --output "$ready_file" \
       --write-out '%{http_code}' \
+      --header "Authorization: Bearer $identity_token" \
       "$base_url/health/ready" || true)"
     if [ "$http_code" = "200" ]; then
       break
@@ -180,13 +186,15 @@ if coverage.get("scope") != "NATIONWIDE_KOREA_HISTORICAL_CANDIDATES":
     raise SystemExit("preview 전국 시설 이력 범위 계약이 깨졌습니다.")
 PY
   CHEMICHECK119_MODEL_API_KEY="$CHEMIGUARD119_API_KEY" \
+    CHEMICHECK119_MODEL_API_ID_TOKEN="$identity_token" \
     PYTHONPATH=src \
     python scripts/integration/smoke_model_api.py \
       --base-url "$base_url" \
-      --api-key-env CHEMICHECK119_MODEL_API_KEY
+      --api-key-env CHEMICHECK119_MODEL_API_KEY \
+      --identity-token-env CHEMICHECK119_MODEL_API_ID_TOKEN
 }
 
-smoke "$candidate_url"
+smoke "$candidate_url" "$service_url"
 
 promoted=false
 rollback() {
@@ -216,7 +224,7 @@ if [ "$service_exists" = true ]; then
     --to-revisions "$candidate_revision=100" \
     --quiet
   promoted=true
-  smoke "$service_url"
+  smoke "$service_url" "$service_url"
 fi
 
 if [ -n "${GITHUB_OUTPUT:-}" ]; then
