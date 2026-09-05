@@ -7,7 +7,7 @@ fastapi==0.139.2
 h11==0.16.0
 idna==3.18
 joblib==1.5.3
-narwhals==2.24.0
+narwhals==2.25.0
 numpy==2.4.6
 pydantic==2.13.4
 pydantic-core==2.46.4
