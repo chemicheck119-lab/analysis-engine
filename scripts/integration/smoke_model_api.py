@@ -24,6 +24,7 @@ def _request_json(
     *,
     timeout: float,
     api_key: str | None = None,
+    identity_token: str | None = None,
     payload: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, str]]:
     headers = {"Accept": "application/json"}
@@ -31,6 +32,8 @@ def _request_json(
     method = "GET"
     if api_key:
         headers["X-API-Key"] = api_key
+    if identity_token:
+        headers["Authorization"] = f"Bearer {identity_token}"
     if payload is not None:
         method = "POST"
         headers["Content-Type"] = "application/json"
@@ -81,11 +84,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         )
     else:
         api_key = None
+    identity_token = os.getenv(args.identity_token_env, "").strip() or None
 
     live, _ = _request_json(
         args.base_url,
         "/health/live",
         timeout=args.timeout,
+        identity_token=identity_token,
     )
     _require(live.get("status") == "UP", "liveness가 UP이 아닙니다.")
     _require(live.get("service") == SERVICE_ID, "service ID가 다릅니다.")
@@ -94,6 +99,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         args.base_url,
         "/health/ready",
         timeout=args.timeout,
+        identity_token=identity_token,
     )
     _require(ready.get("status") == "READY", "readiness가 READY가 아닙니다.")
     _require(ready.get("ready") is True, "runtime ready가 true가 아닙니다.")
@@ -112,6 +118,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         args.base_url,
         "/api/v1/meta",
         timeout=args.timeout,
+        identity_token=identity_token,
     )
     _require(
         metadata.get("api_schema_version") == API_SCHEMA_VERSION,
@@ -124,6 +131,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "/api/v1/incidents/analyze",
         timeout=args.timeout,
         api_key=api_key,
+        identity_token=identity_token,
         payload=payload,
     )
     required_fields = {
@@ -168,6 +176,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "/api/v1/substances/discover",
         timeout=args.timeout,
         api_key=api_key,
+        identity_token=identity_token,
         payload={
             "query": "무색 투명하고 박하 냄새가 나는 휘발성 액체",
             "top_k": 3,
@@ -208,6 +217,11 @@ def parse_args() -> argparse.Namespace:
         "--api-key-env",
         default="CHEMICHECK119_MODEL_API_KEY",
         help="API Key 값을 직접 받지 않고 읽을 환경변수 이름",
+    )
+    parser.add_argument(
+        "--identity-token-env",
+        default="CHEMICHECK119_MODEL_API_ID_TOKEN",
+        help="Cloud Run ID 토큰 값을 직접 받지 않고 읽을 환경변수 이름",
     )
     parser.add_argument(
         "--request-file",

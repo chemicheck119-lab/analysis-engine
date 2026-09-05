@@ -914,9 +914,9 @@ def test_cloud_run_script_smokes_before_traffic_and_rolls_back() -> None:
 
     subprocess.run(["bash", "-n", str(script_path)], check=True)
     no_traffic = script.index("--no-traffic")
-    candidate_smoke = script.index('smoke "$candidate_url"')
+    candidate_smoke = script.index('smoke "$candidate_url" "$service_url"')
     promote = script.index('--to-revisions "$candidate_revision=100"')
-    post_promote_smoke = script.index('smoke "$service_url"')
+    post_promote_smoke = script.index('smoke "$service_url" "$service_url"')
 
     assert no_traffic < candidate_smoke < promote < post_promote_smoke
     assert '--to-revisions "$previous_revision=100"' in script
@@ -931,8 +931,11 @@ def test_cloud_run_script_smokes_before_traffic_and_rolls_back() -> None:
     assert "CHEMIGUARD119_RAG_MODE=extractive" in script
     assert "--readiness-probe" not in script
     assert '--startup-probe="httpGet.path=/health/ready' in script
-    assert 'smoke "$candidate_url"' in script
-    assert 'smoke "$service_url"' in script
+    assert "--no-allow-unauthenticated" in script
+    assert "--invoker-iam-check" in script
+    assert 'gcloud auth print-identity-token --audiences="$audience"' in script
+    assert 'smoke "$candidate_url" "$service_url"' in script
+    assert 'smoke "$service_url" "$service_url"' in script
 
 
 def test_competition_preview_is_explicitly_non_production_and_keyless() -> None:
@@ -971,13 +974,17 @@ def test_competition_preview_deploy_is_separate_and_fail_closed() -> None:
     subprocess.run(["bash", "-n", str(script_path)], check=True)
     assert "id-token: write" in workflow
     assert "environment: staging" in workflow
+    assert "GCP_PREVIEW_CLOUD_RUN_SERVICE" in workflow
     assert "google-github-actions/auth@v3" in workflow
     assert "model-api-preview@sha256:" in workflow
     assert "service_account_key" not in workflow.lower()
     assert "deploy_cloud_run_preview_blue_green.sh" in workflow
     assert "CHEMIGUARD119_ENVIRONMENT=development" in script
     assert "model-api-preview@sha256:" in script
-    assert 'smoke "$candidate_url"' in script
+    assert "--no-allow-unauthenticated" in script
+    assert "--invoker-iam-check" in script
+    assert 'gcloud auth print-identity-token --audiences="$audience"' in script
+    assert 'smoke "$candidate_url" "$service_url"' in script
     assert '--to-revisions "$candidate_revision=100"' in script
     assert '--to-revisions "$previous_revision=100"' in script
     assert 'payload.get("expert_reviewed") is not False' in script
