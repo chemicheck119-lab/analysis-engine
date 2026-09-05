@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: 저장소 체크아웃
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Python 3.11 설정
         uses: actions/setup-python@v6
