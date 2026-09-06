@@ -19,6 +19,7 @@ from chemiguard119 import cli
         (["train"], "train"),
         (["evaluate"], "evaluate"),
         (["evaluate-e2e"], "evaluate-e2e"),
+        (["evaluate-agent-trajectories"], "evaluate-agent-trajectories"),
         (
             ["evaluate-official-incidents", "--split", "development"],
             "evaluate-official-incidents",
