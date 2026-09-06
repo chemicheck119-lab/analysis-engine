@@ -15,13 +15,11 @@ def main() -> int:
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--manifest", type=Path, required=True)
-    parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
     result = prepare_ulsan_resolver_source(
         args.source,
         args.output,
         args.manifest,
-        overwrite=args.overwrite,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0

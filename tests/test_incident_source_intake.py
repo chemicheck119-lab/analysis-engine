@@ -116,3 +116,29 @@ def test_does_not_publish_csv_when_manifest_staging_fails(
     assert not output.exists()
     assert not manifest.exists()
     assert not list(tmp_path.glob(".*.tmp"))
+
+
+def test_rolls_back_csv_when_manifest_publication_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "source.csv"
+    output = tmp_path / "output.csv"
+    manifest = tmp_path / "manifest.json"
+    _write_source(source)
+    real_link = intake_module.os.link
+    call_count = 0
+
+    def fail_second_link(source_path: object, destination_path: object) -> None:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 2:
+            raise OSError("synthetic manifest publication failure")
+        real_link(source_path, destination_path)
+
+    monkeypatch.setattr(intake_module.os, "link", fail_second_link)
+    with pytest.raises(OSError, match="synthetic manifest publication failure"):
+        prepare_ulsan_resolver_source(source, output, manifest)
+
+    assert not output.exists()
+    assert not manifest.exists()
+    assert not list(tmp_path.glob(".*.tmp"))

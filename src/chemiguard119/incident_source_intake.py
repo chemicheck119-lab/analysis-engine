@@ -90,8 +90,6 @@ def prepare_ulsan_resolver_source(
     source_path: Path,
     output_path: Path,
     manifest_path: Path,
-    *,
-    overwrite: bool = False,
 ) -> dict[str, Any]:
     """공식 원본에서 Resolver에 필요한 열만 private 파생 파일로 만든다."""
 
@@ -103,7 +101,7 @@ def prepare_ulsan_resolver_source(
     if len({source_path, output_path, manifest_path}) != 3:
         raise ValueError("원본·파생 CSV·manifest 경로는 서로 달라야 합니다.")
     existing = [path for path in (output_path, manifest_path) if path.exists()]
-    if existing and not overwrite:
+    if existing:
         raise FileExistsError(
             "기존 파생 파일을 덮어쓰지 않습니다: "
             + ", ".join(str(path) for path in existing)
@@ -173,17 +171,17 @@ def prepare_ulsan_resolver_source(
         write_json(temporary_manifest, manifest)
         with temporary_manifest.open("rb") as handle:
             os.fsync(handle.fileno())
-        if not overwrite:
-            late_existing = [
-                path for path in (output_path, manifest_path) if path.exists()
-            ]
-            if late_existing:
-                raise FileExistsError(
-                    "게시 직전에 기존 파생 파일이 확인됐습니다: "
-                    + ", ".join(str(path) for path in late_existing)
-                )
-        temporary_output.replace(output_path)
-        temporary_manifest.replace(manifest_path)
+        output_published = False
+        try:
+            # 같은 디렉터리에 만든 임시 파일을 hard link로 게시하면, 목적지가
+            # 늦게 생긴 경우에도 기존 파일을 덮어쓰지 않고 원자적으로 실패한다.
+            os.link(temporary_output, output_path)
+            output_published = True
+            os.link(temporary_manifest, manifest_path)
+        except Exception:
+            if output_published:
+                output_path.unlink(missing_ok=True)
+            raise
     finally:
         temporary_output.unlink(missing_ok=True)
         temporary_manifest.unlink(missing_ok=True)
