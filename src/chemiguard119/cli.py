@@ -101,6 +101,7 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
         "train": "기준선 모델 학습",
         "evaluate": "모델 평가",
         "evaluate-e2e": "사고 분석 E2E 안전 평가",
+        "evaluate-agent-trajectories": "Agent trajectory 안전 평가",
         "evaluate-official-incidents": "전국 공식 화학사고 외부 기준선 평가",
         "e2e-review": "E2E 독립 검수팩",
         "resolve": "물질 후보 검색",
@@ -313,6 +314,26 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
         )
         print(f"주장 범위: {_short(payload.get('claim_scope'))}")
         print("주의: DRAFT E2E 회귀 결과는 현장 정확도나 상용 성능이 아닙니다.")
+    elif command == "evaluate-agent-trajectories":
+        metrics = payload.get("metrics") or {}
+        print(f"사실 상태: {_short(payload.get('fact_status'))}")
+        print(
+            "통과: "
+            f"{payload.get('passed_case_count', 0)}/{payload.get('case_count', 0)} "
+            f"({metrics.get('scenario_pass_rate', 0):.3f})"
+        )
+        print(
+            "안전 위반: "
+            f"확인 전 결과 제시 {metrics.get('presentation_before_two_confirmations_count', 0)}건, "
+            f"실패 후 도구 계획 {metrics.get('tool_after_failure_count', 0)}건, "
+            f"실패 분석 노출 {metrics.get('failure_analysis_exposure_count', 0)}건, "
+            f"인자 연결 위반 {metrics.get('tool_argument_contract_violation_count', 0)}건"
+        )
+        print(f"판정: {_short(payload.get('decision'))}")
+        print(f"주장 범위: {_short(payload.get('claim_scope'))}")
+        print(
+            "주의: 합성 정책 회귀이며 LLM 추론·현장 정확도·실제 안전성 평가가 아닙니다."
+        )
     elif command == "e2e-review":
         print(f"작업: {_short(payload.get('action'))}")
         print(f"상태: {_short(payload.get('status'))}")
@@ -650,6 +671,18 @@ def _evaluate_e2e(args: argparse.Namespace) -> dict[str, Any]:
         args.retriever_model,
         args.evaluation,
         config_dir=args.config_dir,
+        profile=args.evaluation_profile,
+        report_path=args.report,
+    )
+
+
+def _evaluate_agent_trajectories(args: argparse.Namespace) -> dict[str, Any]:
+    from chemiguard119.agent_trajectory_evaluation import (
+        evaluate_agent_trajectories,
+    )
+
+    return evaluate_agent_trajectories(
+        args.evaluation,
         profile=args.evaluation_profile,
         report_path=args.report,
     )
@@ -1192,6 +1225,7 @@ def _interactive(args: argparse.Namespace) -> dict[str, Any]:
             "train",
             "evaluate",
             "evaluate-e2e",
+            "evaluate-agent-trajectories",
             "evaluate-official-incidents",
             "e2e-review",
             "resolve",
@@ -1380,6 +1414,35 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_json_option(evaluate_e2e)
     evaluate_e2e.set_defaults(handler=_evaluate_e2e)
+
+    evaluate_agent = subparsers.add_parser(
+        "evaluate-agent-trajectories",
+        help="Agent 도구 선택·순서·재시도·중단·2-CAS Gate 합성 회귀 평가",
+    )
+    evaluate_agent.add_argument(
+        "--evaluation",
+        type=_path,
+        default=EVALUATION_DIR / "agent_trajectory_scenarios_draft.jsonl",
+        help="Agent trajectory 시나리오 JSONL 경로",
+    )
+    evaluate_agent.add_argument(
+        "--evaluation-profile",
+        choices=(
+            "INTERNAL_REGRESSION",
+            "COMPETITION_REVIEWED",
+            "PILOT_REVIEWED",
+        ),
+        default="INTERNAL_REGRESSION",
+        help="평가 데이터 검수·주장 범위 gate",
+    )
+    evaluate_agent.add_argument(
+        "--report",
+        type=_path,
+        default=DEFAULT_REPORT_DIR / "agent_trajectory_evaluation.json",
+        help="JSON 평가 보고서 저장 경로",
+    )
+    _add_json_option(evaluate_agent)
+    evaluate_agent.set_defaults(handler=_evaluate_agent_trajectories)
 
     e2e_review = subparsers.add_parser(
         "e2e-review",

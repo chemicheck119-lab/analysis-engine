@@ -65,6 +65,8 @@ flowchart LR
 
 `PLAN → ACT → OBSERVE → REPLAN` 루프로 현재 사고 상태를 관리합니다. 파서, 물질 검색,
 시설 이력, 근거 검색, 확인 게이트, 충돌 규칙을 도구처럼 선택하고 다음 현장 행동을 제안합니다.
+자유 생성형 위험판단 성능이 아니라 도구 선택·순서·재시도·중단·2-CAS Gate 정책을
+`evaluate-agent-trajectories`의 합성 DRAFT 10개 시나리오·13 step으로 별도 회귀 검사합니다.
 
 ### 2. 신고문 구조화
 

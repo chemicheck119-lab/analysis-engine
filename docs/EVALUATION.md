@@ -58,6 +58,38 @@ chemiguard119 evaluate-e2e \
 검사와 배포 smoke를 분리해 제시합니다. 사람 검수 gate는 향후 현장 파일럿 조건으로
 그대로 유지합니다.
 
+## Agent trajectory 안전 회귀
+
+`evaluate-agent-trajectories`는 LLM의 자유 추론 품질을 채점하지 않습니다. 결정적
+`IncidentAgentRunner`에 사전 정의한 합성 `AnalysisResponse` 관찰을 주입하고 다음 정책이
+정확한 순서로 실행되는지 검사합니다.
+
+- 새 요청에서 분석→안전 계약 재검증→필요한 사람 확인 요청 순서를 지키는가
+- 같은 요청·같은 runtime·새 관찰 없음 상태에서는 도구를 다시 호출하지 않는가
+- runtime fingerprint가 바뀌면 이전 memory만 믿지 않고 다시 분석하는가
+- request·incident·memory 식별자와 fingerprint가 호출 사이에 섞이지 않는가
+- 두 CAS가 각각 확인된 뒤에만 결과 제시 도구를 선택하는가
+- CAMEO 미지원 상태에서는 공식 근거 검토를 요청하는가
+- timeout은 재시도 가능한 실패로, 안전 계약 위반은 재시도 불가 실패로 중단하는가
+- 실패 뒤 다른 도구를 계획하거나 내부 오류·분석 결과를 노출하지 않는가
+
+```bash
+chemiguard119 evaluate-agent-trajectories \
+  --evaluation data/evaluation/agent_trajectory_scenarios_draft.jsonl \
+  --evaluation-profile INTERNAL_REGRESSION \
+  --report outputs/modeling/agent_trajectory_evaluation.json \
+  --json
+```
+
+2026-09-06 DRAFT 10개 시나리오·13개 step은 10/10 통과했습니다. memory checksum 실패,
+실패 후 도구 계획, 두 CAS 확인 전 결과 제시, 실패 분석 노출, 내부 timeout 상세 노출은
+각각 0건입니다. 판정은 `ADOPT_FOR_INTERNAL_REGRESSION_ONLY`입니다.
+
+사실 상태는 **부분 구현 또는 개발용 데모**입니다. 합성 관찰에 대한 정책 회귀이므로 실제
+LLM Agent의 자율 추론 성능, 실제 네트워크 SLO, 화학적 위험 정답, 현장 정확도 또는 운영
+안전성을 증명하지 않습니다. `COMPETITION_REVIEWED`와 `PILOT_REVIEWED` profile은 독립
+검수 행이 생기기 전까지 의도적으로 차단됩니다.
+
 ## 평가 profile과 section 평가
 
 ```bash
@@ -167,6 +199,7 @@ python scripts/evaluation/evaluate_verified_pairs.py \
 | `retrieval_regression_queries.csv` | 10 | KOSHA·CAMEO 근거 검색 회귀 검사 | 내부 초안 |
 | `retrieval_section_regression.jsonl` | 12 | 질문별 핵심·보조 MSDS 절 순위 검사 | 내부 초안 |
 | `incident_parser_seed.jsonl` | 6 | 신고문 구조화 데이터 형식 시드 | 학습·성능평가 불가 |
+| `agent_trajectory_scenarios_draft.jsonl` | 10개 시나리오·13 step | Agent 도구 순서·인자·재시도·중단·2-CAS Gate 회귀 | 합성 내부 초안 |
 | `material_ranker_self_retrieval_2026-08-01.json` | 300 | 공개 물성 프로필 검색·재순위화 회귀 | 자기검색, 현장 정확도 아님 |
 | `incident_adapted_resolver_temporal_2026-08-01.json` | 353/419 | 2019 검증·2020 잠금 시간 분할 | 반복 표현 적응 평가, 전국 정확도 아님 |
 | `incident_adapted_resolver_temporal_2026-08-02.json` | 353/419 | source-only CAS exact 후보 확장 전후 비교 | v4 채택 평가, 전국 정확도 아님 |
