@@ -64,8 +64,14 @@ def _analysis_report() -> dict:
 
 def _backend_report() -> dict:
     values = {
+        "confirmation_revision_count_after_new_evidence": 2,
         "old_confirmation_status": "SUPERSEDED",
+        "old_confirmation_superseded_by_new_evidence": True,
         "active_confirmation_status": "ACTIVE",
+        "new_evidence_confirmation_basis": "SITE_MSDS",
+        "new_evidence_confirmed_cas": "7664-93-9",
+        "new_evidence_confirmation_revision": 2,
+        "new_evidence_reanalyze_required": True,
         "stale_record_http_status": 409,
         "record_count_after_stale_attempt": 0,
         "fresh_record_http_status": 201,
@@ -80,7 +86,7 @@ def _backend_report() -> dict:
         for name, value in values.items()
     ]
     return {
-        "schema_version": "chemicheck119-backend-safety-evaluation-v1",
+        "schema_version": "chemicheck119-backend-safety-evaluation-v2",
         "status": "COMPLETED",
         "claim_scope": "INTERNAL_REGRESSION_ONLY",
         "field_validated": False,
@@ -142,7 +148,7 @@ def _fixture(tmp_path: Path) -> dict[str, Path]:
     _write(paths["speech_incheon_radio_sim"], _speech_report("2" * 64))
     schemas = {
         "analysis_engine": "chemicheck119-e2e-evaluation-report-v4",
-        "backend_state": "chemicheck119-backend-safety-evaluation-v1",
+        "backend_state": "chemicheck119-backend-safety-evaluation-v2",
         "speech_seoul_radio_sim": "stt-radio-sim-downstream-silver-eval-v1",
         "speech_incheon_radio_sim": "stt-radio-sim-downstream-silver-eval-v1",
     }
@@ -198,6 +204,18 @@ def test_aggregate_accepts_locked_separate_internal_suites(tmp_path: Path) -> No
             "wrong_single_cas_promotion_ground_truth_count"
         ]
         is None
+    )
+    assert (
+        report["safety_observations_across_separate_suites"][
+            "new_evidence_reanalysis_required"
+        ]
+        is True
+    )
+    assert (
+        report["safety_observations_across_separate_suites"][
+            "old_analysis_persisted_after_new_evidence_count"
+        ]
+        == 0
     )
     assert output.is_file()
 
