@@ -70,7 +70,7 @@ def load_incident_alias_records(
     source_bytes = path.read_bytes()
     source_sha256 = hashlib.sha256(source_bytes).hexdigest()
     with io.StringIO(source_bytes.decode("utf-8-sig"), newline="") as handle:
-        reader = csv.reader(handle)
+        reader = csv.reader(handle, strict=True)
         actual_columns = next(reader, [])
         if actual_columns != list(OUTPUT_COLUMNS):
             missing = sorted(REQUIRED_COLUMNS - set(actual_columns))

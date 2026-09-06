@@ -218,6 +218,52 @@ def test_rejects_raw_row_width_mismatch_before_projection(
     assert not manifest.exists()
 
 
+def test_rejects_unterminated_quote_in_official_source(tmp_path: Path) -> None:
+    source = tmp_path / "source.csv"
+    output = tmp_path / "output.csv"
+    manifest = tmp_path / "manifest.json"
+    first_row = ["" for _ in OFFICIAL_SOURCE_COLUMNS]
+    first_row[-1] = '"2020-01-01'
+    second_row = ["" for _ in OFFICIAL_SOURCE_COLUMNS]
+    source.write_text(
+        ",".join(OFFICIAL_SOURCE_COLUMNS)
+        + "\n"
+        + ",".join(first_row)
+        + "\n"
+        + ",".join(second_row)
+        + "\n",
+        encoding="utf-8-sig",
+    )
+
+    with pytest.raises(csv.Error, match="unexpected end of data"):
+        prepare_ulsan_resolver_source(source, output, manifest)
+
+    assert not output.exists()
+    assert not manifest.exists()
+
+
+def test_rejects_unterminated_quote_in_derived_csv(tmp_path: Path) -> None:
+    source = tmp_path / "source.csv"
+    output = tmp_path / "output.csv"
+    manifest = tmp_path / "manifest.json"
+    _write_source(source)
+    payload = prepare_ulsan_resolver_source(source, output, manifest)
+    output.write_text(
+        ",".join(OUTPUT_COLUMNS)
+        + '\n2020,64-17-5,에탄올,Ethanol,에틸 알코올,"Ethyl alcohol\n'
+        + "2020,67-56-1,메탄올,Methanol,메틸 알코올,Methyl alcohol\n",
+        encoding="utf-8-sig",
+    )
+    payload["derived"]["sha256"] = hashlib.sha256(output.read_bytes()).hexdigest()
+    manifest.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(csv.Error, match="unexpected end of data"):
+        load_incident_alias_records(output, manifest)
+
+
 def test_refuses_to_overwrite_existing_outputs(tmp_path: Path) -> None:
     source = tmp_path / "source.csv"
     output = tmp_path / "output.csv"

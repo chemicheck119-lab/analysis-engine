@@ -86,7 +86,7 @@ def _read_source(source_bytes: bytes) -> tuple[str, list[str], list[dict[str, st
         try:
             decoded = source_bytes.decode(encoding)
             with io.StringIO(decoded, newline="") as handle:
-                reader = csv.reader(handle)
+                reader = csv.reader(handle, strict=True)
                 raw_fieldnames = next(reader, [])
                 fieldnames = [str(item).strip() for item in raw_fieldnames]
                 normalized_fieldnames = [field.upper() for field in fieldnames]
