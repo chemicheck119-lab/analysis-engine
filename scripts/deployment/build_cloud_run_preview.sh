@@ -44,10 +44,18 @@ test -z "$(git -C "$project_root" status --porcelain)" || {
   echo "preview 이미지는 clean commit에서만 만들 수 있습니다."
   exit 1
 }
+current_git_commit="$(git -C "$project_root" rev-parse HEAD)"
+test "$MODEL_GIT_COMMIT" = "$current_git_commit" || {
+  echo "MODEL_GIT_COMMIT이 현재 clean HEAD와 다릅니다."
+  echo "입력: $MODEL_GIT_COMMIT"
+  echo "HEAD: $current_git_commit"
+  exit 1
+}
 python "$project_root/scripts/deployment/validate_manifest_runtime_versions.py" \
   --manifest "$PREVIEW_ARTIFACT_DIR/runtime_manifest.json" \
   --requirements "$project_root/requirements-production.txt" \
-  --dockerfile "$project_root/Dockerfile.preview"
+  --dockerfile "$project_root/Dockerfile.preview" \
+  --expected-git-commit "$MODEL_GIT_COMMIT"
 
 build_context="$(mktemp -d)"
 cleanup() {
