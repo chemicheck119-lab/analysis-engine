@@ -38,6 +38,7 @@ CAS_PATTERN = re.compile(r"^\d{2,7}-\d{2}-\d$")
 RECORD_KEY_PATTERN = re.compile(r"^[0-9a-f]{16}$")
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 GIT_COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
+LOCAL_MODEL_API_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 Analyze = Callable[[str, str], dict[str, Any]]
 
 
@@ -193,10 +194,7 @@ class ModelApiClient:
         parsed = parse.urlparse(base_url)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
             raise DownstreamEvaluationError("Model API URL이 올바르지 않습니다.")
-        if parsed.scheme != "https" and parsed.hostname not in {
-            "127.0.0.1",
-            "localhost",
-        }:
+        if parsed.scheme != "https" and parsed.hostname not in LOCAL_MODEL_API_HOSTS:
             raise DownstreamEvaluationError("원격 Model API는 HTTPS만 허용합니다.")
         if not api_key:
             raise DownstreamEvaluationError("Model API Key가 필요합니다.")
@@ -733,10 +731,24 @@ def required_secret_from_env(name: str) -> str:
     return value
 
 
+def bearer_token_from_env(name: str, *, base_url: str) -> str | None:
+    """원격 API에는 identity token을 강제하고 로컬 평가에서만 생략한다."""
+
+    value = os.getenv(name)
+    if value:
+        return value
+    if parse.urlparse(base_url).hostname in LOCAL_MODEL_API_HOSTS:
+        return None
+    raise DownstreamEvaluationError(
+        f"원격 Model API에 필요한 인증 환경변수가 없습니다: {name}"
+    )
+
+
 __all__ = [
     "DownstreamEvaluationError",
     "MAX_WORKERS",
     "ModelApiClient",
+    "bearer_token_from_env",
     "build_report",
     "evaluate_pairs",
     "load_private_records",

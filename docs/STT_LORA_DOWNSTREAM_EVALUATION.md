@@ -31,6 +31,26 @@ downstream Gate 통과일 뿐이며 `automatic_adoption_allowed=false`를 유지
 Speech summary·private record·wind report는 owner-only 비공개 경로에 둡니다. 인증값은 명령
 인자가 아니라 환경변수로 전달합니다.
 
+현재 코드와 고정 artifact를 같은 호스트에서 실행하는 경우 identity token은 생략할 수
+있습니다. 이 예외는 `localhost`·`127.0.0.1`·`::1`에만 적용되며, 원격 HTTPS URL은 기존처럼
+identity token이 없으면 평가 시작 전에 실패합니다. 로컬 API도 별도의 평가용 API Key를
+사용합니다.
+
+```bash
+export CHEMIGUARD119_API_KEY=local-evaluation-only-key
+export CHEMIGUARD119_CONFIG_DIR=/private/model-runtime/config
+export CHEMIGUARD119_DB_PATH=/private/model-runtime/artifacts/chemiguard119.sqlite
+export CHEMIGUARD119_RESOLVER_MODEL=/private/model-runtime/artifacts/resolver.joblib
+export CHEMIGUARD119_RETRIEVER_MODEL=/private/model-runtime/artifacts/retriever.joblib
+chemiguard119-api
+```
+
+다른 터미널에서 아래 평가 명령의 `--model-api-base-url`을
+`http://127.0.0.1:8000`으로 지정합니다. `CHEMICHECK119_IDENTITY_TOKEN`은 설정하지 않습니다.
+
+Cloud Run처럼 IAM으로 보호된 원격 API를 평가할 때는 다음과 같이 두 인증값을 모두
+환경변수로 전달합니다.
+
 ```bash
 CHEMIGUARD119_API_KEY="$(gcloud secrets versions access 1 \
   --secret=chemicheck119-model-api-key --project=chemi-check)" \
