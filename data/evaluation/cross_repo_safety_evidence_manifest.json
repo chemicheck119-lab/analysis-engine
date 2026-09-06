@@ -1,0 +1,26 @@
+{
+  "schema_version": "chemicheck119-cross-repo-safety-evidence-manifest-v1",
+  "fact_status": "부분 구현 또는 개발용 데모",
+  "sources": {
+    "analysis_engine": {
+      "repository": "chemicheck119-lab/analysis-engine",
+      "expected_schema_version": "chemicheck119-e2e-evaluation-report-v3",
+      "expected_sha256": "43c17ab2e86369d63ce1bc2be7a7f5fed59d352df6db9b530fb3c196c00ab98b"
+    },
+    "backend_state": {
+      "repository": "chemicheck119-lab/back",
+      "expected_schema_version": "chemicheck119-backend-safety-evaluation-v1",
+      "expected_sha256": "deca81276b8d339d9be9940e6b3cccefa2af89f5c992bbb1616bb5c5074cc25e"
+    },
+    "speech_seoul_radio_sim": {
+      "repository": "chemicheck119-lab/speech-service",
+      "expected_schema_version": "stt-radio-sim-downstream-silver-eval-v1",
+      "expected_sha256": "88ff44ee77082ac04fa1db8d910dc4248237ecdc3048d6f8aa5fb37af5dbea42"
+    },
+    "speech_incheon_radio_sim": {
+      "repository": "chemicheck119-lab/speech-service",
+      "expected_schema_version": "stt-radio-sim-downstream-silver-eval-v1",
+      "expected_sha256": "f4c42101e370c0770e387dfc8b58f153dec407500bcaa775e649a30c2d36d6fa"
+    }
+  }
+}
