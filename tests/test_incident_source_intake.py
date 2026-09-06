@@ -156,6 +156,33 @@ def test_rejects_missing_required_source_column(tmp_path: Path) -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "row",
+    [
+        "2020,64-17-5,에탄올,Ethanol,에틸 알코올",
+        "2020,64-17-5,에탄올,Ethanol,에틸 알코올,Ethyl alcohol,숨은 위치 값",
+    ],
+)
+def test_rejects_raw_row_width_mismatch_before_projection(
+    tmp_path: Path,
+    row: str,
+) -> None:
+    source = tmp_path / "source.csv"
+    output = tmp_path / "output.csv"
+    manifest = tmp_path / "manifest.json"
+    source.write_text(
+        "OCRN_YR,CAS_NO,CHEM_SBSTN_KORN_NM,CHEM_SBSTN_ENG_NM,"
+        "GNRL_KORN_NM,GNRL_ENG_NM\n" + row + "\n",
+        encoding="utf-8-sig",
+    )
+
+    with pytest.raises(ValueError, match="열 개수가 header와 다릅니다"):
+        prepare_ulsan_resolver_source(source, output, manifest)
+
+    assert not output.exists()
+    assert not manifest.exists()
+
+
 def test_refuses_to_overwrite_existing_outputs(tmp_path: Path) -> None:
     source = tmp_path / "source.csv"
     output = tmp_path / "output.csv"

@@ -81,8 +81,8 @@ CAS는 정확한 과거 표현에 한해 확인 필요 후보로 포함합니다
 ```bash
 PYTHONPATH=src python scripts/data/prepare_ulsan_resolver_source.py \
   --source /private/raw/유해물질판단_2020_2015.csv \
-  --output /private/derived/ulsan-resolver-source.csv \
-  --manifest /private/derived/ulsan-resolver-source.manifest.json
+  --output /private/derived/07_울산소방_화학사고별_유해물질판단.csv \
+  --manifest /private/derived/07_울산소방_화학사고별_유해물질판단.manifest.json
 ```
 
 원본 음성·주소·전사문과 마찬가지로 이 파생 CSV와 manifest도 Git에 커밋하지 않습니다. 기존
@@ -93,8 +93,8 @@ PYTHONPATH=src python scripts/data/prepare_ulsan_resolver_source.py \
 ```bash
 chemiguard119 finetune-resolver \
   --base-model artifacts/resolver.joblib \
-  --incidents /private/derived/ulsan-resolver-source.csv \
-  --source-manifest /private/derived/ulsan-resolver-source.manifest.json \
+  --incidents /private/derived/07_울산소방_화학사고별_유해물질판단.csv \
+  --source-manifest /private/derived/07_울산소방_화학사고별_유해물질판단.manifest.json \
   --output-dir artifacts/incident_adaptation \
   --report outputs/modeling/incident_adapted_resolver_evaluation.json \
   --json

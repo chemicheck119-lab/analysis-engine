@@ -57,8 +57,23 @@ def _read_source(source_bytes: bytes) -> tuple[str, list[str], list[dict[str, st
                 fieldnames = [
                     str(item or "").strip() for item in reader.fieldnames or []
                 ]
+                normalized_fieldnames = [field.upper() for field in fieldnames]
+                if (
+                    not fieldnames
+                    or any(not field for field in fieldnames)
+                    or len(normalized_fieldnames) != len(set(normalized_fieldnames))
+                ):
+                    raise ValueError(
+                        "원본 CSV header에 빈 값 또는 중복 컬럼이 있습니다."
+                    )
                 rows: list[dict[str, str]] = []
-                for row in reader:
+                for row_number, row in enumerate(reader, start=2):
+                    if None in row or any(
+                        value is None for key, value in row.items() if key is not None
+                    ):
+                        raise ValueError(
+                            f"원본 CSV 행의 열 개수가 header와 다릅니다: {row_number}행"
+                        )
                     preserved: dict[str, str] = {}
                     for key, value in row.items():
                         if key is None:

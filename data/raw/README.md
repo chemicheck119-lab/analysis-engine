@@ -56,8 +56,8 @@ sidecar를 추가로 사용합니다.
 ```bash
 PYTHONPATH=src python scripts/data/prepare_ulsan_resolver_source.py \
   --source /private/raw/유해물질판단_2020_2015.csv \
-  --output /private/derived/ulsan-resolver-source.csv \
-  --manifest /private/derived/ulsan-resolver-source.manifest.json
+  --output /private/derived/07_울산소방_화학사고별_유해물질판단.csv \
+  --manifest /private/derived/07_울산소방_화학사고별_유해물질판단.manifest.json
 ```
 
 기본 카탈로그에 없는 유효 CAS는 현재 재고나 상세 MSDS로 승격하지 않습니다. 과거 소방
@@ -67,8 +67,8 @@ PYTHONPATH=src python scripts/data/prepare_ulsan_resolver_source.py \
 ```bash
 chemiguard119 finetune-resolver \
   --base-model artifacts/resolver.joblib \
-  --incidents /private/derived/ulsan-resolver-source.csv \
-  --source-manifest /private/derived/ulsan-resolver-source.manifest.json \
+  --incidents /private/derived/07_울산소방_화학사고별_유해물질판단.csv \
+  --source-manifest /private/derived/07_울산소방_화학사고별_유해물질판단.manifest.json \
   --output-dir artifacts/incident_adaptation \
   --report outputs/modeling/incident_adapted_resolver_evaluation.json
 ```

@@ -351,8 +351,8 @@ python scripts/evaluation/evaluate_material_ranker.py \
 ```bash
 chemiguard119 finetune-resolver \
   --base-model artifacts/resolver.joblib \
-  --incidents /private/derived/ulsan-resolver-source.csv \
-  --source-manifest /private/derived/ulsan-resolver-source.manifest.json \
+  --incidents /private/derived/07_울산소방_화학사고별_유해물질판단.csv \
+  --source-manifest /private/derived/07_울산소방_화학사고별_유해물질판단.manifest.json \
   --output-dir artifacts/incident_adaptation \
   --report outputs/modeling/incident_adapted_resolver_evaluation.json \
   --json
