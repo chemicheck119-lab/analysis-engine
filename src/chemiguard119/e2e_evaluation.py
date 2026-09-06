@@ -24,6 +24,7 @@ from chemiguard119.evaluation_contract import (
     evaluate_dataset_contract,
     load_evaluation_rows,
 )
+from chemiguard119.facility import search_facility_history
 from chemiguard119.paths import CONFIG_DIR
 from chemiguard119.pipeline import analyze_incident, validate_pipeline_output
 from chemiguard119.rag import GroundedRagService, RagConfig
@@ -33,8 +34,8 @@ from chemiguard119.rules import PUBLIC_SOURCE_PILOT_POLICY
 from chemiguard119.utils import sha256_file, write_json
 
 
-E2E_METRICS_VERSION = "incident-e2e-evaluation-v3"
-E2E_REPORT_SCHEMA_VERSION = "chemicheck119-e2e-evaluation-report-v3"
+E2E_METRICS_VERSION = "incident-e2e-evaluation-v4"
+E2E_REPORT_SCHEMA_VERSION = "chemicheck119-e2e-evaluation-report-v4"
 SUPPORTED_CAPABILITIES = frozenset(
     {
         "PARSER_CANDIDATE",
@@ -48,11 +49,13 @@ SUPPORTED_CAPABILITIES = frozenset(
         "UNREGISTERED_PRODUCT_ABSTENTION",
         "RETRIEVER_TIMEOUT_ABSTENTION",
         "LLM_TIMEOUT_EXTRACTIVE_FALLBACK",
+        "FACILITY_HISTORY_ABSENCE",
     }
 )
 SUPPORTED_FAULTS = frozenset({"RETRIEVER_TIMEOUT", "LLM_TIMEOUT"})
 
 Analyzer = Callable[..., dict[str, Any]]
+FacilitySearcher = Callable[..., dict[str, Any]]
 
 
 def _percentile(values: list[float], percentile: float) -> float | None:
@@ -110,6 +113,18 @@ def _validate_rows(rows: list[Mapping[str, Any]]) -> None:
             raise ValueError(
                 f"{case_id}: input.faults는 지원하는 fault 문자열 배열이어야 합니다."
             )
+        facility_query = input_payload.get("facility_history_query")
+        if facility_query is not None:
+            _require_string(
+                facility_query,
+                "input.facility_history_query",
+                case_id,
+            )
+            province = input_payload.get("facility_history_province")
+            if province is not None and not isinstance(province, str):
+                raise ValueError(
+                    f"{case_id}: input.facility_history_province는 문자열 또는 null이어야 합니다."
+                )
         if not isinstance(expected, Mapping):
             raise ValueError(f"{case_id}: expected 객체가 필요합니다.")
         for field in (
@@ -145,6 +160,26 @@ def _validate_rows(rows: list[Mapping[str, Any]]) -> None:
         if not isinstance(expected["expect_abstention"], bool):
             raise ValueError(
                 f"{case_id}: expected.expect_abstention은 boolean이어야 합니다."
+            )
+        expected_facility = expected.get("facility_history")
+        if facility_query is not None:
+            if not isinstance(expected_facility, Mapping):
+                raise ValueError(
+                    f"{case_id}: 시설 이력 조회에는 expected.facility_history가 필요합니다."
+                )
+            for field in (
+                "status",
+                "result_count",
+                "any_current_inventory_confirmed",
+                "any_rule_eligible",
+            ):
+                if field not in expected_facility:
+                    raise ValueError(
+                        f"{case_id}: expected.facility_history.{field}가 필요합니다."
+                    )
+        elif expected_facility is not None:
+            raise ValueError(
+                f"{case_id}: input.facility_history_query 없이 expected.facility_history를 사용할 수 없습니다."
             )
         expected_rag = expected.get("grounded_rag")
         if "LLM_TIMEOUT" in faults and expected_rag is None:
@@ -247,6 +282,25 @@ def summarize_grounded_rag(payload: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def summarize_facility_history(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """현재 재고로 오해할 필드를 제거한 시설 과거 이력 안전 요약을 만든다."""
+
+    results = payload.get("results")
+    rows = results if isinstance(results, list) else []
+    return {
+        "status": payload.get("status"),
+        "result_count": len(rows),
+        "any_current_inventory_confirmed": any(
+            isinstance(row, Mapping) and row.get("current_inventory_confirmed") is True
+            for row in rows
+        ),
+        "any_rule_eligible": any(
+            isinstance(row, Mapping) and row.get("rule_eligible") is True
+            for row in rows
+        ),
+    }
+
+
 def _compare(expected: Mapping[str, Any], actual: Mapping[str, Any]) -> list[str]:
     failures: list[str] = []
     exact_fields = (
@@ -311,6 +365,30 @@ def _compare_grounded_rag(
     return failures
 
 
+def _compare_facility_history(
+    expected: Mapping[str, Any], actual: Mapping[str, Any]
+) -> list[str]:
+    failures: list[str] = []
+    for field in (
+        "status",
+        "result_count",
+        "any_current_inventory_confirmed",
+        "any_rule_eligible",
+    ):
+        if actual.get(field) != expected.get(field):
+            failures.append(
+                "facility_history."
+                f"{field}: expected={expected.get(field)!r}, actual={actual.get(field)!r}"
+            )
+    if actual.get("status") == "NO_HISTORY_MATCH" and actual.get("result_count") != 0:
+        failures.append("facility_history.NO_HISTORY_MATCH_WITH_RESULTS")
+    if actual.get("any_current_inventory_confirmed") is True:
+        failures.append("facility_history.CURRENT_INVENTORY_AUTO_CONFIRMED")
+    if actual.get("any_rule_eligible") is True:
+        failures.append("facility_history.CANDIDATE_PROMOTED_TO_RULE_INPUT")
+    return failures
+
+
 def evaluate_incident_scenarios(
     db_path: Path,
     resolver_model_path: Path,
@@ -323,6 +401,7 @@ def evaluate_incident_scenarios(
     resolver_artifact: dict[str, Any] | None = None,
     retriever_artifact: dict[str, Any] | None = None,
     analyzer: Analyzer | None = None,
+    facility_searcher: FacilitySearcher | None = None,
 ) -> dict[str, Any]:
     """실제 사고 분석 경로의 안전 상태 전이를 시나리오별로 검사한다."""
 
@@ -348,6 +427,7 @@ def evaluate_incident_scenarios(
         else load_retriever(retriever_model_path)
     )
     analyze = analyzer or analyze_incident
+    search_facility = facility_searcher or search_facility_history
 
     case_reports: list[dict[str, Any]] = []
     unsafe_conflict_execution_count = 0
@@ -359,6 +439,8 @@ def evaluate_incident_scenarios(
     llm_timeout_fallback_pass_count = 0
     grounded_rag_contract_pass_count = 0
     uncited_grounded_rag_case_count = 0
+    facility_history_expected_count = 0
+    facility_history_pass_count = 0
     capability_totals: Counter[str] = Counter()
     capability_passes: Counter[str] = Counter()
 
@@ -369,6 +451,25 @@ def evaluate_incident_scenarios(
         capabilities = [str(item) for item in row["capabilities"]]
         faults = [str(item) for item in input_payload.get("faults", [])]
         started = time.perf_counter()
+        facility_history_actual: dict[str, Any] | None = None
+        facility_history_failures: list[str] = []
+        facility_query = input_payload.get("facility_history_query")
+        if facility_query is not None:
+            facility_history_expected_count += 1
+            facility_result = search_facility(
+                str(facility_query),
+                db_path,
+                province=input_payload.get("facility_history_province"),
+                top_k=10,
+            )
+            facility_history_actual = summarize_facility_history(facility_result)
+            expected_facility = expected.get("facility_history")
+            facility_history_failures = _compare_facility_history(
+                expected_facility if isinstance(expected_facility, Mapping) else {},
+                facility_history_actual,
+            )
+            if not facility_history_failures:
+                facility_history_pass_count += 1
         analyzer_kwargs: dict[str, Any] = {}
         if "RETRIEVER_TIMEOUT" in faults:
 
@@ -412,7 +513,7 @@ def evaluate_incident_scenarios(
         if unconfirmed_risk:
             unconfirmed_risk_exposure_count += 1
 
-        failures = _compare(expected, actual)
+        failures = [*_compare(expected, actual), *facility_history_failures]
         grounded_rag_actual: dict[str, Any] | None = None
         grounded_rag_contract_passed: bool | None = None
         if "LLM_TIMEOUT" in faults:
@@ -500,6 +601,7 @@ def evaluate_incident_scenarios(
                 "contract_passed": contract_passed,
                 "grounded_rag": grounded_rag_actual,
                 "grounded_rag_contract_passed": grounded_rag_contract_passed,
+                "facility_history": facility_history_actual,
                 "unsafe_conflict_execution": unsafe_execution,
                 "unconfirmed_risk_exposure": unconfirmed_risk,
                 "failures": failures,
@@ -535,6 +637,12 @@ def evaluate_incident_scenarios(
             else None
         ),
         "uncited_grounded_rag_case_count": uncited_grounded_rag_case_count,
+        "facility_history_expected_count": facility_history_expected_count,
+        "facility_history_absence_pass_rate": (
+            facility_history_pass_count / facility_history_expected_count
+            if facility_history_expected_count
+            else None
+        ),
         "latency_ms": {
             "mean": sum(latencies) / len(latencies) if latencies else None,
             "p95": _percentile(latencies, 0.95),
@@ -574,6 +682,9 @@ def evaluate_incident_scenarios(
             "rag_source": _artifact_identity(
                 Path(GroundedRagService.answer.__code__.co_filename)
             ),
+            "facility_source": _artifact_identity(
+                Path(search_facility_history.__code__.co_filename)
+            ),
         },
         "cases": case_reports,
         "limitations": [
@@ -581,6 +692,7 @@ def evaluate_incident_scenarios(
             "현재 시나리오는 독립 검수·현장 표본·전국 분포를 포함하지 않습니다.",
             "파일럿 판정에는 별도 PILOT_REVIEWED 200건 이상과 현장 검증이 필요합니다.",
             "LLM timeout은 결정적 fault injection이며 실제 네트워크 가용성이나 복구 시간을 측정하지 않습니다.",
+            "시설 이력 없음은 모의 시설명과 과거 공개 이력 DB의 NO_HISTORY_MATCH 회귀이며 실제 현장 재고 부재를 뜻하지 않습니다.",
         ],
     }
     if report_path is not None:
@@ -597,5 +709,6 @@ __all__ = [
     "SUPPORTED_FAULTS",
     "evaluate_incident_scenarios",
     "summarize_grounded_rag",
+    "summarize_facility_history",
     "summarize_pipeline_output",
 ]

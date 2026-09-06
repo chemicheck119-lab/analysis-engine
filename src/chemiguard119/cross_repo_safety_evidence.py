@@ -15,7 +15,7 @@ from chemiguard119.utils import sha256_file, write_json
 
 
 MANIFEST_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-manifest-v1"
-REPORT_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-report-v1"
+REPORT_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-report-v2"
 SOURCE_IDS = (
     "analysis_engine",
     "backend_state",
@@ -28,6 +28,7 @@ REQUIRED_ANALYSIS_CAPABILITIES = frozenset(
         "CONFIRMATION_GATE",
         "DETERMINISTIC_CONFLICT_RULE",
         "EVIDENCE_CAS_LOCK",
+        "FACILITY_HISTORY_ABSENCE",
         "INVALID_INPUT_REJECTION",
         "LLM_TIMEOUT_EXTRACTIVE_FALLBACK",
         "RETRIEVER_TIMEOUT_ABSTENTION",
@@ -120,7 +121,7 @@ def _validate_analysis(report: Mapping[str, Any]) -> list[str]:
     _append_if(errors, report.get("status") != "COMPLETED", "ANALYSIS_NOT_COMPLETED")
     _append_if(
         errors,
-        report.get("metrics_version") != "incident-e2e-evaluation-v3",
+        report.get("metrics_version") != "incident-e2e-evaluation-v4",
         "ANALYSIS_METRICS_VERSION_MISMATCH",
     )
     _append_if(
@@ -191,6 +192,8 @@ def _validate_analysis(report: Mapping[str, Any]) -> list[str]:
         "llm_timeout_fallback_pass_rate": 1.0,
         "grounded_rag_contract_pass_rate": 1.0,
         "uncited_grounded_rag_case_count": 0,
+        "facility_history_expected_count": 1,
+        "facility_history_absence_pass_rate": 1.0,
     }
     for field, expected in expected_metrics.items():
         _append_if(
@@ -547,7 +550,7 @@ def aggregate_cross_repo_safety_evidence(
         "safety_observations_across_separate_suites": combined_safety,
         "unverified_gaps": [
             "음성부터 Backend 인계 기록까지 동일 request_id로 실행한 단일 전체 경로",
-            "시설 과거 이력이 없는 입력을 포함한 단일 전체 경로",
+            "시설 과거 이력 없음 결과를 HTTP API부터 Backend 인계까지 연결한 동일 request_id 경로",
             "실제 현장 무전 음성과 실제 화학사고 결과",
             "음성 물질명의 CAS 사람 정답",
             "Cloud SQL PostgreSQL 동시성·복구·가용성",
@@ -557,6 +560,7 @@ def aggregate_cross_repo_safety_evidence(
             "잠긴 네 보고서가 manifest SHA-256·schema와 일치함",
             "분리된 내부 회귀 suite에서 관측된 안전 계약 위반 건수",
             "Speech·Analysis·Backend 각 구현 경계의 제한된 회귀 상태",
+            "모의 시설명의 과거 공개 이력 NO_HISTORY_MATCH에서 시설 확인 Gate가 유지됨",
         ],
         "claims_not_allowed": [
             "한 요청의 음성→인계 전체 경로가 실행됐다는 주장",

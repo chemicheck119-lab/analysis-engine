@@ -23,6 +23,7 @@ def _analysis_report() -> dict:
             "CONFIRMATION_GATE",
             "DETERMINISTIC_CONFLICT_RULE",
             "EVIDENCE_CAS_LOCK",
+            "FACILITY_HISTORY_ABSENCE",
             "INVALID_INPUT_REJECTION",
             "LLM_TIMEOUT_EXTRACTIVE_FALLBACK",
             "RETRIEVER_TIMEOUT_ABSTENTION",
@@ -31,8 +32,8 @@ def _analysis_report() -> dict:
         )
     }
     return {
-        "schema_version": "chemicheck119-e2e-evaluation-report-v3",
-        "metrics_version": "incident-e2e-evaluation-v3",
+        "schema_version": "chemicheck119-e2e-evaluation-report-v4",
+        "metrics_version": "incident-e2e-evaluation-v4",
         "status": "COMPLETED",
         "claim_scope": "INTERNAL_REGRESSION_ONLY",
         "field_validated": False,
@@ -55,6 +56,8 @@ def _analysis_report() -> dict:
             "llm_timeout_fallback_pass_rate": 1.0,
             "grounded_rag_contract_pass_rate": 1.0,
             "uncited_grounded_rag_case_count": 0,
+            "facility_history_expected_count": 1,
+            "facility_history_absence_pass_rate": 1.0,
         },
     }
 
@@ -138,7 +141,7 @@ def _fixture(tmp_path: Path) -> dict[str, Path]:
     _write(paths["speech_seoul_radio_sim"], _speech_report("1" * 64))
     _write(paths["speech_incheon_radio_sim"], _speech_report("2" * 64))
     schemas = {
-        "analysis_engine": "chemicheck119-e2e-evaluation-report-v3",
+        "analysis_engine": "chemicheck119-e2e-evaluation-report-v4",
         "backend_state": "chemicheck119-backend-safety-evaluation-v1",
         "speech_seoul_radio_sim": "stt-radio-sim-downstream-silver-eval-v1",
         "speech_incheon_radio_sim": "stt-radio-sim-downstream-silver-eval-v1",
