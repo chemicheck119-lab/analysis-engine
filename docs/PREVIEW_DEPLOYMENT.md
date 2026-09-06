@@ -139,6 +139,11 @@ preview workflow는 `-preview` service, `model-api-preview@sha256:` image,
 `expert_reviewed=false`를 모두 확인합니다. 운영 `model-api@sha256:` workflow와 분리돼 있어
 `PILOT_REVIEWED` gate를 약화하지 않습니다.
 
+GitHub Actions는 Workload Identity Federation으로 배포 Service Account를 짧게 위임하고,
+`google-github-actions/auth`가 preview service URL을 audience로 하는 단기 ID token을
+발급합니다. 후보 tag URL과 stable service URL smoke는 같은 stable audience를 사용합니다.
+Service Account JSON key는 생성하거나 저장하지 않습니다.
+
 ## 백엔드 계약
 
 백엔드는 모델 API URL과 API Key를 서버 환경변수로만 보관합니다. FE에 Key를 전달하지
