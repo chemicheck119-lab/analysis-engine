@@ -20,6 +20,7 @@
 - 잘못된 CAS checksum 거부
 - 공개 규칙 미지원 조합의 위험등급 기권
 - 미등록 제품명과 Retriever timeout의 빈 근거 fail-closed
+- LLM timeout의 공식 근거 extractive fallback과 인용 보존
 
 ```bash
 chemiguard119 evaluate-e2e \
@@ -65,6 +66,36 @@ claim_scope=INTERNAL_REGRESSION_ONLY
 이는 합성 timeout 한 종류의 내부 안전 회귀입니다. 실제 장애 빈도·복구 시간·현장 검색
 정확도나 상용 가용성을 검증하지 않습니다. Backend confirmation correction과 stale·duplicate
 상태를 같은 report에 연결하는 작업도 남아 있습니다.
+
+### 2026-09-07 LLM timeout 회귀 추가
+
+평가 v3는 두 CAS가 각각 확인되고 CAMEO 공개 규칙이 완료된 시나리오에서 LLM requester가
+결정적으로 `TimeoutError`를 내도록 주입합니다. 파이프라인은 Rule 결과를 유지하되 LLM이
+새 설명을 생성하지 않고, 공식 CAMEO 근거를 인용한 extractive 문장으로 전환해야 합니다.
+
+```text
+DRAFT 시나리오 10/10 통과
+LLM timeout extractive fallback 1/1 통과
+Grounded RAG 출력 계약 1/1 통과
+인용되지 않은 fallback 문장 0건
+미확인 Rule 실행 0건
+미확인 위험등급 노출 0건
+평균 89.281ms / p95 113.941ms
+claim_scope=INTERNAL_REGRESSION_ONLY
+```
+
+- report SHA-256: `43c17ab2e86369d63ce1bc2be7a7f5fed59d352df6db9b530fb3c196c00ab98b`
+- dataset SHA-256: `d5bcc9a2037e067d5e8028de22d02de822c1f75a6784fd9f8c48ff147083e586`
+- DB SHA-256: `ed81fe9aac45a38880920d967ce8f3954acabfedf7b2f6ea59464552e7958b91`
+- Resolver SHA-256: `2696fa7f067163055ff556e5e12ccfa15e7dc08c9ff803838f0db074aa002dff`
+- Retriever SHA-256: `2e93e066648890400b26f56b532d6ed608b828203f8668e4af3cf63de1bc544b`
+- evaluator source SHA-256: `1b824beb66a235ecf324108261e4d18a49666b0db15ef2a31f348348bcd79f74`
+- pipeline source SHA-256: `81abb1c68e913442fd2b69bafff9f683e116a9bc1664b5e1ced4a27896470e1c`
+- RAG source SHA-256: `bd527c4d83eb67ba3409744417ad6743b3aafffa3055e9b53c47f7106c074df5`
+
+이는 결정적 timeout 1건의 내부 회귀입니다. 실제 LLM endpoint 장애율·네트워크 SLO·응답
+품질을 측정하지 않으며 현장 안전성을 증명하지 않습니다. Backend confirmation correction과
+stale·duplicate 상태를 같은 report에 연결하는 작업도 남아 있습니다.
 
 ### 향후 사람 검수용 E2E 50건 후보
 

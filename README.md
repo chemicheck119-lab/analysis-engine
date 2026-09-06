@@ -8,7 +8,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)](docs/API.md)
 [![Docker](https://img.shields.io/badge/Deploy-Docker%20%7C%20Cloud%20Run-4285F4?logo=googlecloud&logoColor=white)](docs/DEPLOYMENT.md)
-[![Tests](https://img.shields.io/badge/Tests-489%20passed-2E7D32)](docs/EVALUATION.md)
+[![Tests](https://img.shields.io/badge/Tests-490%20passed-2E7D32)](docs/EVALUATION.md)
 
 - **참가 부문:** [제6회 소방안전 빅데이터 활용 및 아이디어 경진대회](https://www.bigdata-119.kr/bbs/view?bbsctt_id=571) · 서비스 개발 부문
 - **AI 스택:** Incident Agent · Resolver Fine-tuning · Hybrid Retrieval · Grounded RAG · CAMEO Rule Engine · FastAPI
@@ -113,7 +113,7 @@ flowchart LR
 | 전국 시설 과거 이력 | **17개 시·도 · 28,647개 시설** |
 | 공식 근거 검색 인덱스 | 약 **5,858개 문서·절** |
 | CAMEO 충돌 규칙 코어 | **CAS 6종 · 15조합** |
-| 자동화 테스트 | **489개** |
+| 자동화 테스트 | **490개** |
 
 평가 데이터, 분할 정책, 실패 사례와 재현 명령은 [모델 평가 문서](docs/EVALUATION.md)에서
 관리합니다. Resolver 수치는 과거 공개 사고 표현 재식별 평가이며 전국 현장 정확도가 아닙니다.

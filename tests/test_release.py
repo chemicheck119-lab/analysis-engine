@@ -174,7 +174,7 @@ def _report_payload(
             },
         },
         "e2e_scenarios": {
-            "metrics_version": "incident-e2e-evaluation-v2",
+            "metrics_version": "incident-e2e-evaluation-v3",
             "case_count": case_count,
             "metrics": {
                 "output_contract_pass_rate": 1.0,

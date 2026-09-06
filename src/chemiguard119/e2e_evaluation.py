@@ -11,13 +11,14 @@ DRAFT 시나리오는 내부 회귀에만 사용할 수 있다. 현장 성능이
 
 from __future__ import annotations
 
+import json
 import math
 import time
 from collections import Counter
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
-from chemiguard119.api_models import contains_unconfirmed_risk_output
+from chemiguard119.api_models import GroundedRagAnswer, contains_unconfirmed_risk_output
 from chemiguard119.evaluation_contract import (
     EvaluationProfile,
     evaluate_dataset_contract,
@@ -25,14 +26,15 @@ from chemiguard119.evaluation_contract import (
 )
 from chemiguard119.paths import CONFIG_DIR
 from chemiguard119.pipeline import analyze_incident, validate_pipeline_output
+from chemiguard119.rag import GroundedRagService, RagConfig
 from chemiguard119.resolver import load_resolver
 from chemiguard119.retrieval import load_retriever
 from chemiguard119.rules import PUBLIC_SOURCE_PILOT_POLICY
 from chemiguard119.utils import sha256_file, write_json
 
 
-E2E_METRICS_VERSION = "incident-e2e-evaluation-v2"
-E2E_REPORT_SCHEMA_VERSION = "chemicheck119-e2e-evaluation-report-v2"
+E2E_METRICS_VERSION = "incident-e2e-evaluation-v3"
+E2E_REPORT_SCHEMA_VERSION = "chemicheck119-e2e-evaluation-report-v3"
 SUPPORTED_CAPABILITIES = frozenset(
     {
         "PARSER_CANDIDATE",
@@ -45,9 +47,10 @@ SUPPORTED_CAPABILITIES = frozenset(
         "UNSUPPORTED_PAIR_ABSTENTION",
         "UNREGISTERED_PRODUCT_ABSTENTION",
         "RETRIEVER_TIMEOUT_ABSTENTION",
+        "LLM_TIMEOUT_EXTRACTIVE_FALLBACK",
     }
 )
-SUPPORTED_FAULTS = frozenset({"RETRIEVER_TIMEOUT"})
+SUPPORTED_FAULTS = frozenset({"RETRIEVER_TIMEOUT", "LLM_TIMEOUT"})
 
 Analyzer = Callable[..., dict[str, Any]]
 
@@ -143,6 +146,27 @@ def _validate_rows(rows: list[Mapping[str, Any]]) -> None:
             raise ValueError(
                 f"{case_id}: expected.expect_abstention은 boolean이어야 합니다."
             )
+        expected_rag = expected.get("grounded_rag")
+        if "LLM_TIMEOUT" in faults and expected_rag is None:
+            raise ValueError(
+                f"{case_id}: LLM_TIMEOUT에는 expected.grounded_rag가 필요합니다."
+            )
+        if expected_rag is not None:
+            if not isinstance(expected_rag, Mapping):
+                raise ValueError(f"{case_id}: expected.grounded_rag는 객체여야 합니다.")
+            for field in (
+                "status",
+                "used_llm",
+                "fallback_reason",
+                "minimum_statement_count",
+                "minimum_citation_count",
+                "citation_validation_passed",
+                "risk_decision_source",
+            ):
+                if field not in expected_rag:
+                    raise ValueError(
+                        f"{case_id}: expected.grounded_rag.{field}가 필요합니다."
+                    )
         if not isinstance(capabilities, list) or not capabilities:
             raise ValueError(
                 f"{case_id}: capabilities는 비어 있지 않은 문자열 배열이어야 합니다."
@@ -188,6 +212,41 @@ def summarize_pipeline_output(payload: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def summarize_grounded_rag(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """LLM 원문이나 내부 오류 없이 fallback 안전 속성만 요약한다."""
+
+    statements = payload.get("statements")
+    statement_rows = statements if isinstance(statements, list) else []
+    citations = payload.get("citations")
+    citation_rows = citations if isinstance(citations, list) else []
+    citation_ids = {
+        str(item.get("source_id"))
+        for item in citation_rows
+        if isinstance(item, Mapping) and item.get("source_id")
+    }
+    referenced_ids = {
+        str(source_id)
+        for statement in statement_rows
+        if isinstance(statement, Mapping)
+        for source_id in statement.get("source_ids") or []
+    }
+    citation_validation = payload.get("citation_validation")
+    validation_payload = (
+        citation_validation if isinstance(citation_validation, Mapping) else {}
+    )
+    return {
+        "status": payload.get("status"),
+        "used_llm": payload.get("used_llm"),
+        "fallback_reason": payload.get("fallback_reason"),
+        "statement_count": len(statement_rows),
+        "citation_count": len(citation_rows),
+        "citation_validation_passed": validation_payload.get("passed"),
+        "all_statement_sources_cited": bool(statement_rows)
+        and referenced_ids.issubset(citation_ids),
+        "risk_decision_source": payload.get("risk_decision_source"),
+    }
+
+
 def _compare(expected: Mapping[str, Any], actual: Mapping[str, Any]) -> list[str]:
     failures: list[str] = []
     exact_fields = (
@@ -218,6 +277,37 @@ def _compare(expected: Mapping[str, Any], actual: Mapping[str, Any]) -> list[str
             failures.append(
                 f"{field}: expected={expected.get(field)!r}, actual={actual.get(field)!r}"
             )
+    return failures
+
+
+def _compare_grounded_rag(
+    expected: Mapping[str, Any], actual: Mapping[str, Any]
+) -> list[str]:
+    failures: list[str] = []
+    for field in (
+        "status",
+        "used_llm",
+        "fallback_reason",
+        "citation_validation_passed",
+        "risk_decision_source",
+    ):
+        if actual.get(field) != expected.get(field):
+            failures.append(
+                "grounded_rag."
+                f"{field}: expected={expected.get(field)!r}, actual={actual.get(field)!r}"
+            )
+    for field, actual_field in (
+        ("minimum_statement_count", "statement_count"),
+        ("minimum_citation_count", "citation_count"),
+    ):
+        if int(actual.get(actual_field) or 0) < int(expected.get(field) or 0):
+            failures.append(
+                "grounded_rag."
+                f"{actual_field}: expected>={expected.get(field)!r}, "
+                f"actual={actual.get(actual_field)!r}"
+            )
+    if actual.get("all_statement_sources_cited") is not True:
+        failures.append("grounded_rag.all_statement_sources_cited=false")
     return failures
 
 
@@ -265,6 +355,10 @@ def evaluate_incident_scenarios(
     contract_pass_count = 0
     abstention_expected_count = 0
     abstention_pass_count = 0
+    llm_timeout_expected_count = 0
+    llm_timeout_fallback_pass_count = 0
+    grounded_rag_contract_pass_count = 0
+    uncited_grounded_rag_case_count = 0
     capability_totals: Counter[str] = Counter()
     capability_passes: Counter[str] = Counter()
 
@@ -273,9 +367,10 @@ def evaluate_incident_scenarios(
         input_payload = dict(row["input"])
         expected = dict(row["expected"])
         capabilities = [str(item) for item in row["capabilities"]]
+        faults = [str(item) for item in input_payload.get("faults", [])]
         started = time.perf_counter()
         analyzer_kwargs: dict[str, Any] = {}
-        if "RETRIEVER_TIMEOUT" in input_payload.get("faults", []):
+        if "RETRIEVER_TIMEOUT" in faults:
 
             def timeout_searcher(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
                 raise TimeoutError("deterministic retriever timeout fixture")
@@ -293,7 +388,6 @@ def evaluate_incident_scenarios(
             config_dir=config_dir,
             **analyzer_kwargs,
         )
-        latency_ms = (time.perf_counter() - started) * 1_000
         actual = summarize_pipeline_output(output)
         validation_errors = validate_pipeline_output(
             output, str(input_payload["raw_text"])
@@ -319,6 +413,57 @@ def evaluate_incident_scenarios(
             unconfirmed_risk_exposure_count += 1
 
         failures = _compare(expected, actual)
+        grounded_rag_actual: dict[str, Any] | None = None
+        grounded_rag_contract_passed: bool | None = None
+        if "LLM_TIMEOUT" in faults:
+            llm_timeout_expected_count += 1
+            private_timeout_detail = (
+                "private-llm-host.example.internal must not be exposed"
+            )
+
+            def timeout_requester(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+                raise TimeoutError(private_timeout_detail)
+
+            rag_service = GroundedRagService(
+                RagConfig(
+                    mode="llm",
+                    base_url="https://llm-timeout.invalid/v1",
+                    model="deterministic-timeout-fixture",
+                ),
+                requester=timeout_requester,
+            )
+            grounded_rag = rag_service.answer(
+                list(output.get("evidence") or []),
+                output.get("rule_review") or {},
+            )
+            try:
+                GroundedRagAnswer.model_validate(grounded_rag)
+            except Exception as error:
+                grounded_rag_contract_passed = False
+                failures.append(f"grounded_rag_contract_error={type(error).__name__}")
+            else:
+                grounded_rag_contract_passed = True
+                grounded_rag_contract_pass_count += 1
+            grounded_rag_actual = summarize_grounded_rag(grounded_rag)
+            expected_rag = expected.get("grounded_rag")
+            rag_failures = _compare_grounded_rag(
+                expected_rag if isinstance(expected_rag, Mapping) else {},
+                grounded_rag_actual,
+            )
+            failures.extend(rag_failures)
+            timeout_detail_exposed = private_timeout_detail in json.dumps(
+                grounded_rag, ensure_ascii=False
+            )
+            if timeout_detail_exposed:
+                failures.append("LLM_TIMEOUT_INTERNAL_DETAIL_EXPOSED")
+            if not grounded_rag_actual["all_statement_sources_cited"]:
+                uncited_grounded_rag_case_count += 1
+            if (
+                grounded_rag_contract_passed
+                and not rag_failures
+                and not timeout_detail_exposed
+            ):
+                llm_timeout_fallback_pass_count += 1
         if validation_errors:
             failures.append(f"pipeline_contract_errors={validation_errors!r}")
         if unsafe_execution:
@@ -341,6 +486,7 @@ def evaluate_incident_scenarios(
                 failures.append("EXPECTED_ABSTENTION_NOT_OBSERVED")
 
         passed = not failures
+        latency_ms = (time.perf_counter() - started) * 1_000
         for capability in capabilities:
             capability_totals[capability] += 1
             if passed:
@@ -352,6 +498,8 @@ def evaluate_incident_scenarios(
                 "capabilities": capabilities,
                 "actual": actual,
                 "contract_passed": contract_passed,
+                "grounded_rag": grounded_rag_actual,
+                "grounded_rag_contract_passed": grounded_rag_contract_passed,
                 "unsafe_conflict_execution": unsafe_execution,
                 "unconfirmed_risk_exposure": unconfirmed_risk,
                 "failures": failures,
@@ -375,6 +523,18 @@ def evaluate_incident_scenarios(
             if abstention_expected_count
             else None
         ),
+        "llm_timeout_expected_count": llm_timeout_expected_count,
+        "llm_timeout_fallback_pass_rate": (
+            llm_timeout_fallback_pass_count / llm_timeout_expected_count
+            if llm_timeout_expected_count
+            else None
+        ),
+        "grounded_rag_contract_pass_rate": (
+            grounded_rag_contract_pass_count / llm_timeout_expected_count
+            if llm_timeout_expected_count
+            else None
+        ),
+        "uncited_grounded_rag_case_count": uncited_grounded_rag_case_count,
         "latency_ms": {
             "mean": sum(latencies) / len(latencies) if latencies else None,
             "p95": _percentile(latencies, 0.95),
@@ -411,12 +571,16 @@ def evaluate_incident_scenarios(
             "pipeline_source": _artifact_identity(
                 Path(analyze_incident.__code__.co_filename)
             ),
+            "rag_source": _artifact_identity(
+                Path(GroundedRagService.answer.__code__.co_filename)
+            ),
         },
         "cases": case_reports,
         "limitations": [
             "DRAFT 시나리오는 내부 안전 회귀용이며 현장 정확도를 나타내지 않습니다.",
             "현재 시나리오는 독립 검수·현장 표본·전국 분포를 포함하지 않습니다.",
             "파일럿 판정에는 별도 PILOT_REVIEWED 200건 이상과 현장 검증이 필요합니다.",
+            "LLM timeout은 결정적 fault injection이며 실제 네트워크 가용성이나 복구 시간을 측정하지 않습니다.",
         ],
     }
     if report_path is not None:
@@ -432,5 +596,6 @@ __all__ = [
     "SUPPORTED_CAPABILITIES",
     "SUPPORTED_FAULTS",
     "evaluate_incident_scenarios",
+    "summarize_grounded_rag",
     "summarize_pipeline_output",
 ]

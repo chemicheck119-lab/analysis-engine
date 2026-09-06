@@ -128,7 +128,7 @@
       }
     },
     "e2e_scenarios": {
-      "metrics_version": "incident-e2e-evaluation-v2",
+      "metrics_version": "incident-e2e-evaluation-v3",
       "minimum_case_count": 200,
       "thresholds": {
         "metrics.output_contract_pass_rate": {
