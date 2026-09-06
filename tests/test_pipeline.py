@@ -151,6 +151,74 @@ def test_pipeline_surfaces_missing_same_cas_evidence_without_substitution(
     assert result["output_validation"] == {"status": "PASSED", "errors": []}
 
 
+def test_retriever_timeout_fails_closed_without_leaking_error(
+    tmp_path: Path,
+    resolver_artifact: dict,
+) -> None:
+    def timeout_search(*_args: object, **_kwargs: object) -> dict:
+        raise TimeoutError("PRIVATE_RETRIEVER_ENDPOINT_AND_QUERY")
+
+    result = analyze_incident(
+        "PX-119-Z 미등록 제품이 누출됐다는 신고",
+        db_path=tmp_path / "unused.sqlite",
+        resolver_artifact=resolver_artifact,
+        retriever_artifact={},
+        evidence_searcher=timeout_search,
+    )
+
+    retrieval = result["evidence"][0]["retrieval"]
+    assert retrieval["status"] == "RETRIEVAL_UNAVAILABLE"
+    assert retrieval["results"] == []
+    assert retrieval["cas_hint"] is None
+    assert "PRIVATE_RETRIEVER_ENDPOINT_AND_QUERY" not in str(result)
+    assert result["rule_review"]["executed"] is False
+    assert result["rule_review"]["status"] == "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS"
+    trace = next(
+        item for item in result["trace"] if item["stage"] == "EVIDENCE_RETRIEVAL"
+    )
+    assert trace["status"] == "COMPLETED_WITH_WARNINGS"
+    assert trace["retrieval_unavailable_count"] == 1
+    assert result["output_validation"] == {"status": "PASSED", "errors": []}
+
+    result["evidence"][0]["retrieval"]["results"] = [
+        {"evidence_id": "FORGED", "cas_number": "7647-01-0"}
+    ]
+    assert (
+        "근거 검색 장애 상태에 결과 문서를 포함할 수 없습니다."
+        in validate_pipeline_output(result)
+    )
+
+
+def test_retriever_timeout_with_one_confirmation_still_skips_rule(
+    tmp_path: Path,
+    resolver_artifact: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        pipeline_module,
+        "review_pair",
+        lambda *_args, **_kwargs: pytest.fail(
+            "Retriever timeout 뒤 한쪽 CAS만으로 Rule을 실행했습니다."
+        ),
+    )
+
+    result = analyze_incident(
+        "차아염소산나트륨 누출",
+        db_path=tmp_path / "unused.sqlite",
+        resolver_artifact=resolver_artifact,
+        retriever_artifact={},
+        confirmed_incident_cas="7681-52-9",
+        evidence_searcher=lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            TimeoutError("private timeout")
+        ),
+    )
+
+    assert result["status"] == "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION"
+    assert result["rule_review"]["executed"] is False
+    assert result["evidence"][0]["retrieval"]["status"] == "RETRIEVAL_UNAVAILABLE"
+    assert result["output_validation"] == {"status": "PASSED", "errors": []}
+
+
 def test_ambiguous_name_never_uses_first_candidate_as_evidence_cas_hint(
     tmp_path: Path,
 ) -> None:

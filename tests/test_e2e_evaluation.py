@@ -99,7 +99,7 @@ def test_e2e_evaluator_reports_safe_abstention(
         lambda *_args, **_kwargs: _safe_output(),
     )
 
-    assert report["metrics_version"] == "incident-e2e-evaluation-v1"
+    assert report["metrics_version"] == "incident-e2e-evaluation-v2"
     assert report["status"] == "COMPLETED"
     assert report["claim_scope"] == "INTERNAL_REGRESSION_ONLY"
     assert report["is_field_performance_estimate"] is False
@@ -108,6 +108,8 @@ def test_e2e_evaluator_reports_safe_abstention(
     assert report["metrics"]["unsafe_conflict_execution_count"] == 0
     assert report["metrics"]["unconfirmed_risk_exposure_count"] == 0
     assert report["metrics"]["expected_abstention_pass_rate"] == 1.0
+    assert report["artifacts"]["evaluator_source"]["sha256"]
+    assert report["artifacts"]["pipeline_source"]["sha256"]
 
 
 def test_e2e_evaluator_detects_rule_execution_without_two_confirmations(
@@ -193,14 +195,28 @@ def test_repository_e2e_scenarios_have_supported_schema(
             and row["input"].get("confirmed_facility_cas")
             == kwargs.get("confirmed_facility_cas")
         )
+        expected_retrieval_statuses = expected.get("retrieval_statuses")
         return {
             "status": expected["status"],
             "substance_candidates": [
                 {"role": role} for role in expected["candidate_roles"]
             ],
             "evidence": [
-                {"role": role, "cas_basis": basis}
-                for role, basis in expected["evidence_bases"].items()
+                {
+                    "role": role,
+                    "cas_basis": basis,
+                    "retrieval": {
+                        "status": (
+                            expected_retrieval_statuses[index]
+                            if expected_retrieval_statuses
+                            else None
+                        ),
+                        "results": [],
+                    },
+                }
+                for index, (role, basis) in enumerate(
+                    expected["evidence_bases"].items()
+                )
             ],
             "rule_review": {
                 "executed": expected["rule_executed"],
@@ -229,7 +245,55 @@ def test_repository_e2e_scenarios_have_supported_schema(
         retriever_artifact={},
         analyzer=analyzer,
     )
-    assert report["case_count"] == 8
+    assert report["case_count"] == 9
+
+
+def test_e2e_fault_fixture_injects_retriever_timeout(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed = {"timeout": False}
+
+    def analyzer(*_args: object, **kwargs: object) -> dict[str, Any]:
+        searcher = kwargs["evidence_searcher"]
+        with pytest.raises(TimeoutError, match="deterministic retriever timeout"):
+            searcher()
+        observed["timeout"] = True
+        output = _safe_output()
+        output["evidence"] = [
+            {
+                "role": "UNKNOWN",
+                "cas_basis": "NO_CAS_HINT",
+                "retrieval": {"status": "RETRIEVAL_UNAVAILABLE", "results": []},
+            }
+        ]
+        return output
+
+    row = _row(
+        capabilities=[
+            "UNREGISTERED_PRODUCT_ABSTENTION",
+            "RETRIEVER_TIMEOUT_ABSTENTION",
+        ],
+        input={
+            "raw_text": "PX-119-Z 미등록 제품이 누출됐다는 신고",
+            "confirmed_incident_cas": None,
+            "confirmed_facility_cas": None,
+            "faults": ["RETRIEVER_TIMEOUT"],
+        },
+        expected={
+            **_row()["expected"],
+            "retrieval_statuses": ["RETRIEVAL_UNAVAILABLE"],
+        },
+    )
+
+    report = _evaluate(tmp_path, monkeypatch, [row], analyzer)
+
+    assert observed["timeout"] is True
+    assert report["status"] == "COMPLETED"
+    assert (
+        report["capability_coverage"]["RETRIEVER_TIMEOUT_ABSTENTION"]["pass_rate"]
+        == 1.0
+    )
 
 
 def test_cli_exposes_e2e_evaluation_command() -> None:

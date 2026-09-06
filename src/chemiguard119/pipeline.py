@@ -15,7 +15,7 @@ artifact를 시작 시 한 번 로드한 뒤 :func:`analyze_incident`에 전달�
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
 from chemiguard119.incident import deterministic_parse, validate_parser_output
 from chemiguard119.paths import CONFIG_DIR
@@ -39,6 +39,9 @@ PIPELINE_SCHEMA_VERSION = "incident-analysis-v1"
 RULE_GATE = "BOTH_CAS_RESPONDER_CONFIRMED"
 FINAL_DECISION_AUTHORITY = "현장 지휘관 판단"
 CAS_EVIDENCE_NO_MATCH_STATUS = "NO_EVIDENCE_FOUND"
+RETRIEVAL_UNAVAILABLE_STATUS = "RETRIEVAL_UNAVAILABLE"
+
+EvidenceSearcher = Callable[..., dict[str, Any]]
 
 
 def _safety_fields() -> dict[str, Any]:
@@ -359,6 +362,11 @@ def validate_pipeline_output(
         cas_hint = item.get("cas_hint")
         retrieval = item.get("retrieval") or {}
         retrieval_results = retrieval.get("results") or []
+        if (
+            retrieval.get("status") == RETRIEVAL_UNAVAILABLE_STATUS
+            and retrieval_results
+        ):
+            errors.append("근거 검색 장애 상태에 결과 문서를 포함할 수 없습니다.")
         if cas_hint:
             normalized_hint = normalize_cas(str(cas_hint))
             if retrieval.get("cas_hint") != normalized_hint:
@@ -371,6 +379,7 @@ def validate_pipeline_output(
             if not retrieval_results and retrieval.get("status") not in {
                 CAS_EVIDENCE_NOT_LOADED_STATUS,
                 CAS_EVIDENCE_NO_MATCH_STATUS,
+                RETRIEVAL_UNAVAILABLE_STATUS,
             }:
                 errors.append("CAS 제한 검색의 빈 결과 상태가 올바르지 않습니다.")
 
@@ -392,6 +401,7 @@ def analyze_incident(
     policy_mode: str = APPROVED_ONLY_POLICY,
     config_dir: Path = CONFIG_DIR,
     evidence_top_k: int = 5,
+    evidence_searcher: EvidenceSearcher | None = None,
 ) -> dict[str, Any]:
     """사고 신고 한 건을 구조화하고 검증 가능한 분석 JSON으로 변환한다.
 
@@ -489,15 +499,32 @@ def analyze_incident(
     base["parsed_report"] = parsed
     base["substance_candidates"] = candidates
 
+    search = evidence_searcher or search_evidence
     evidence: list[dict[str, Any]] = []
     for target in _evidence_targets(raw_value, candidates, incident_cas, facility_cas):
-        retrieval = search_evidence(
-            target["query"],
-            db_path,
-            retriever_artifact,
-            cas_hint=target["cas_hint"],
-            top_k=evidence_top_k,
-        )
+        try:
+            retrieval = search(
+                target["query"],
+                db_path,
+                retriever_artifact,
+                cas_hint=target["cas_hint"],
+                top_k=evidence_top_k,
+            )
+        except Exception:
+            # 외부 검색 장애의 예외·주소·내부 메시지를 응답에 노출하지 않는다.
+            # 검색 실패를 다른 CAS 문서나 생성 답변으로 대체하지 않고 빈 근거로
+            # 보존하며, 확인 Gate와 결정론적 Rule 경로는 그대로 유지한다.
+            retrieval = {
+                "status": RETRIEVAL_UNAVAILABLE_STATUS,
+                "query": target["query"],
+                "cas_hint": target["cas_hint"],
+                "method": "fail-closed official evidence retrieval",
+                "warning": "공식 근거 검색을 완료하지 못했습니다.",
+                "notice": "공식 SDS를 별도로 확인해야 합니다.",
+                "ranking_notice": None,
+                "cas_link_warning": None,
+                "results": [],
+            }
         evidence.append({**target, "retrieval": retrieval})
     base["evidence"] = evidence
     retrieval_statuses = [
@@ -507,8 +534,16 @@ def analyze_incident(
         status == CAS_EVIDENCE_NOT_LOADED_STATUS for status in retrieval_statuses
     )
     retrieval_warning_count = sum(
-        status in {CAS_EVIDENCE_NOT_LOADED_STATUS, INVALID_CAS_HINT_STATUS}
+        status
+        in {
+            CAS_EVIDENCE_NOT_LOADED_STATUS,
+            INVALID_CAS_HINT_STATUS,
+            RETRIEVAL_UNAVAILABLE_STATUS,
+        }
         for status in retrieval_statuses
+    )
+    retrieval_unavailable_count = sum(
+        status == RETRIEVAL_UNAVAILABLE_STATUS for status in retrieval_statuses
     )
     base["trace"].append(
         {
@@ -521,6 +556,7 @@ def analyze_incident(
                 len(item["retrieval"].get("results", [])) for item in evidence
             ),
             "missing_cas_evidence_count": missing_cas_evidence_count,
+            "retrieval_unavailable_count": retrieval_unavailable_count,
         }
     )
 
@@ -594,6 +630,7 @@ def analyze_incident(
 __all__ = [
     "FINAL_DECISION_AUTHORITY",
     "PIPELINE_SCHEMA_VERSION",
+    "RETRIEVAL_UNAVAILABLE_STATUS",
     "RULE_GATE",
     "analyze_incident",
     "validate_pipeline_output",
