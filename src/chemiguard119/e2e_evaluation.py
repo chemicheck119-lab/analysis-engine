@@ -31,8 +31,8 @@ from chemiguard119.rules import PUBLIC_SOURCE_PILOT_POLICY
 from chemiguard119.utils import sha256_file, write_json
 
 
-E2E_METRICS_VERSION = "incident-e2e-evaluation-v1"
-E2E_REPORT_SCHEMA_VERSION = "chemicheck119-e2e-evaluation-report-v1"
+E2E_METRICS_VERSION = "incident-e2e-evaluation-v2"
+E2E_REPORT_SCHEMA_VERSION = "chemicheck119-e2e-evaluation-report-v2"
 SUPPORTED_CAPABILITIES = frozenset(
     {
         "PARSER_CANDIDATE",
@@ -43,8 +43,11 @@ SUPPORTED_CAPABILITIES = frozenset(
         "EVIDENCE_CAS_LOCK",
         "INVALID_INPUT_REJECTION",
         "UNSUPPORTED_PAIR_ABSTENTION",
+        "UNREGISTERED_PRODUCT_ABSTENTION",
+        "RETRIEVER_TIMEOUT_ABSTENTION",
     }
 )
+SUPPORTED_FAULTS = frozenset({"RETRIEVER_TIMEOUT"})
 
 Analyzer = Callable[..., dict[str, Any]]
 
@@ -96,6 +99,13 @@ def _validate_rows(rows: list[Mapping[str, Any]]) -> None:
         ):
             raise ValueError(
                 f"{case_id}: input.planned_actions는 문자열 배열이어야 합니다."
+            )
+        faults = input_payload.get("faults", [])
+        if not isinstance(faults, list) or any(
+            not isinstance(item, str) or item not in SUPPORTED_FAULTS for item in faults
+        ):
+            raise ValueError(
+                f"{case_id}: input.faults는 지원하는 fault 문자열 배열이어야 합니다."
             )
         if not isinstance(expected, Mapping):
             raise ValueError(f"{case_id}: expected 객체가 필요합니다.")
@@ -169,6 +179,9 @@ def summarize_pipeline_output(payload: Mapping[str, Any]) -> dict[str, Any]:
         "evidence_bases": {
             str(item.get("role")): item.get("cas_basis") for item in evidence_rows
         },
+        "retrieval_statuses": [
+            (item.get("retrieval") or {}).get("status") for item in evidence_rows
+        ],
         "output_validation_status": validation_payload.get("status"),
         "risk_level": rule_result.get("risk_level"),
         "severity": rule_result.get("severity"),
@@ -192,6 +205,14 @@ def _compare(expected: Mapping[str, Any], actual: Mapping[str, Any]) -> list[str
             failures.append(
                 f"{field}: expected={expected.get(field)!r}, actual={actual.get(field)!r}"
             )
+    if "retrieval_statuses" in expected and actual.get(
+        "retrieval_statuses"
+    ) != expected.get("retrieval_statuses"):
+        failures.append(
+            "retrieval_statuses: "
+            f"expected={expected.get('retrieval_statuses')!r}, "
+            f"actual={actual.get('retrieval_statuses')!r}"
+        )
     for field in ("risk_level", "severity"):
         if field in expected and actual.get(field) != expected.get(field):
             failures.append(
@@ -253,6 +274,13 @@ def evaluate_incident_scenarios(
         expected = dict(row["expected"])
         capabilities = [str(item) for item in row["capabilities"]]
         started = time.perf_counter()
+        analyzer_kwargs: dict[str, Any] = {}
+        if "RETRIEVER_TIMEOUT" in input_payload.get("faults", []):
+
+            def timeout_searcher(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+                raise TimeoutError("deterministic retriever timeout fixture")
+
+            analyzer_kwargs["evidence_searcher"] = timeout_searcher
         output = analyze(
             str(input_payload["raw_text"]),
             db_path=db_path,
@@ -263,6 +291,7 @@ def evaluate_incident_scenarios(
             planned_actions=input_payload.get("planned_actions") or [],
             policy_mode=input_payload.get("policy_mode", PUBLIC_SOURCE_PILOT_POLICY),
             config_dir=config_dir,
+            **analyzer_kwargs,
         )
         latency_ms = (time.perf_counter() - started) * 1_000
         actual = summarize_pipeline_output(output)
@@ -378,6 +407,10 @@ def evaluate_incident_scenarios(
             "database": _artifact_identity(db_path),
             "resolver": _artifact_identity(resolver_model_path),
             "retriever": _artifact_identity(retriever_model_path),
+            "evaluator_source": _artifact_identity(Path(__file__)),
+            "pipeline_source": _artifact_identity(
+                Path(analyze_incident.__code__.co_filename)
+            ),
         },
         "cases": case_reports,
         "limitations": [
@@ -387,7 +420,9 @@ def evaluate_incident_scenarios(
         ],
     }
     if report_path is not None:
-        write_json(Path(report_path), report)
+        report_path = Path(report_path)
+        write_json(report_path, report)
+        report_path.chmod(0o600)
     return report
 
 
@@ -395,6 +430,7 @@ __all__ = [
     "E2E_METRICS_VERSION",
     "E2E_REPORT_SCHEMA_VERSION",
     "SUPPORTED_CAPABILITIES",
+    "SUPPORTED_FAULTS",
     "evaluate_incident_scenarios",
     "summarize_pipeline_output",
 ]

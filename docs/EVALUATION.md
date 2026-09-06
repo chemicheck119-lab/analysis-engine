@@ -19,6 +19,7 @@
 - 모호한 일반명과 포함 문자열의 기권
 - 잘못된 CAS checksum 거부
 - 공개 규칙 미지원 조합의 위험등급 기권
+- 미등록 제품명과 Retriever timeout의 빈 근거 fail-closed
 
 ```bash
 chemiguard119 evaluate-e2e \
@@ -36,6 +37,34 @@ chemiguard119 evaluate-e2e \
 원본 측정값은
 [`e2e_scenario_regression_2026-07-31.json`](../data/evaluation/e2e_scenario_regression_2026-07-31.json)에
 있습니다.
+
+### 2026-09-07 Retriever timeout 회귀 추가
+
+평가 v2는 미등록 제품명 입력에서 Retriever가 결정적으로 `TimeoutError`를 내도록 주입하고,
+실제 `analyze_incident`가 예외 세부정보나 다른 CAS 근거를 노출하지 않은 채
+`RETRIEVAL_UNAVAILABLE` 빈 근거를 반환하는지 검사합니다.
+
+```text
+DRAFT 시나리오 9/9 통과
+Retriever timeout 기권 1/1 통과
+미확인 Rule 실행 0건
+미확인 위험등급 노출 0건
+기권 필요 8/8 통과
+평균 87.450ms / p95 116.432ms
+claim_scope=INTERNAL_REGRESSION_ONLY
+```
+
+- report SHA-256: `5c9e75b2edca16bdbbe3361f1949afb3685b3e0bebd0f6840ea10740d00dd70e`
+- dataset SHA-256: `38f3150e1902d6d126c2b980a2b2959724b5b46ca0205ccf69cc2d67516fd107`
+- DB SHA-256: `ed81fe9aac45a38880920d967ce8f3954acabfedf7b2f6ea59464552e7958b91`
+- Resolver SHA-256: `2696fa7f067163055ff556e5e12ccfa15e7dc08c9ff803838f0db074aa002dff`
+- Retriever SHA-256: `2e93e066648890400b26f56b532d6ed608b828203f8668e4af3cf63de1bc544b`
+- evaluator source SHA-256: `b0b0ac8cd6aad7690324e068873738899aeec45590fcfb105d9d840f16d7620d`
+- pipeline source SHA-256: `81abb1c68e913442fd2b69bafff9f683e116a9bc1664b5e1ced4a27896470e1c`
+
+이는 합성 timeout 한 종류의 내부 안전 회귀입니다. 실제 장애 빈도·복구 시간·현장 검색
+정확도나 상용 가용성을 검증하지 않습니다. Backend confirmation correction과 stale·duplicate
+상태를 같은 report에 연결하는 작업도 남아 있습니다.
 
 ### 향후 사람 검수용 E2E 50건 후보
 
