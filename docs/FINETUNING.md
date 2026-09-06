@@ -90,10 +90,15 @@ PYTHONPATH=src python scripts/data/prepare_ulsan_resolver_source.py \
 chemiguard119 finetune-resolver \
   --base-model artifacts/resolver.joblib \
   --incidents /private/derived/ulsan-resolver-source.csv \
+  --source-manifest /private/derived/ulsan-resolver-source.manifest.json \
   --output-dir artifacts/incident_adaptation \
   --report outputs/modeling/incident_adapted_resolver_evaluation.json \
   --json
 ```
+
+학습기는 sidecar의 원본·파생 SHA-256, 행 수, 컬럼 투영 계약을 먼저 검증하고,
+검증된 원본 SHA-256과 manifest SHA-256을 모델 metadata와 평가 보고서에 함께
+기록합니다. CSV와 sidecar 중 하나라도 달라지면 학습을 중단합니다.
 
 배포 후보 artifact:
 

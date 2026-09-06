@@ -8,6 +8,8 @@
 from __future__ import annotations
 
 import csv
+import hashlib
+import io
 import statistics
 import time
 from collections import Counter, defaultdict
@@ -15,6 +17,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+from chemiguard119.incident_source_intake import (
+    SOURCE_DATASET_ID,
+    SOURCE_URL,
+    verify_ulsan_resolver_source_manifest,
+)
 from chemiguard119.resolver import (
     INCIDENT_ADAPTED_MODEL_SCHEMA_VERSION,
     evaluate_resolver,
@@ -33,8 +40,6 @@ from chemiguard119.utils import (
 from chemiguard119.paths import EVALUATION_DIR
 
 
-SOURCE_DATASET_ID = "NFA_BIGDATA119_ULSAN_HAZARDOUS_SUBSTANCE_JUDGMENT_2015_2020"
-SOURCE_URL = "https://bigdata-119.kr/goods/goodsInfo?goods_mng_sn=5"
 TRAINING_POLICY_VERSION = "incident-alias-temporal-adaptation-v2-source-catalog"
 DEFAULT_TRAINING_YEAR_MAX = 2019
 DEFAULT_LOCKED_TEST_YEAR = 2020
@@ -55,10 +60,15 @@ def _surface_values(value: str) -> list[str]:
     return [part.strip() for part in str(value or "").split(";") if part.strip()]
 
 
-def load_incident_alias_records(path: Path) -> dict[str, Any]:
+def load_incident_alias_records(
+    path: Path,
+    source_manifest_path: Path | None = None,
+) -> dict[str, Any]:
     """공개 사고 CSV를 검증하고 비식별 물질명–CAS 학습 레코드로 축약한다."""
 
-    with path.open(encoding="utf-8-sig", newline="") as handle:
+    source_bytes = path.read_bytes()
+    source_sha256 = hashlib.sha256(source_bytes).hexdigest()
+    with io.StringIO(source_bytes.decode("utf-8-sig"), newline="") as handle:
         reader = csv.DictReader(handle)
         missing = REQUIRED_COLUMNS - set(reader.fieldnames or [])
         if missing:
@@ -120,24 +130,32 @@ def load_incident_alias_records(path: Path) -> dict[str, Any]:
         ),
         key=lambda row: (row["year"], row["cas_number"], row["normalized_text"]),
     )
+    audit: dict[str, Any] = {
+        "source_dataset_id": SOURCE_DATASET_ID,
+        "source_url": SOURCE_URL,
+        "source_file": path.name,
+        "source_sha256": source_sha256,
+        "source_row_count": len(source_rows),
+        "valid_alias_record_count": len(records),
+        "pre_ambiguity_filter_record_count": len(training_records),
+        "invalid_year_row_count": invalid_year,
+        "invalid_or_composite_cas_row_count": invalid_cas,
+        "ambiguous_surface_count": len(ambiguous_surfaces),
+        "year_counts": dict(Counter(row["year"] for row in records)),
+        "contains_personal_data": False,
+        "released_fields": ["발생연도", "CAS번호", *SURFACE_FIELDS],
+    }
+    if source_manifest_path is not None:
+        audit["intake_provenance"] = verify_ulsan_resolver_source_manifest(
+            path,
+            source_manifest_path,
+            expected_row_count=len(source_rows),
+            observed_derived_sha256=source_sha256,
+        )
     return {
         "records": records,
         "training_records": training_records,
-        "audit": {
-            "source_dataset_id": SOURCE_DATASET_ID,
-            "source_url": SOURCE_URL,
-            "source_file": path.name,
-            "source_sha256": sha256_file(path),
-            "source_row_count": len(source_rows),
-            "valid_alias_record_count": len(records),
-            "pre_ambiguity_filter_record_count": len(training_records),
-            "invalid_year_row_count": invalid_year,
-            "invalid_or_composite_cas_row_count": invalid_cas,
-            "ambiguous_surface_count": len(ambiguous_surfaces),
-            "year_counts": dict(Counter(row["year"] for row in records)),
-            "contains_personal_data": False,
-            "released_fields": ["발생연도", "CAS번호", *SURFACE_FIELDS],
-        },
+        "audit": audit,
     }
 
 
@@ -268,9 +286,10 @@ def train_incident_adapted_resolver(
     output_model_path: Path,
     *,
     training_year_max: int = DEFAULT_TRAINING_YEAR_MAX,
+    source_manifest_path: Path | None = None,
 ) -> dict[str, Any]:
     base_artifact = load_resolver(base_model_path)
-    source = load_incident_alias_records(incident_csv_path)
+    source = load_incident_alias_records(incident_csv_path, source_manifest_path)
     rows, metadata = _training_alias_rows(
         base_artifact,
         source["training_records"],
@@ -419,8 +438,9 @@ def evaluate_temporal_adaptation(
     *,
     validation_year: int = 2019,
     locked_test_year: int = DEFAULT_LOCKED_TEST_YEAR,
+    source_manifest_path: Path | None = None,
 ) -> dict[str, Any]:
-    source = load_incident_alias_records(incident_csv_path)
+    source = load_incident_alias_records(incident_csv_path, source_manifest_path)
     records = list(source["records"])
     base = load_resolver(base_model_path)
     validation_model = load_resolver(validation_model_path)
@@ -504,6 +524,8 @@ def run_training_and_evaluation(
     incident_csv_path: Path,
     output_dir: Path,
     report_path: Path | None = None,
+    *,
+    source_manifest_path: Path,
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     validation_model = output_dir / "resolver_incident_adapted_through_2018.joblib"
@@ -513,18 +535,21 @@ def run_training_and_evaluation(
         incident_csv_path,
         validation_model,
         training_year_max=2018,
+        source_manifest_path=source_manifest_path,
     )
     final_training = train_incident_adapted_resolver(
         base_model_path,
         incident_csv_path,
         final_model,
         training_year_max=2019,
+        source_manifest_path=source_manifest_path,
     )
     evaluation = evaluate_temporal_adaptation(
         base_model_path,
         validation_model,
         final_model,
         incident_csv_path,
+        source_manifest_path=source_manifest_path,
     )
     resolver_regression = evaluate_resolver(
         final_model,

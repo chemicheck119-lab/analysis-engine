@@ -14,6 +14,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-model", type=Path, required=True)
     parser.add_argument("--incidents", type=Path, required=True)
+    parser.add_argument("--source-manifest", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--report", type=Path)
     args = parser.parse_args()
@@ -22,6 +23,7 @@ def main() -> int:
         args.incidents,
         args.output_dir,
         args.report,
+        source_manifest_path=args.source_manifest,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0

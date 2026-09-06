@@ -881,6 +881,7 @@ def _finetune_resolver(args: argparse.Namespace) -> dict[str, Any]:
         args.incidents,
         args.output_dir,
         args.report,
+        source_manifest_path=args.source_manifest,
     )
 
 
@@ -942,6 +943,13 @@ def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
     )
     from chemiguard119.retrieval import evaluate_retriever, train_retriever
 
+    if (args.incident_adaptation_csv is None) != (
+        args.incident_adaptation_manifest is None
+    ):
+        raise ValueError(
+            "--incident-adaptation-csv와 --incident-adaptation-manifest를 "
+            "함께 지정해야 합니다."
+        )
     args.report_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     report_path = args.report_dir / f"pipeline_{timestamp}.json"
@@ -960,6 +968,11 @@ def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
             "incident_adaptation_csv": (
                 str(args.incident_adaptation_csv)
                 if args.incident_adaptation_csv is not None
+                else None
+            ),
+            "incident_adaptation_manifest": (
+                str(args.incident_adaptation_manifest)
+                if args.incident_adaptation_manifest is not None
                 else None
             ),
         },
@@ -1020,6 +1033,7 @@ def _pipeline(args: argparse.Namespace) -> dict[str, Any]:
                 args.incident_adaptation_csv,
                 adaptation_dir,
                 adaptation_report_path,
+                source_manifest_path=args.incident_adaptation_manifest,
             )
             if adaptation["adoption_gate"]["passed"] is not True:
                 raise RuntimeError(
@@ -1640,6 +1654,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="소방안전 빅데이터 플랫폼 사고–CAS CSV",
     )
     finetune_resolver.add_argument(
+        "--source-manifest",
+        type=_path,
+        default=(
+            FINAL_DATA_DIR
+            / "07_울산소방_화학사고별_유해물질판단.manifest.json"
+        ),
+        help="공식 원본과 파생 CSV SHA-256을 결합하는 intake sidecar",
+    )
+    finetune_resolver.add_argument(
         "--output-dir",
         type=_path,
         default=DEFAULT_ARTIFACT_DIR / "incident_adaptation",
@@ -1692,6 +1715,11 @@ def build_parser() -> argparse.ArgumentParser:
             "소방 사고 물질명-CAS 공개 CSV. 지정하면 baseline 학습 뒤 시간 분할 "
             "품질·안전 gate를 통과한 source-adapted Resolver만 채택"
         ),
+    )
+    pipeline.add_argument(
+        "--incident-adaptation-manifest",
+        type=_path,
+        help="사고–CAS 파생 CSV에 대응하는 검증된 intake sidecar",
     )
     pipeline.add_argument(
         "--resolver-evaluation",

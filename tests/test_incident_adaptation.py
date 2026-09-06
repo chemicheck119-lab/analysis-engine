@@ -11,6 +11,7 @@ from chemiguard119.incident_adaptation import (
     load_incident_alias_records,
     train_incident_adapted_resolver,
 )
+from chemiguard119.incident_source_intake import prepare_ulsan_resolver_source
 from chemiguard119.resolver import (
     INCIDENT_ADAPTED_MODEL_SCHEMA_VERSION,
     fit_resolver_rows,
@@ -34,6 +35,28 @@ def _write_incidents(path: Path, rows: list[dict[str, str]]) -> None:
         writer = csv.DictWriter(handle, fieldnames=HEADERS)
         writer.writeheader()
         writer.writerows(rows)
+
+
+def _write_official_incidents(path: Path, rows: list[dict[str, str]]) -> None:
+    field_map = {
+        "발생연도": "ocrn_yr",
+        "CAS번호": "cas_no",
+        "화학물질명_한글": "chem_sbstn_korn_nm",
+        "화학물질명_영문": "chem_sbstn_eng_nm",
+        "일반명_한글": "gnrl_korn_nm",
+        "일반명_영문": "gnrl_eng_nm",
+    }
+    fields = [*field_map.values(), "road_nm"]
+    with path.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(
+                {
+                    **{raw: row[column] for column, raw in field_map.items()},
+                    "road_nm": "비공개 경로에만 남을 위치 열",
+                }
+            )
 
 
 def _row(year: int, cas: str, name: str, *, common: str = "") -> dict[str, str]:
@@ -93,6 +116,39 @@ def test_source_audit_filters_invalid_cas_and_ambiguous_surface(tmp_path: Path) 
     assert result["audit"]["ambiguous_surface_count"] == 1
     assert all(row["alias_text"] != "공통명" for row in result["records"])
     assert sum(row["alias_text"] == "공통명" for row in result["training_records"]) == 2
+
+
+def test_training_binds_verified_raw_source_provenance(tmp_path: Path) -> None:
+    base_model = tmp_path / "base.joblib"
+    raw_source = tmp_path / "유해물질판단_2020_2015.csv"
+    derived_source = tmp_path / "resolver-source.csv"
+    manifest = tmp_path / "resolver-source.manifest.json"
+    adapted_model = tmp_path / "adapted.joblib"
+    _base_model(base_model)
+    _write_official_incidents(raw_source, [_row(2018, "7647-01-0", "염산")])
+    intake = prepare_ulsan_resolver_source(
+        raw_source,
+        derived_source,
+        manifest,
+    )
+
+    report = train_incident_adapted_resolver(
+        base_model,
+        derived_source,
+        adapted_model,
+        training_year_max=2019,
+        source_manifest_path=manifest,
+    )
+
+    provenance = report["source_audit"]["intake_provenance"]
+    assert provenance["raw_source_sha256"] == intake["source"]["sha256"]
+    assert provenance["derived_sha256"] == intake["derived"]["sha256"]
+    assert len(provenance["manifest_sha256"]) == 64
+    artifact = load_resolver(adapted_model)
+    assert (
+        artifact["training_metadata"]["source_audit"]["intake_provenance"]
+        == provenance
+    )
 
 
 def test_training_ambiguity_filter_does_not_look_at_future_year(tmp_path: Path) -> None:

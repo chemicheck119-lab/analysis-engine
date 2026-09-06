@@ -10,16 +10,22 @@ Resolver source adaptation에는 이 열이 필요하지 않으므로, 이 모�
 from __future__ import annotations
 
 import csv
+import hashlib
+import io
+import json
 import os
+import re
 import tempfile
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from chemiguard119.incident_adaptation import SOURCE_DATASET_ID, SOURCE_URL
 from chemiguard119.utils import sha256_file, write_json
 
 
+SOURCE_DATASET_ID = "NFA_BIGDATA119_ULSAN_HAZARDOUS_SUBSTANCE_JUDGMENT_2015_2020"
+SOURCE_URL = "https://bigdata-119.kr/goods/goodsInfo?goods_mng_sn=5"
 INTAKE_SCHEMA_VERSION = "ulsan-resolver-source-intake-v1"
 OUTPUT_COLUMNS = (
     "발생연도",
@@ -38,13 +44,15 @@ SOURCE_COLUMNS = {
     "GNRL_ENG_NM": "일반명_영문",
 }
 SUPPORTED_ENCODINGS = ("utf-8-sig", "cp949")
+SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
 
-def _read_source(path: Path) -> tuple[str, list[str], list[dict[str, str]]]:
+def _read_source(source_bytes: bytes) -> tuple[str, list[str], list[dict[str, str]]]:
     last_error: UnicodeDecodeError | None = None
     for encoding in SUPPORTED_ENCODINGS:
         try:
-            with path.open(encoding=encoding, newline="") as handle:
+            decoded = source_bytes.decode(encoding)
+            with io.StringIO(decoded, newline="") as handle:
                 reader = csv.DictReader(handle)
                 fieldnames = [
                     str(item or "").strip() for item in reader.fieldnames or []
@@ -67,6 +75,89 @@ def _read_source(path: Path) -> tuple[str, list[str], list[dict[str, str]]]:
             "원본 CSV를 utf-8-sig 또는 cp949로 해석할 수 없습니다."
         ) from last_error
     raise ValueError("원본 CSV를 읽을 수 없습니다.")
+
+
+def _mapping(value: object, label: str) -> Mapping[str, Any]:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"intake manifest의 {label} 객체가 필요합니다.")
+    return value
+
+
+def verify_ulsan_resolver_source_manifest(
+    derived_path: Path,
+    manifest_path: Path,
+    *,
+    expected_row_count: int,
+    observed_derived_sha256: str | None = None,
+) -> dict[str, Any]:
+    """파생 CSV와 sidecar가 같은 승인 원본 계보를 가리키는지 검증한다."""
+
+    derived_path = Path(derived_path)
+    manifest_path = Path(manifest_path)
+    try:
+        manifest_bytes = manifest_path.read_bytes()
+        payload = json.loads(manifest_bytes.decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError(f"intake manifest를 읽을 수 없습니다: {manifest_path}") from error
+    if not isinstance(payload, Mapping):
+        raise ValueError("intake manifest 최상위는 객체여야 합니다.")
+    if payload.get("schema_version") != INTAKE_SCHEMA_VERSION:
+        raise ValueError("지원하지 않는 intake manifest schema_version입니다.")
+    if payload.get("source_dataset_id") != SOURCE_DATASET_ID:
+        raise ValueError("intake manifest source_dataset_id가 다릅니다.")
+    if payload.get("source_url") != SOURCE_URL:
+        raise ValueError("intake manifest source_url이 다릅니다.")
+
+    source = _mapping(payload.get("source"), "source")
+    derived = _mapping(payload.get("derived"), "derived")
+    transformation = _mapping(payload.get("transformation"), "transformation")
+    safety = _mapping(payload.get("safety"), "safety")
+    source_sha256 = str(source.get("sha256") or "")
+    if not SHA256_PATTERN.fullmatch(source_sha256):
+        raise ValueError("intake manifest 원본 SHA-256이 유효하지 않습니다.")
+    expected_derived_sha256 = str(derived.get("sha256") or "")
+    if not SHA256_PATTERN.fullmatch(expected_derived_sha256):
+        raise ValueError("intake manifest 파생 CSV SHA-256이 유효하지 않습니다.")
+    actual_derived_sha256 = observed_derived_sha256 or sha256_file(derived_path)
+    if actual_derived_sha256 != expected_derived_sha256:
+        raise ValueError("intake manifest와 파생 CSV의 SHA-256이 다릅니다.")
+    if derived.get("file_name") != derived_path.name:
+        raise ValueError("intake manifest와 파생 CSV 파일명이 다릅니다.")
+    if derived.get("row_count") != expected_row_count:
+        raise ValueError("intake manifest와 파생 CSV 행 수가 다릅니다.")
+    if source.get("row_count") != expected_row_count:
+        raise ValueError("intake manifest의 원본·파생 행 수가 다릅니다.")
+    if derived.get("columns") != list(OUTPUT_COLUMNS):
+        raise ValueError("intake manifest의 파생 컬럼 계약이 다릅니다.")
+    if transformation != {
+        "type": "COLUMN_PROJECTION_ONLY",
+        "row_filtering_applied": False,
+        "value_relabeling_applied": False,
+        "training_split_applied": False,
+    }:
+        raise ValueError("intake manifest의 변환 계약이 다릅니다.")
+    if (
+        source.get("contains_location_or_response_fields") is not True
+        or derived.get("contains_location_or_response_fields") is not False
+        or safety.get("git_commit_allowed") is not False
+        or safety.get("private_storage_required") is not True
+        or safety.get("claim_scope")
+        != "SOURCE_INTAKE_ONLY_NOT_RESOLVER_PERFORMANCE"
+    ):
+        raise ValueError("intake manifest의 private 저장·주장 범위 계약이 다릅니다.")
+    return {
+        "schema_version": INTAKE_SCHEMA_VERSION,
+        "manifest_file": manifest_path.name,
+        "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+        "raw_source_file": source.get("file_name"),
+        "raw_source_sha256": source_sha256,
+        "raw_source_row_count": source.get("row_count"),
+        "derived_file": derived_path.name,
+        "derived_sha256": expected_derived_sha256,
+        "derived_row_count": expected_row_count,
+        "private_storage_required": True,
+        "claim_scope": "SOURCE_INTAKE_ONLY_NOT_RESOLVER_PERFORMANCE",
+    }
 
 
 def _source_projection(fieldnames: list[str]) -> dict[str, str]:
@@ -107,7 +198,9 @@ def prepare_ulsan_resolver_source(
             + ", ".join(str(path) for path in existing)
         )
 
-    encoding, fieldnames, source_rows = _read_source(source_path)
+    source_bytes = source_path.read_bytes()
+    source_sha256 = hashlib.sha256(source_bytes).hexdigest()
+    encoding, fieldnames, source_rows = _read_source(source_bytes)
     projection = _source_projection(fieldnames)
     projected_rows = [
         {
@@ -143,7 +236,7 @@ def prepare_ulsan_resolver_source(
             "source_url": SOURCE_URL,
             "source": {
                 "file_name": source_path.name,
-                "sha256": sha256_file(source_path),
+                "sha256": source_sha256,
                 "encoding": encoding,
                 "row_count": len(source_rows),
                 "contains_location_or_response_fields": True,
@@ -191,5 +284,8 @@ def prepare_ulsan_resolver_source(
 __all__ = [
     "INTAKE_SCHEMA_VERSION",
     "OUTPUT_COLUMNS",
+    "SOURCE_DATASET_ID",
+    "SOURCE_URL",
     "prepare_ulsan_resolver_source",
+    "verify_ulsan_resolver_source_manifest",
 ]

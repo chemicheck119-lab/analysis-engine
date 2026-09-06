@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from chemiguard119.incident_source_intake import (
     INTAKE_SCHEMA_VERSION,
     OUTPUT_COLUMNS,
     prepare_ulsan_resolver_source,
+    verify_ulsan_resolver_source_manifest,
 )
 
 
@@ -55,11 +57,13 @@ def test_projects_only_resolver_columns_and_records_provenance(
     output = tmp_path / "resolver-source.csv"
     manifest = tmp_path / "resolver-source.manifest.json"
     _write_source(source, lowercase=lowercase)
+    expected_raw_sha256 = hashlib.sha256(source.read_bytes()).hexdigest()
 
     result = prepare_ulsan_resolver_source(source, output, manifest)
 
     assert result["schema_version"] == INTAKE_SCHEMA_VERSION
     assert result["source"]["row_count"] == 1
+    assert result["source"]["sha256"] == expected_raw_sha256
     assert result["derived"]["columns"] == list(OUTPUT_COLUMNS)
     assert result["transformation"]["row_filtering_applied"] is False
     assert result["safety"]["git_commit_allowed"] is False
@@ -71,6 +75,29 @@ def test_projects_only_resolver_columns_and_records_provenance(
     assert rows[0]["화학물질명_한글"] == "  에탄올  "
     assert "내보내면 안 되는 도로명" not in output.read_text(encoding="utf-8-sig")
     assert json.loads(manifest.read_text(encoding="utf-8")) == result
+    provenance = verify_ulsan_resolver_source_manifest(
+        output,
+        manifest,
+        expected_row_count=1,
+    )
+    assert provenance["raw_source_sha256"] == expected_raw_sha256
+    assert provenance["derived_sha256"] == result["derived"]["sha256"]
+
+
+def test_rejects_tampered_derived_csv(tmp_path: Path) -> None:
+    source = tmp_path / "source.csv"
+    output = tmp_path / "output.csv"
+    manifest = tmp_path / "manifest.json"
+    _write_source(source)
+    prepare_ulsan_resolver_source(source, output, manifest)
+    output.write_text("변조됨", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="SHA-256이 다릅니다"):
+        verify_ulsan_resolver_source_manifest(
+            output,
+            manifest,
+            expected_row_count=1,
+        )
 
 
 def test_rejects_missing_required_source_column(tmp_path: Path) -> None:
