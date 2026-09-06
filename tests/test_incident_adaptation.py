@@ -5,10 +5,12 @@ from pathlib import Path
 
 import pytest
 
+import chemiguard119.incident_adaptation as adaptation_module
 from chemiguard119.incident_adaptation import (
     SOURCE_ONLY_CATALOG_SCOPE,
     evaluate_temporal_adaptation,
     load_incident_alias_records,
+    run_training_and_evaluation,
     train_incident_adapted_resolver,
 )
 from chemiguard119.incident_source_intake import prepare_ulsan_resolver_source
@@ -148,6 +150,55 @@ def test_training_binds_verified_raw_source_provenance(tmp_path: Path) -> None:
     assert (
         artifact["training_metadata"]["source_audit"]["intake_provenance"] == provenance
     )
+
+
+def test_full_run_loads_and_verifies_one_source_snapshot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    base_model = tmp_path / "base.joblib"
+    raw_source = tmp_path / "유해물질판단_2020_2015.csv"
+    derived_source = tmp_path / "resolver-source.csv"
+    manifest = tmp_path / "resolver-source.manifest.json"
+    output_dir = tmp_path / "output"
+    _base_model(base_model)
+    _write_official_incidents(
+        raw_source,
+        [
+            _row(2018, "7647-01-0", "염산"),
+            _row(2019, "7647-01-0", "염화수소"),
+            _row(2020, "1310-73-2", "가성소다"),
+        ],
+    )
+    prepare_ulsan_resolver_source(raw_source, derived_source, manifest)
+    real_loader = adaptation_module.load_incident_alias_records
+    load_count = 0
+
+    def counted_loader(*args: object, **kwargs: object) -> dict[str, object]:
+        nonlocal load_count
+        load_count += 1
+        return real_loader(*args, **kwargs)
+
+    monkeypatch.setattr(
+        adaptation_module,
+        "load_incident_alias_records",
+        counted_loader,
+    )
+
+    result = run_training_and_evaluation(
+        base_model,
+        derived_source,
+        output_dir,
+        source_manifest_path=manifest,
+    )
+
+    assert load_count == 1
+    expected = result["source_audit"]["intake_provenance"]
+    assert (
+        result["artifacts"]["validation"]["source_audit"]["intake_provenance"]
+        == expected
+    )
+    assert result["artifacts"]["final"]["source_audit"]["intake_provenance"] == expected
 
 
 def test_training_ambiguity_filter_does_not_look_at_future_year(tmp_path: Path) -> None:

@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 import chemiguard119.incident_source_intake as intake_module
+from chemiguard119.incident_adaptation import load_incident_alias_records
 from chemiguard119.incident_source_intake import (
     INTAKE_SCHEMA_VERSION,
     OUTPUT_COLUMNS,
@@ -98,6 +99,28 @@ def test_rejects_tampered_derived_csv(tmp_path: Path) -> None:
             manifest,
             expected_row_count=1,
         )
+
+
+def test_rejects_extra_column_even_with_matching_manifest_hash(tmp_path: Path) -> None:
+    source = tmp_path / "source.csv"
+    output = tmp_path / "output.csv"
+    manifest = tmp_path / "manifest.json"
+    _write_source(source)
+    payload = prepare_ulsan_resolver_source(source, output, manifest)
+    with output.open(encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    with output.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=[*OUTPUT_COLUMNS, "ROAD_NM"])
+        writer.writeheader()
+        writer.writerow({**rows[0], "ROAD_NM": "숨은 위치 열"})
+    payload["derived"]["sha256"] = hashlib.sha256(output.read_bytes()).hexdigest()
+    manifest.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="정확히 같아야"):
+        load_incident_alias_records(output, manifest)
 
 
 def test_rejects_missing_required_source_column(tmp_path: Path) -> None:

@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from chemiguard119.incident_source_intake import (
+    OUTPUT_COLUMNS,
     SOURCE_DATASET_ID,
     SOURCE_URL,
     verify_ulsan_resolver_source_manifest,
@@ -70,9 +71,14 @@ def load_incident_alias_records(
     source_sha256 = hashlib.sha256(source_bytes).hexdigest()
     with io.StringIO(source_bytes.decode("utf-8-sig"), newline="") as handle:
         reader = csv.DictReader(handle)
-        missing = REQUIRED_COLUMNS - set(reader.fieldnames or [])
-        if missing:
-            raise RuntimeError(f"사고–CAS 원천 컬럼이 부족합니다: {sorted(missing)}")
+        actual_columns = list(reader.fieldnames or [])
+        if actual_columns != list(OUTPUT_COLUMNS):
+            missing = sorted(REQUIRED_COLUMNS - set(actual_columns))
+            unexpected = sorted(set(actual_columns) - REQUIRED_COLUMNS)
+            raise RuntimeError(
+                "사고–CAS 파생 CSV는 manifest에 고정된 6개 컬럼과 순서가 "
+                f"정확히 같아야 합니다: missing={missing}, unexpected={unexpected}"
+            )
         source_rows = list(reader)
 
     invalid_year = 0
@@ -287,9 +293,14 @@ def train_incident_adapted_resolver(
     *,
     training_year_max: int = DEFAULT_TRAINING_YEAR_MAX,
     source_manifest_path: Path | None = None,
+    source_snapshot: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     base_artifact = load_resolver(base_model_path)
-    source = load_incident_alias_records(incident_csv_path, source_manifest_path)
+    source = (
+        source_snapshot
+        if source_snapshot is not None
+        else load_incident_alias_records(incident_csv_path, source_manifest_path)
+    )
     rows, metadata = _training_alias_rows(
         base_artifact,
         source["training_records"],
@@ -439,8 +450,13 @@ def evaluate_temporal_adaptation(
     validation_year: int = 2019,
     locked_test_year: int = DEFAULT_LOCKED_TEST_YEAR,
     source_manifest_path: Path | None = None,
+    source_snapshot: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    source = load_incident_alias_records(incident_csv_path, source_manifest_path)
+    source = (
+        source_snapshot
+        if source_snapshot is not None
+        else load_incident_alias_records(incident_csv_path, source_manifest_path)
+    )
     records = list(source["records"])
     base = load_resolver(base_model_path)
     validation_model = load_resolver(validation_model_path)
@@ -527,6 +543,10 @@ def run_training_and_evaluation(
     *,
     source_manifest_path: Path,
 ) -> dict[str, Any]:
+    source_snapshot = load_incident_alias_records(
+        incident_csv_path,
+        source_manifest_path,
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
     validation_model = output_dir / "resolver_incident_adapted_through_2018.joblib"
     final_model = output_dir / "resolver_incident_adapted_through_2019.joblib"
@@ -535,21 +555,21 @@ def run_training_and_evaluation(
         incident_csv_path,
         validation_model,
         training_year_max=2018,
-        source_manifest_path=source_manifest_path,
+        source_snapshot=source_snapshot,
     )
     final_training = train_incident_adapted_resolver(
         base_model_path,
         incident_csv_path,
         final_model,
         training_year_max=2019,
-        source_manifest_path=source_manifest_path,
+        source_snapshot=source_snapshot,
     )
     evaluation = evaluate_temporal_adaptation(
         base_model_path,
         validation_model,
         final_model,
         incident_csv_path,
-        source_manifest_path=source_manifest_path,
+        source_snapshot=source_snapshot,
     )
     resolver_regression = evaluate_resolver(
         final_model,
