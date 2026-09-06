@@ -80,6 +80,16 @@ def load_incident_alias_records(
                 f"정확히 같아야 합니다: missing={missing}, unexpected={unexpected}"
             )
         source_rows = list(reader)
+    malformed_row_count = sum(
+        1
+        for row in source_rows
+        if None in row or any(row.get(column) is None for column in OUTPUT_COLUMNS)
+    )
+    if malformed_row_count:
+        raise RuntimeError(
+            "사고–CAS 파생 CSV에 header와 열 개수가 다른 행이 있습니다: "
+            f"{malformed_row_count}건"
+        )
 
     invalid_year = 0
     invalid_cas = 0

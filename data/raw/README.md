@@ -35,15 +35,18 @@ chemiguard119 audit --data-dir data/raw
 chemiguard119 pipeline --data-dir data/raw --include-hash
 ```
 
-GitHub Actions 릴리스에서는 이 8개 파일을 루트에 담은 `tar.gz` 번들을 사용합니다.
+GitHub Actions 릴리스에서는 위 8개 파일과 아래 6열 파생본·sidecar를 합친 10개
+파일을 루트에 담은 `tar.gz` 번들을 사용합니다.
 조직 Secret `CHEMIGUARD119_DATA_BUNDLE_URL`과
 `CHEMIGUARD119_DATA_BUNDLE_SHA256`에 다운로드 주소와 SHA-256을 등록해야 합니다.
 
 ## 선택: 소방 사고–CAS source adaptation
 
-물질명 후보 Resolver 파인튜닝에는 다음 공개 파일을 추가로 사용합니다.
+물질명 후보 Resolver 파인튜닝에는 공식 원본에서 만든 다음 private 파생 파일과
+sidecar를 추가로 사용합니다.
 
 - `07_울산소방_화학사고별_유해물질판단.csv`
+- `07_울산소방_화학사고별_유해물질판단.manifest.json`
 - 출처: `https://bigdata-119.kr/goods/goodsInfo?goods_mng_sn=5`
 
 원본 전체를 Git에 넣지 않고 `발생연도·CAS·한글/영문 물질명·일반명`만 학습에

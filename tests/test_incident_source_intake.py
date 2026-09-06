@@ -123,6 +123,27 @@ def test_rejects_extra_column_even_with_matching_manifest_hash(tmp_path: Path) -
         load_incident_alias_records(output, manifest)
 
 
+def test_rejects_surplus_row_cell_with_six_column_header(tmp_path: Path) -> None:
+    source = tmp_path / "source.csv"
+    output = tmp_path / "output.csv"
+    manifest = tmp_path / "manifest.json"
+    _write_source(source)
+    payload = prepare_ulsan_resolver_source(source, output, manifest)
+    output.write_text(
+        ",".join(OUTPUT_COLUMNS)
+        + "\n2020,64-17-5,에탄올,Ethanol,에틸 알코올,Ethyl alcohol,숨은 위치 값\n",
+        encoding="utf-8-sig",
+    )
+    payload["derived"]["sha256"] = hashlib.sha256(output.read_bytes()).hexdigest()
+    manifest.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="열 개수가 다른 행"):
+        load_incident_alias_records(output, manifest)
+
+
 def test_rejects_missing_required_source_column(tmp_path: Path) -> None:
     source = tmp_path / "source.csv"
     source.write_text("OCRN_YR,CAS_NO\n2020,64-17-5\n", encoding="utf-8")
