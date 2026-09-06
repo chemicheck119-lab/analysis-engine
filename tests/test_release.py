@@ -4,6 +4,7 @@ import json
 import shutil
 import sqlite3
 import subprocess
+import sys
 from hashlib import sha256
 from pathlib import Path
 
@@ -955,6 +956,84 @@ def test_competition_preview_is_explicitly_non_production_and_keyless() -> None:
     assert "runtime_manifest.json" in script
     assert "gcloud builds submit" in script
     assert "digest_reference" in script
+    assert "validate_manifest_runtime_versions.py" in script
+
+
+def test_preview_runtime_version_preflight_rejects_dependency_drift(
+    tmp_path: Path,
+) -> None:
+    project_root = CONFIG_DIR.parent
+    validator = (
+        project_root
+        / "scripts"
+        / "deployment"
+        / "validate_manifest_runtime_versions.py"
+    )
+    manifest = tmp_path / "runtime_manifest.json"
+    requirements = tmp_path / "requirements-production.txt"
+    dockerfile = tmp_path / "Dockerfile.preview"
+    requirements.write_text(
+        "numpy==2.4.6\nscikit-learn==1.9.0\njoblib==1.5.3\n",
+        encoding="utf-8",
+    )
+    dockerfile.write_text("FROM python:3.11.15-slim\n", encoding="utf-8")
+
+    manifest.write_text(
+        json.dumps(
+            {
+                "runtime_versions": {
+                    "python": "3.11.15",
+                    "numpy": "2.4.6",
+                    "scikit_learn": "1.9.0",
+                    "joblib": "1.5.3",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    valid = subprocess.run(
+        [
+            sys.executable,
+            str(validator),
+            "--manifest",
+            str(manifest),
+            "--requirements",
+            str(requirements),
+            "--dockerfile",
+            str(dockerfile),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert valid.returncode == 0
+    assert json.loads(valid.stdout)["status"] == "VERIFIED"
+
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["runtime_versions"]["joblib"] = "1.6.0"
+    manifest.write_text(json.dumps(payload), encoding="utf-8")
+    invalid = subprocess.run(
+        [
+            sys.executable,
+            str(validator),
+            "--manifest",
+            str(manifest),
+            "--requirements",
+            str(requirements),
+            "--dockerfile",
+            str(dockerfile),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert invalid.returncode == 1
+    result = json.loads(invalid.stdout)
+    assert result["status"] == "MISMATCH"
+    assert result["mismatches"]["joblib"] == {
+        "manifest": "1.6.0",
+        "serving": "1.5.3",
+    }
 
 
 def test_competition_preview_deploy_is_separate_and_fail_closed() -> None:

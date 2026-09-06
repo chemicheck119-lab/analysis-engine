@@ -44,6 +44,10 @@ test -z "$(git -C "$project_root" status --porcelain)" || {
   echo "preview 이미지는 clean commit에서만 만들 수 있습니다."
   exit 1
 }
+python "$project_root/scripts/deployment/validate_manifest_runtime_versions.py" \
+  --manifest "$PREVIEW_ARTIFACT_DIR/runtime_manifest.json" \
+  --requirements "$project_root/requirements-production.txt" \
+  --dockerfile "$project_root/Dockerfile.preview"
 
 build_context="$(mktemp -d)"
 cleanup() {
