@@ -66,6 +66,34 @@ def _safe_output() -> dict[str, Any]:
     }
 
 
+def _completed_output() -> dict[str, Any]:
+    return {
+        "status": "SCREENING_COMPLETED",
+        "substance_candidates": [
+            {"role": "INCIDENT"},
+            {"role": "FACILITY"},
+        ],
+        "evidence": [
+            {"role": "INCIDENT", "cas_basis": "RESPONDER_CONFIRMED"},
+            {"role": "FACILITY", "cas_basis": "RESPONDER_CONFIRMED"},
+        ],
+        "rule_review": {
+            "executed": True,
+            "status": "SCREENING_COMPLETED",
+            "missing_confirmations": [],
+            "result": {
+                "risk_level": "HIGH",
+                "risk_level_ko": "높음",
+                "severity": "HIGH_RISK",
+                "brief_text": "확인된 공개 규칙에서 높은 반응 위험으로 분류됩니다.",
+                "required_checks": ["현장 조건과 물질 식별을 다시 확인"],
+                "evidence_urls": ["https://cameochemicals.noaa.gov/"],
+            },
+        },
+        "output_validation": {"status": "PASSED", "errors": []},
+    }
+
+
 def _evaluate(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -99,7 +127,7 @@ def test_e2e_evaluator_reports_safe_abstention(
         lambda *_args, **_kwargs: _safe_output(),
     )
 
-    assert report["metrics_version"] == "incident-e2e-evaluation-v2"
+    assert report["metrics_version"] == "incident-e2e-evaluation-v3"
     assert report["status"] == "COMPLETED"
     assert report["claim_scope"] == "INTERNAL_REGRESSION_ONLY"
     assert report["is_field_performance_estimate"] is False
@@ -224,7 +252,11 @@ def test_repository_e2e_scenarios_have_supported_schema(
                 "missing_confirmations": expected["missing_confirmations"],
                 "result": {
                     "risk_level": expected.get("risk_level"),
+                    "risk_level_ko": "높음",
                     "severity": expected.get("severity"),
+                    "brief_text": "공개 규칙 기반 충돌 스크리닝 결과입니다.",
+                    "required_checks": ["현장 조건 재확인"],
+                    "evidence_urls": ["https://cameochemicals.noaa.gov/"],
                 },
             },
             "output_validation": {
@@ -245,7 +277,7 @@ def test_repository_e2e_scenarios_have_supported_schema(
         retriever_artifact={},
         analyzer=analyzer,
     )
-    assert report["case_count"] == 9
+    assert report["case_count"] == 10
 
 
 def test_e2e_fault_fixture_injects_retriever_timeout(
@@ -294,6 +326,69 @@ def test_e2e_fault_fixture_injects_retriever_timeout(
         report["capability_coverage"]["RETRIEVER_TIMEOUT_ABSTENTION"]["pass_rate"]
         == 1.0
     )
+
+
+def test_e2e_fault_fixture_injects_llm_timeout_and_uses_cited_fallback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    row = _row(
+        capabilities=["LLM_TIMEOUT_EXTRACTIVE_FALLBACK"],
+        input={
+            "raw_text": "차아염소산나트륨 누출, 시설에 염산 보관",
+            "confirmed_incident_cas": "7681-52-9",
+            "confirmed_facility_cas": "7647-01-0",
+            "faults": ["LLM_TIMEOUT"],
+        },
+        expected={
+            "status": "SCREENING_COMPLETED",
+            "rule_executed": True,
+            "rule_status": "SCREENING_COMPLETED",
+            "missing_confirmations": [],
+            "candidate_count": 2,
+            "candidate_roles": ["INCIDENT", "FACILITY"],
+            "evidence_bases": {
+                "INCIDENT": "RESPONDER_CONFIRMED",
+                "FACILITY": "RESPONDER_CONFIRMED",
+            },
+            "output_validation_status": "PASSED",
+            "risk_level": "HIGH",
+            "severity": "HIGH_RISK",
+            "expect_abstention": False,
+            "grounded_rag": {
+                "status": "FALLBACK_EXTRACTIVE",
+                "used_llm": False,
+                "fallback_reason": "LLM_REQUEST_OR_OUTPUT_FAILED",
+                "minimum_statement_count": 1,
+                "minimum_citation_count": 1,
+                "citation_validation_passed": True,
+                "risk_decision_source": "DETERMINISTIC_CAMEO_RULE_ENGINE",
+            },
+        },
+    )
+
+    report = _evaluate(
+        tmp_path,
+        monkeypatch,
+        [row],
+        lambda *_args, **_kwargs: _completed_output(),
+    )
+
+    assert report["status"] == "COMPLETED"
+    assert report["metrics"]["llm_timeout_fallback_pass_rate"] == 1.0
+    assert report["metrics"]["grounded_rag_contract_pass_rate"] == 1.0
+    assert report["metrics"]["uncited_grounded_rag_case_count"] == 0
+    assert report["cases"][0]["grounded_rag"] == {
+        "status": "FALLBACK_EXTRACTIVE",
+        "used_llm": False,
+        "fallback_reason": "LLM_REQUEST_OR_OUTPUT_FAILED",
+        "statement_count": 2,
+        "citation_count": 1,
+        "citation_validation_passed": True,
+        "all_statement_sources_cited": True,
+        "risk_decision_source": "DETERMINISTIC_CAMEO_RULE_ENGINE",
+    }
+    assert "private-llm-host" not in json.dumps(report, ensure_ascii=False)
 
 
 def test_cli_exposes_e2e_evaluation_command() -> None:
