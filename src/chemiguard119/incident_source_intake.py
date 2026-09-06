@@ -53,10 +53,9 @@ def _read_source(source_bytes: bytes) -> tuple[str, list[str], list[dict[str, st
         try:
             decoded = source_bytes.decode(encoding)
             with io.StringIO(decoded, newline="") as handle:
-                reader = csv.DictReader(handle)
-                fieldnames = [
-                    str(item or "").strip() for item in reader.fieldnames or []
-                ]
+                reader = csv.reader(handle)
+                raw_fieldnames = next(reader, [])
+                fieldnames = [str(item).strip() for item in raw_fieldnames]
                 normalized_fieldnames = [field.upper() for field in fieldnames]
                 if (
                     not fieldnames
@@ -67,20 +66,15 @@ def _read_source(source_bytes: bytes) -> tuple[str, list[str], list[dict[str, st
                         "원본 CSV header에 빈 값 또는 중복 컬럼이 있습니다."
                     )
                 rows: list[dict[str, str]] = []
-                for row_number, row in enumerate(reader, start=2):
-                    if None in row or any(
-                        value is None for key, value in row.items() if key is not None
-                    ):
+                for row_number, values in enumerate(reader, start=2):
+                    if len(values) != len(raw_fieldnames):
                         raise ValueError(
                             f"원본 CSV 행의 열 개수가 header와 다릅니다: {row_number}행"
                         )
-                    preserved: dict[str, str] = {}
-                    for key, value in row.items():
-                        if key is None:
-                            continue
-                        preserved[str(key).strip()] = (
-                            value if isinstance(value, str) else ""
-                        )
+                    preserved = {
+                        str(key).strip(): value
+                        for key, value in zip(raw_fieldnames, values, strict=True)
+                    }
                     rows.append(preserved)
             return encoding, fieldnames, rows
         except UnicodeDecodeError as error:

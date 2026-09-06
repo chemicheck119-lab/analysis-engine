@@ -159,6 +159,7 @@ def test_rejects_missing_required_source_column(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "row",
     [
+        "",
         "2020,64-17-5,에탄올,Ethanol,에틸 알코올",
         "2020,64-17-5,에탄올,Ethanol,에틸 알코올,Ethyl alcohol,숨은 위치 값",
     ],
