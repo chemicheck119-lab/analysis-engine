@@ -101,6 +101,7 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
         "train": "기준선 모델 학습",
         "evaluate": "모델 평가",
         "evaluate-e2e": "사고 분석 E2E 안전 평가",
+        "aggregate-e2e-evidence": "Cross-repo E2E 안전 증거 결합",
         "evaluate-agent-trajectories": "Agent trajectory 안전 평가",
         "evaluate-official-incidents": "전국 공식 화학사고 외부 기준선 평가",
         "e2e-review": "E2E 독립 검수팩",
@@ -314,6 +315,25 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
         )
         print(f"주장 범위: {_short(payload.get('claim_scope'))}")
         print("주의: DRAFT E2E 회귀 결과는 현장 정확도나 상용 성능이 아닙니다.")
+    elif command == "aggregate-e2e-evidence":
+        integrity = payload.get("evidence_integrity_gate") or {}
+        coverage = payload.get("coverage") or {}
+        speech = coverage.get("speech") or {}
+        analysis = coverage.get("analysis_engine") or {}
+        backend = coverage.get("backend_state") or {}
+        print(f"증거 무결성 Gate: {_short(integrity.get('passed'))}")
+        print(
+            "분리 suite 범위: "
+            f"Speech {speech.get('condition_input_count', 0)}개 조건 입력, "
+            f"Analysis {analysis.get('passed_scenario_count', 0)}/"
+            f"{analysis.get('scenario_count', 0)} 시나리오, "
+            f"Backend {backend.get('passed_check_count', 0)}/"
+            f"{backend.get('check_count', 0)} 검사"
+        )
+        print(f"판정: {_short(payload.get('decision'))}")
+        print(
+            "주의: 서로 다른 내부 회귀를 결합한 보고서이며 단일 전체 경로 실행이 아닙니다."
+        )
     elif command == "evaluate-agent-trajectories":
         metrics = payload.get("metrics") or {}
         print(f"사실 상태: {_short(payload.get('fact_status'))}")
@@ -672,6 +692,21 @@ def _evaluate_e2e(args: argparse.Namespace) -> dict[str, Any]:
         args.evaluation,
         config_dir=args.config_dir,
         profile=args.evaluation_profile,
+        report_path=args.report,
+    )
+
+
+def _aggregate_e2e_evidence(args: argparse.Namespace) -> dict[str, Any]:
+    from chemiguard119.cross_repo_safety_evidence import (
+        aggregate_cross_repo_safety_evidence,
+    )
+
+    return aggregate_cross_repo_safety_evidence(
+        manifest_path=args.manifest,
+        analysis_report_path=args.analysis_report,
+        backend_report_path=args.backend_report,
+        seoul_speech_report_path=args.seoul_speech_report,
+        incheon_speech_report_path=args.incheon_speech_report,
         report_path=args.report,
     )
 
@@ -1275,6 +1310,7 @@ def _interactive(args: argparse.Namespace) -> dict[str, Any]:
             "train",
             "evaluate",
             "evaluate-e2e",
+            "aggregate-e2e-evidence",
             "evaluate-agent-trajectories",
             "evaluate-official-incidents",
             "e2e-review",
@@ -1464,6 +1500,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_json_option(evaluate_e2e)
     evaluate_e2e.set_defaults(handler=_evaluate_e2e)
+
+    aggregate_e2e = subparsers.add_parser(
+        "aggregate-e2e-evidence",
+        help="잠금 Speech·Analysis·Backend 내부 안전 보고서의 hash·Gate 결합",
+    )
+    aggregate_e2e.add_argument(
+        "--manifest",
+        type=_path,
+        default=EVALUATION_DIR / "cross_repo_safety_evidence_manifest.json",
+    )
+    aggregate_e2e.add_argument("--analysis-report", type=_path, required=True)
+    aggregate_e2e.add_argument("--backend-report", type=_path, required=True)
+    aggregate_e2e.add_argument("--seoul-speech-report", type=_path, required=True)
+    aggregate_e2e.add_argument("--incheon-speech-report", type=_path, required=True)
+    aggregate_e2e.add_argument(
+        "--report",
+        type=_path,
+        default=DEFAULT_REPORT_DIR / "cross_repo_safety_evidence.json",
+    )
+    _add_json_option(aggregate_e2e)
+    aggregate_e2e.set_defaults(handler=_aggregate_e2e_evidence)
 
     evaluate_agent = subparsers.add_parser(
         "evaluate-agent-trajectories",

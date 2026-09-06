@@ -94,8 +94,42 @@ claim_scope=INTERNAL_REGRESSION_ONLY
 - RAG source SHA-256: `bd527c4d83eb67ba3409744417ad6743b3aafffa3055e9b53c47f7106c074df5`
 
 이는 결정적 timeout 1건의 내부 회귀입니다. 실제 LLM endpoint 장애율·네트워크 SLO·응답
-품질을 측정하지 않으며 현장 안전성을 증명하지 않습니다. Backend confirmation correction과
-stale·duplicate 상태를 같은 report에 연결하는 작업도 남아 있습니다.
+품질을 측정하지 않으며 현장 안전성을 증명하지 않습니다.
+
+### 2026-09-07 Cross-repo 안전 증거 bundle
+
+Speech radio-sim, Analysis E2E v3, Backend confirmation correction·stale·duplicate 보고서는
+서로 다른 실행입니다. `aggregate-e2e-evidence`는 이들을 하나의 실험으로 합산하지 않고,
+잠금 manifest의 SHA-256·schema와 각 suite의 안전 Gate를 함께 검증합니다.
+
+```bash
+chemiguard119 aggregate-e2e-evidence \
+  --analysis-report <private-data>/experiments/analysis/e2e-v3-llm-timeout-r1/report.json \
+  --backend-report <private-data>/experiments/back/backend-safety-state-v1-r1/report.json \
+  --seoul-speech-report <private-data>/experiments/speech/robustness/seoul/radio-sim-v1/20260906T050926Z/downstream-silver-119ce11-p68beeb4/report.json \
+  --incheon-speech-report <private-data>/experiments/speech/robustness/incheon/radio-sim-v1/20260906T022037Z/downstream-silver-119ce11-p68beeb4/report.json \
+  --report <private-data>/experiments/analysis/cross-repo-safety-evidence-v1-r1/report.json
+```
+
+```text
+증거 무결성 Gate 통과
+Speech 서울·인천 radio-sim 1,440개 조건 입력
+Analysis DRAFT 시나리오 10/10 통과
+Backend H2 PostgreSQL 호환 모드 검사 18/18 통과
+분리 suite의 확인 전 Rule 실행·위험 노출·후보 승격 위반 관측 0건
+decision=CONDITIONALLY_ADOPT_FOR_INTERNAL_REGRESSION
+field_validated=false
+full_chain_executed=false
+```
+
+- 결합 report SHA-256: `dcfa26af2e0bf05134aec1f20944b0e0b78d099432c13c9783c4c77425204d20`
+- 잠금 manifest SHA-256: `0618f56780cff5c855b42f40441717e980e3ac8303ab919fbbecaa89e8bdd137`
+
+이 결과로 말할 수 있는 것은 네 보고서의 무결성과 **분리된 내부 회귀 suite에서 관측한**
+안전 계약뿐입니다. 음성부터 Backend 인계 기록까지 동일 `request_id`로 실행한 전체 경로,
+시설 과거 이력 없음, 실제 현장 무전, 음성 물질명의 CAS 사람 정답, Cloud SQL 동시성은 아직
+검증하지 않았습니다. 특히 speech 보고서는 CAS 정답 평가가 아니므로 “잘못된 단일 CAS 확정
+0건”이라고 표현하지 않습니다.
 
 ### 향후 사람 검수용 E2E 50건 후보
 

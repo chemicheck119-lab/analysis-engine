@@ -19,6 +19,20 @@ from chemiguard119 import cli
         (["train"], "train"),
         (["evaluate"], "evaluate"),
         (["evaluate-e2e"], "evaluate-e2e"),
+        (
+            [
+                "aggregate-e2e-evidence",
+                "--analysis-report",
+                "analysis.json",
+                "--backend-report",
+                "backend.json",
+                "--seoul-speech-report",
+                "seoul.json",
+                "--incheon-speech-report",
+                "incheon.json",
+            ],
+            "aggregate-e2e-evidence",
+        ),
         (["evaluate-agent-trajectories"], "evaluate-agent-trajectories"),
         (
             ["evaluate-official-incidents", "--split", "development"],
