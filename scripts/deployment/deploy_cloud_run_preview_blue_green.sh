@@ -9,10 +9,12 @@ required_variables=(
   GCP_REGION
   GCP_ARTIFACT_REPOSITORY
   GCP_CLOUD_RUN_SERVICE
+  GCP_CLOUD_RUN_URL
   GCP_RUNTIME_SERVICE_ACCOUNT
   GCP_MODEL_API_KEY_SECRET
   GCP_MODEL_API_KEY_SECRET_VERSION
   CHEMIGUARD119_API_KEY
+  CHEMICHECK119_MODEL_API_ID_TOKEN
 )
 for variable_name in "${required_variables[@]}"; do
   test -n "${!variable_name:-}" || {
@@ -139,6 +141,7 @@ PY
 test -n "$candidate_revision"
 test -n "$candidate_url"
 test -n "$service_url"
+test "$service_url" = "$GCP_CLOUD_RUN_URL"
 test "$candidate_revision" != "$previous_revision"
 
 deployed_image="$(gcloud run revisions describe "$candidate_revision" \
@@ -154,10 +157,7 @@ fi
 
 smoke() {
   local base_url="$1"
-  local audience="$2"
-  local identity_token
-  identity_token="$(gcloud auth print-identity-token --audiences="$audience")"
-  test -n "$identity_token"
+  local identity_token="$CHEMICHECK119_MODEL_API_ID_TOKEN"
   local http_code="000"
   for _attempt in $(seq 1 40); do
     http_code="$(curl --silent --show-error \
@@ -203,7 +203,7 @@ PY
       --identity-token-env CHEMICHECK119_MODEL_API_ID_TOKEN
 }
 
-smoke "$candidate_url" "$service_url"
+smoke "$candidate_url"
 
 promoted=false
 rollback() {
@@ -233,7 +233,7 @@ if [ "$service_exists" = true ]; then
     --to-revisions "$candidate_revision=100" \
     --quiet
   promoted=true
-  smoke "$service_url" "$service_url"
+  smoke "$service_url"
 fi
 
 if [ -n "${GITHUB_OUTPUT:-}" ]; then
