@@ -80,6 +80,11 @@ jobs:
           [[ "$IMAGE_DIGEST" =~ @sha256:[0-9a-f]{64}$ ]]
           [[ "$RUNTIME_MANIFEST_SHA256" =~ ^[0-9a-f]{64}$ ]]
           [[ "$RELEASE_GIT_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          scripts/deployment/validate_cloud_run_service_tier.sh \
+            competition-preview \
+            "$GCP_CLOUD_RUN_SERVICE" \
+            development \
+            "$IMAGE_DIGEST"
 
       - name: Python 3.11 설정
         uses: actions/setup-python@v6

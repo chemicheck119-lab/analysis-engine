@@ -100,6 +100,7 @@ INTERNAL_PACKAGE_NAME = "chemiguard119"
 AUTH_HEADER_NAME = "X-API-Key"
 REQUEST_ID_HEADER_NAME = "X-Request-Id"
 DEPLOYMENT_ENVIRONMENT_ENV_VAR = "CHEMIGUARD119_ENVIRONMENT"
+RELEASE_TIER_ENV_VAR = "CHEMIGUARD119_RELEASE_TIER"
 RULE_POLICY_ENV_VAR = "CHEMIGUARD119_RULE_POLICY"
 REQUEST_ID_MAX_LENGTH = 128
 REQUEST_ID_RE = re.compile(IDENTIFIER_PATTERN)
@@ -154,6 +155,36 @@ def _deployment_environment_error(environment: str) -> str | None:
     if environment not in SUPPORTED_DEPLOYMENT_ENVIRONMENTS:
         allowed = ", ".join(sorted(SUPPORTED_DEPLOYMENT_ENVIRONMENTS))
         return f"지원하지 않는 배포 환경입니다: {environment!r} (허용: {allowed})"
+    return None
+
+
+def _release_tier(environment: str) -> str:
+    configured = os.getenv(RELEASE_TIER_ENV_VAR, "").strip().lower()
+    if configured:
+        return configured
+    return {
+        "development": "development",
+        "test": "test",
+        "staging": "reviewed-staging",
+        "production": "production",
+    }.get(environment, "unknown")
+
+
+def _release_tier_error(environment: str, release_tier: str) -> str | None:
+    allowed_by_environment = {
+        "development": {"development", "competition-preview"},
+        "test": {"test"},
+        "staging": {"reviewed-staging"},
+        "production": {"production"},
+    }
+    allowed = allowed_by_environment.get(environment, set())
+    if release_tier not in allowed:
+        expected = ", ".join(sorted(allowed)) or "없음"
+        return (
+            "배포 환경과 release tier 조합이 올바르지 않습니다: "
+            f"environment={environment!r}, release_tier={release_tier!r} "
+            f"(허용: {expected})"
+        )
     return None
 
 
@@ -1175,6 +1206,11 @@ def create_app(
     application.state.rag_service = rag_service or GroundedRagService()
     application.state.startup_error = None
     application.state.deployment_environment = resolved_deployment_environment
+    application.state.release_tier = _release_tier(resolved_deployment_environment)
+    application.state.release_tier_error = _release_tier_error(
+        resolved_deployment_environment,
+        application.state.release_tier,
+    )
     application.state.rule_policy = (
         rule_policy or os.getenv(RULE_POLICY_ENV_VAR) or PUBLIC_SOURCE_PILOT_POLICY
     ).strip()
@@ -1196,6 +1232,7 @@ def create_app(
     )
     application.state.auth_config_error = (
         deployment_environment_error
+        or application.state.release_tier_error
         or _production_api_key_error(
             application.state.api_key,
             application.state.deployment_environment,
@@ -1235,6 +1272,7 @@ def create_app(
                 service_name=SERVICE_ID,
                 service_version=__version__,
                 deployment_environment=request.app.state.deployment_environment,
+                release_tier=request.app.state.release_tier,
                 authentication_mode=_auth_mode(request),
                 http_request_method=request.method,
                 http_route=_request_route(request),
@@ -1337,6 +1375,8 @@ def create_app(
                     "status": "NOT_READY",
                     "service": SERVICE_ID,
                     "service_name": PUBLIC_SERVICE_NAME,
+                    "deployment_environment": request.app.state.deployment_environment,
+                    "release_tier": request.app.state.release_tier,
                     "reason": getattr(request.app.state, "startup_error", None),
                     "material_discovery_capability": {
                         "ready": False,
@@ -1383,6 +1423,8 @@ def create_app(
                 "status": "READY" if overall_ready else "NOT_READY",
                 "service": SERVICE_ID,
                 "service_name": PUBLIC_SERVICE_NAME,
+                "deployment_environment": request.app.state.deployment_environment,
+                "release_tier": request.app.state.release_tier,
                 **readiness,
                 "ready": overall_ready,
                 "rule_policy": policy_mode,
@@ -1401,6 +1443,7 @@ def create_app(
                     "rule_policy": policy_mode,
                     "conflict_review_ready": conflict_review_ready,
                     "production_integrity_ready": production_integrity_ready,
+                    "release_tier_ready": request.app.state.release_tier_error is None,
                 },
             },
         )
@@ -1428,6 +1471,7 @@ def create_app(
             "internal_package_name": INTERNAL_PACKAGE_NAME,
             "version": __version__,
             "deployment_environment": request.app.state.deployment_environment,
+            "release_tier": request.app.state.release_tier,
             "api_schema_version": API_SCHEMA_VERSION,
             "pipeline_schema_version": PIPELINE_SCHEMA_VERSION,
             "authentication": {

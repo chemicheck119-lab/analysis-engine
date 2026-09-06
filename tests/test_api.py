@@ -397,6 +397,8 @@ def test_health_and_readiness_with_injected_runtime(runtime: ModelRuntime) -> No
         "status": "READY",
         "service": "chemicheck119-model-api",
         "service_name": "케미체크119",
+        "deployment_environment": "development",
+        "release_tier": "development",
         "ready": True,
         "artifacts": {
             "database": True,
@@ -479,6 +481,7 @@ def test_health_and_readiness_with_injected_runtime(runtime: ModelRuntime) -> No
             "rule_policy": "PUBLIC_SOURCE_PILOT_V1",
             "conflict_review_ready": True,
             "production_integrity_ready": True,
+            "release_tier_ready": True,
         },
     }
 
@@ -1012,6 +1015,7 @@ def test_anonymous_mode_must_be_explicit_and_is_reported(runtime: ModelRuntime) 
     assert response.status_code == 200
     body = response.json()
     assert body["deployment_environment"] == "test"
+    assert body["release_tier"] == "test"
     assert body["authentication"]["mode"] == "EXPLICIT_ANONYMOUS"
     assert body["authentication"]["required"] is False
     assert body["authentication"]["anonymous_access_is_explicit"] is True
@@ -1045,7 +1049,10 @@ def test_deployment_environment_uses_canonical_environment_variable(
 
     assert metadata.status_code == 200
     assert metadata.json()["deployment_environment"] == "staging"
+    assert metadata.json()["release_tier"] == "reviewed-staging"
     assert ready.status_code == 503
+    assert ready.json()["deployment_environment"] == "staging"
+    assert ready.json()["release_tier"] == "reviewed-staging"
     assert ready.json()["operational_checks"]["production_integrity_ready"] is False
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "MODEL_RUNTIME_INTEGRITY_NOT_READY"
@@ -1068,6 +1075,27 @@ def test_staging_rejects_anonymous_and_weak_api_key(runtime: ModelRuntime) -> No
 
     assert ready.status_code == 503
     assert ready.json()["operational_checks"]["authentication_ready"] is False
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "BACKEND_AUTH_CONFIGURATION_INVALID"
+
+
+def test_release_tier_mismatch_fails_closed(
+    runtime: ModelRuntime,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CHEMIGUARD119_RELEASE_TIER", "reviewed-staging")
+    application = create_app(runtime=runtime, allow_anonymous=True)
+
+    with TestClient(application) as client:
+        ready = client.get("/health/ready")
+        response = client.post(
+            "/api/v1/substances/resolve",
+            json={"query": "염산"},
+        )
+
+    assert ready.status_code == 503
+    assert ready.json()["release_tier"] == "reviewed-staging"
+    assert ready.json()["operational_checks"]["release_tier_ready"] is False
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "BACKEND_AUTH_CONFIGURATION_INVALID"
 

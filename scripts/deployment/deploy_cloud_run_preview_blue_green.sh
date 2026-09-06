@@ -33,6 +33,11 @@ maximum_instances="${GCP_MAX_INSTANCES:-3}"
 expected_image_prefix="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_ARTIFACT_REPOSITORY/model-api-preview@sha256:"
 [[ "$IMAGE_DIGEST" == "$expected_image_prefix"* ]]
 [[ "$IMAGE_DIGEST" =~ @sha256:[0-9a-f]{64}$ ]]
+scripts/deployment/validate_cloud_run_service_tier.sh \
+  competition-preview \
+  "$GCP_CLOUD_RUN_SERVICE" \
+  development \
+  "$IMAGE_DIGEST"
 
 run_attempt="${GITHUB_RUN_ATTEMPT:-1}"
 run_id="${GITHUB_RUN_ID:-$(date -u +%s)}"
@@ -92,7 +97,7 @@ deploy_args=(
   --deploy-health-check
   --startup-probe=httpGet.path=/health/ready,httpGet.port=8000,timeoutSeconds=3,periodSeconds=5,failureThreshold=24
   --liveness-probe=httpGet.path=/health/live,httpGet.port=8000,timeoutSeconds=3,periodSeconds=30,failureThreshold=3
-  --set-env-vars="CHEMIGUARD119_ENVIRONMENT=development,CHEMIGUARD119_RUNTIME_MANIFEST_SHA256=$RUNTIME_MANIFEST_SHA256,CHEMIGUARD119_GIT_COMMIT=$RELEASE_GIT_COMMIT,CHEMIGUARD119_RULE_POLICY=PUBLIC_SOURCE_PILOT_V1,CHEMIGUARD119_RAG_MODE=extractive,CHEMIGUARD119_LOG_LEVEL=INFO,CHEMIGUARD119_API_HOST=0.0.0.0,CHEMIGUARD119_API_PORT=8000"
+  --set-env-vars="CHEMIGUARD119_ENVIRONMENT=development,CHEMIGUARD119_RELEASE_TIER=competition-preview,CHEMIGUARD119_RUNTIME_MANIFEST_SHA256=$RUNTIME_MANIFEST_SHA256,CHEMIGUARD119_GIT_COMMIT=$RELEASE_GIT_COMMIT,CHEMIGUARD119_RULE_POLICY=PUBLIC_SOURCE_PILOT_V1,CHEMIGUARD119_RAG_MODE=extractive,CHEMIGUARD119_LOG_LEVEL=INFO,CHEMIGUARD119_API_HOST=0.0.0.0,CHEMIGUARD119_API_PORT=8000"
   --set-secrets="CHEMIGUARD119_API_KEY=$GCP_MODEL_API_KEY_SECRET:$GCP_MODEL_API_KEY_SECRET_VERSION"
   --quiet
 )
@@ -178,6 +183,10 @@ integrity = payload.get("integrity") or {}
 coverage = payload.get("facility_history_coverage") or {}
 if payload.get("ready") is not True or integrity.get("status") != "VERIFIED":
     raise SystemExit("Cloud Run preview readiness 무결성 검증 실패")
+if payload.get("deployment_environment") != "development":
+    raise SystemExit("preview deployment_environment는 development여야 합니다.")
+if payload.get("release_tier") != "competition-preview":
+    raise SystemExit("preview release_tier가 competition-preview가 아닙니다.")
 if payload.get("expert_reviewed") is not False:
     raise SystemExit("preview는 expert_reviewed=false여야 합니다.")
 if payload.get("decision_support_only") is not True:
