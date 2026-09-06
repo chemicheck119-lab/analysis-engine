@@ -277,3 +277,20 @@ def test_runtime_provenance_must_bind_execution_to_summary() -> None:
             runtime_provenance_sha256="8" * 64,
             evaluator_git_commit="f" * 40,
         )
+
+
+def test_runtime_provenance_rejects_reused_regional_summary() -> None:
+    incheon = _report("1" * 64, summary_digest="a" * 64)
+    seoul = _report("2" * 64, summary_digest="a" * 64)
+    provenance = _runtime_provenance(incheon, seoul)
+
+    with pytest.raises(DownstreamEvaluationError, match="서로 다른 STT summary"):
+        build_cross_region_lora_gate(
+            incheon_report=incheon,
+            seoul_report=seoul,
+            incheon_report_sha256="1" * 64,
+            seoul_report_sha256="2" * 64,
+            runtime_provenance=provenance,
+            runtime_provenance_sha256="8" * 64,
+            evaluator_git_commit="f" * 40,
+        )

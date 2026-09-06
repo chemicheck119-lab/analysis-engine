@@ -272,6 +272,10 @@ def validate_runtime_provenance(
             raise DownstreamEvaluationError(
                 f"{region} execution provenance와 downstream 보고서가 결합되지 않습니다."
             )
+    if len({regions[region]["summary_sha256"] for region in REGIONS}) != len(REGIONS):
+        raise DownstreamEvaluationError(
+            "서울·인천 execution에는 서로 다른 STT summary SHA-256이 필요합니다."
+        )
     return payload
 
 
