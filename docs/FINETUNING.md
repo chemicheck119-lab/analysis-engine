@@ -69,10 +69,27 @@ CAS는 정확한 과거 표현에 한해 확인 필요 후보로 포함합니다
 
 ## 재현
 
+공식 원본은 관할서·도로명·우편번호 같은 Resolver 비필수 열을 포함합니다. 원본을 Git 작업
+경로가 아닌 승인된 private 저장소에 내려받은 뒤, 다음 명령으로 연도·CAS·물질명 여섯 열만
+별도 private 파생 파일로 투영합니다. 이 단계는 행을 필터링하거나 train/test를 나누지 않으며
+원본·파생 SHA-256과 컬럼 목록을 manifest에 기록합니다.
+
+```bash
+PYTHONPATH=src python scripts/data/prepare_ulsan_resolver_source.py \
+  --source /private/raw/유해물질판단_2020_2015.csv \
+  --output /private/derived/ulsan-resolver-source.csv \
+  --manifest /private/derived/ulsan-resolver-source.manifest.json
+```
+
+원본 음성·주소·전사문과 마찬가지로 이 파생 CSV와 manifest도 Git에 커밋하지 않습니다. 기존
+파일이 있으면 기본적으로 중단하며, 의도적으로 새 원본 버전을 처리할 때만 별도 경로를 쓰거나
+`--overwrite`를 명시합니다. 새 파생 파일은 과거 보고서의 source SHA-256과 다를 수 있으므로,
+419건과 미관측 60건을 처음부터 재평가해 과거 수치와 일치하는지 먼저 확인합니다.
+
 ```bash
 chemiguard119 finetune-resolver \
   --base-model artifacts/resolver.joblib \
-  --incidents data/raw/07_울산소방_화학사고별_유해물질판단.csv \
+  --incidents /private/derived/ulsan-resolver-source.csv \
   --output-dir artifacts/incident_adaptation \
   --report outputs/modeling/incident_adapted_resolver_evaluation.json \
   --json

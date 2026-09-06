@@ -1,0 +1,96 @@
+from __future__ import annotations
+
+import csv
+import json
+from pathlib import Path
+
+import pytest
+
+from chemiguard119.incident_source_intake import (
+    INTAKE_SCHEMA_VERSION,
+    OUTPUT_COLUMNS,
+    prepare_ulsan_resolver_source,
+)
+
+
+def _write_source(path: Path, *, lowercase: bool = False) -> None:
+    fields = [
+        "SN",
+        "OCRN_YR",
+        "CAS_NO",
+        "CHEM_SBSTN_KORN_NM",
+        "CHEM_SBSTN_ENG_NM",
+        "GNRL_KORN_NM",
+        "GNRL_ENG_NM",
+        "ROAD_NM",
+        "EMRG_RSCU_ZIP",
+    ]
+    if lowercase:
+        fields = [field.lower() for field in fields]
+    values = {
+        "SN": "1",
+        "OCRN_YR": "2020",
+        "CAS_NO": "64-17-5",
+        "CHEM_SBSTN_KORN_NM": "에탄올",
+        "CHEM_SBSTN_ENG_NM": "Ethanol",
+        "GNRL_KORN_NM": "에틸 알코올",
+        "GNRL_ENG_NM": "Ethyl alcohol",
+        "ROAD_NM": "내보내면 안 되는 도로명",
+        "EMRG_RSCU_ZIP": "00000",
+    }
+    if lowercase:
+        values = {key.lower(): value for key, value in values.items()}
+    with path.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fields)
+        writer.writeheader()
+        writer.writerow(values)
+
+
+@pytest.mark.parametrize("lowercase", [False, True])
+def test_projects_only_resolver_columns_and_records_provenance(
+    tmp_path: Path, lowercase: bool
+) -> None:
+    source = tmp_path / "유해물질판단_2020_2015.csv"
+    output = tmp_path / "resolver-source.csv"
+    manifest = tmp_path / "resolver-source.manifest.json"
+    _write_source(source, lowercase=lowercase)
+
+    result = prepare_ulsan_resolver_source(source, output, manifest)
+
+    assert result["schema_version"] == INTAKE_SCHEMA_VERSION
+    assert result["source"]["row_count"] == 1
+    assert result["derived"]["columns"] == list(OUTPUT_COLUMNS)
+    assert result["transformation"]["row_filtering_applied"] is False
+    assert result["safety"]["git_commit_allowed"] is False
+    with output.open(encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert list(rows[0]) == list(OUTPUT_COLUMNS)
+    assert rows[0]["발생연도"] == "2020"
+    assert rows[0]["CAS번호"] == "64-17-5"
+    assert "내보내면 안 되는 도로명" not in output.read_text(encoding="utf-8-sig")
+    assert json.loads(manifest.read_text(encoding="utf-8")) == result
+
+
+def test_rejects_missing_required_source_column(tmp_path: Path) -> None:
+    source = tmp_path / "source.csv"
+    source.write_text("OCRN_YR,CAS_NO\n2020,64-17-5\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="원본 컬럼이 부족"):
+        prepare_ulsan_resolver_source(
+            source,
+            tmp_path / "output.csv",
+            tmp_path / "manifest.json",
+        )
+
+
+def test_refuses_to_overwrite_existing_outputs(tmp_path: Path) -> None:
+    source = tmp_path / "source.csv"
+    output = tmp_path / "output.csv"
+    manifest = tmp_path / "manifest.json"
+    _write_source(source)
+    output.write_text("기존 파일", encoding="utf-8")
+
+    with pytest.raises(FileExistsError, match="덮어쓰지 않습니다"):
+        prepare_ulsan_resolver_source(source, output, manifest)
+
+    assert output.read_text(encoding="utf-8") == "기존 파일"
