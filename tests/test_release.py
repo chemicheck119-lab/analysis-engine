@@ -980,6 +980,7 @@ def test_competition_preview_deploy_is_separate_and_fail_closed() -> None:
     assert "service_account_key" not in workflow.lower()
     assert "deploy_cloud_run_preview_blue_green.sh" in workflow
     assert "CHEMIGUARD119_ENVIRONMENT=development" in script
+    assert "CHEMIGUARD119_RELEASE_TIER=competition-preview" in script
     assert "model-api-preview@sha256:" in script
     assert "--no-allow-unauthenticated" in script
     assert "--invoker-iam-check" in script
@@ -988,9 +989,83 @@ def test_competition_preview_deploy_is_separate_and_fail_closed() -> None:
     assert '--to-revisions "$candidate_revision=100"' in script
     assert '--to-revisions "$previous_revision=100"' in script
     assert 'payload.get("expert_reviewed") is not False' in script
+    assert 'payload.get("release_tier") != "competition-preview"' in script
     assert 'payload.get("decision_support_only") is not True' in script
     assert "NATIONWIDE_KOREA_HISTORICAL_CANDIDATES" in script
     assert 'candidate_tag="p${RELEASE_GIT_COMMIT:0:7}${run_attempt}"' in script
     assert "CHEMIGUARD119_RELEASE_ATTESTATION_HMAC_KEY" not in script
     assert "--readiness-probe" not in script
     assert "--startup-probe=httpGet.path=/health/ready" in script
+
+
+def test_cloud_run_service_tier_validation_rejects_mixed_boundaries() -> None:
+    project_root = CONFIG_DIR.parent
+    validator = (
+        project_root / "scripts" / "deployment" / "validate_cloud_run_service_tier.sh"
+    )
+    preview_image = (
+        "asia-northeast3-docker.pkg.dev/chemi-check/chemicheck119/"
+        f"model-api-preview@sha256:{'a' * 64}"
+    )
+    staging_image = (
+        "asia-northeast3-docker.pkg.dev/chemi-check/chemicheck119/"
+        f"model-api@sha256:{'b' * 64}"
+    )
+
+    subprocess.run(["bash", "-n", str(validator)], check=True)
+    subprocess.run(
+        [
+            str(validator),
+            "competition-preview",
+            "chemicheck119-model-api-preview",
+            "development",
+            preview_image,
+        ],
+        check=True,
+    )
+    subprocess.run(
+        [
+            str(validator),
+            "reviewed-staging",
+            "chemicheck119-model-api-staging",
+            "staging",
+            staging_image,
+        ],
+        check=True,
+    )
+
+    invalid_cases = (
+        (
+            "competition-preview",
+            "chemicheck119-model-api-staging",
+            "development",
+            preview_image,
+        ),
+        (
+            "competition-preview",
+            "chemicheck119-model-api-preview",
+            "staging",
+            preview_image,
+        ),
+        (
+            "reviewed-staging",
+            "chemicheck119-model-api-staging",
+            "staging",
+            preview_image,
+        ),
+    )
+    for invalid_case in invalid_cases:
+        assert (
+            subprocess.run([str(validator), *invalid_case], check=False).returncode != 0
+        )
+
+
+def test_reviewed_staging_deploy_checks_runtime_tier() -> None:
+    project_root = CONFIG_DIR.parent
+    script = (
+        project_root / "scripts" / "deployment" / "deploy_cloud_run_blue_green.sh"
+    ).read_text(encoding="utf-8")
+
+    assert "CHEMIGUARD119_RELEASE_TIER=reviewed-staging" in script
+    assert 'payload.get("deployment_environment") != "staging"' in script
+    assert 'payload.get("release_tier") != "reviewed-staging"' in script

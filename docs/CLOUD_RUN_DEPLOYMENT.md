@@ -14,6 +14,15 @@ main의 검증된 코드·데이터
 → 실패 시 이전 리비전 100% 복원
 ```
 
+이 경로는 `-staging` service, `model-api@sha256:` image, `staging` 실행 환경,
+`reviewed-staging` release tier 조합만 허용합니다. development preview artifact는 이 경로에
+배포할 수 없습니다. 공모전용 비운영 이미지는 별도의 `-preview` service와
+`PREVIEW_DEPLOYMENT.md` 절차를 사용합니다.
+
+여기서 `reviewed-staging`은 배포 artifact와 평가 attestation이 staging Gate를 통과했다는
+뜻입니다. CAMEO 공개 규칙 결과가 화학 전문가의 개별 검토를 받았다는 뜻은 아니며, 결과의
+`expert_reviewed` 의미와 섞어 설명하지 않습니다.
+
 태블릿 FE는 이 URL을 직접 호출하지 않습니다. 서비스 BE만 Cloud Run URL과 모델 API Key를
 사용합니다. Cloud Run 호출은 IAM으로 비공개이며, `/api/v1/*`는 추가로 `X-API-Key`가 없으면
 차단됩니다. 배포 스모크 테스트도 배포 서비스 계정의 ID 토큰과 API Key를 함께 사용합니다.

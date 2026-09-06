@@ -33,6 +33,11 @@ maximum_instances="${GCP_MAX_INSTANCES:-3}"
 expected_image_prefix="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GCP_ARTIFACT_REPOSITORY/model-api@sha256:"
 [[ "$IMAGE_DIGEST" == "$expected_image_prefix"* ]]
 [[ "$IMAGE_DIGEST" =~ @sha256:[0-9a-f]{64}$ ]]
+scripts/deployment/validate_cloud_run_service_tier.sh \
+  reviewed-staging \
+  "$GCP_CLOUD_RUN_SERVICE" \
+  staging \
+  "$IMAGE_DIGEST"
 
 run_attempt="${GITHUB_RUN_ATTEMPT:-1}"
 revision_suffix="r${RELEASE_GIT_COMMIT:0:7}${run_attempt}"
@@ -86,7 +91,7 @@ gcloud run deploy "$GCP_CLOUD_RUN_SERVICE" \
   --deploy-health-check \
   --startup-probe="httpGet.path=/health/ready,httpGet.port=8000,timeoutSeconds=3,periodSeconds=5,failureThreshold=24" \
   --liveness-probe="httpGet.path=/health/live,httpGet.port=8000,timeoutSeconds=3,periodSeconds=30,failureThreshold=3" \
-  --set-env-vars="CHEMIGUARD119_ENVIRONMENT=staging,CHEMIGUARD119_RUNTIME_MANIFEST_SHA256=$RUNTIME_MANIFEST_SHA256,CHEMIGUARD119_GIT_COMMIT=$RELEASE_GIT_COMMIT,CHEMIGUARD119_RULE_POLICY=PUBLIC_SOURCE_PILOT_V1,CHEMIGUARD119_RAG_MODE=extractive,CHEMIGUARD119_LOG_LEVEL=INFO,CHEMIGUARD119_API_HOST=0.0.0.0,CHEMIGUARD119_API_PORT=8000" \
+  --set-env-vars="CHEMIGUARD119_ENVIRONMENT=staging,CHEMIGUARD119_RELEASE_TIER=reviewed-staging,CHEMIGUARD119_RUNTIME_MANIFEST_SHA256=$RUNTIME_MANIFEST_SHA256,CHEMIGUARD119_GIT_COMMIT=$RELEASE_GIT_COMMIT,CHEMIGUARD119_RULE_POLICY=PUBLIC_SOURCE_PILOT_V1,CHEMIGUARD119_RAG_MODE=extractive,CHEMIGUARD119_LOG_LEVEL=INFO,CHEMIGUARD119_API_HOST=0.0.0.0,CHEMIGUARD119_API_PORT=8000" \
   --set-secrets="CHEMIGUARD119_API_KEY=$GCP_MODEL_API_KEY_SECRET:$GCP_MODEL_API_KEY_SECRET_VERSION" \
   --quiet
 
@@ -161,6 +166,10 @@ payload = json.load(open(os.environ["READY_FILE"], encoding="utf-8"))
 integrity = payload.get("integrity") or {}
 if payload.get("ready") is not True or integrity.get("status") != "VERIFIED":
     raise SystemExit("Cloud Run readiness 무결성 검증 실패")
+if payload.get("deployment_environment") != "staging":
+    raise SystemExit("staging deployment_environment가 staging이 아닙니다.")
+if payload.get("release_tier") != "reviewed-staging":
+    raise SystemExit("staging release_tier가 reviewed-staging이 아닙니다.")
 PY
   rm -f "$ready_file"
   CHEMICHECK119_MODEL_API_KEY="$CHEMIGUARD119_API_KEY" \

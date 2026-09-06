@@ -5,6 +5,7 @@
 이 이미지는 FE·BE 연동과 공모전 시연을 위한 비운영 preview입니다.
 
 - 배포 환경: `development`
+- release tier: `competition-preview`
 - API 인증: `X-API-Key` 필수
 - 전문가 검토: `expert_reviewed=false`
 - 충돌 실행: 확인된 사고물질·시설물질 CAS 두 개가 있을 때만 허용
@@ -125,9 +126,12 @@ gh workflow run deploy-preview-cloud-run.yml \
   -f git_commit='40자리-main-commit'
 ```
 
-preview workflow는 `model-api-preview@sha256:`만 허용하고 실행 환경을 `development`로
-고정합니다. 운영 `model-api@sha256:` workflow와 분리돼 있어 `PILOT_REVIEWED` gate를
-약화하지 않습니다.
+preview workflow는 `-preview` service, `model-api-preview@sha256:` image,
+`development` 실행 환경, `competition-preview` release tier 조합만 허용합니다. 이 중
+하나라도 staging 값과 섞이면 배포 전에 실패합니다. readiness도
+`deployment_environment=development`, `release_tier=competition-preview`,
+`expert_reviewed=false`를 모두 확인합니다. 운영 `model-api@sha256:` workflow와 분리돼 있어
+`PILOT_REVIEWED` gate를 약화하지 않습니다.
 
 ## 백엔드 계약
 
