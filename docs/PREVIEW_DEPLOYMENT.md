@@ -111,6 +111,11 @@ scripts/deployment/build_cloud_run_preview.sh
 4. API Key와 attestation key를 이미지에 넣지 않음
 5. Artifact Registry digest 반환
 
+`runtime_manifest.json`은 반드시 `requirements-production.txt`와 `Dockerfile.preview`가 고정한
+serving runtime에서 생성합니다. 빌드 스크립트는 Python·NumPy·scikit-learn·joblib 버전을
+Cloud Build 업로드 전에 비교하며, 하나라도 다르면 비용이 발생하는 원격 빌드를 시작하지
+않습니다.
+
 ## preview Cloud Run 배포
 
 최초 서비스는 이전 리비전이 없으므로 직접 생성한 후 즉시 smoke합니다. 두 번째 배포부터는
