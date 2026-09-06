@@ -35,20 +35,30 @@ chemiguard119 audit --data-dir data/raw
 chemiguard119 pipeline --data-dir data/raw --include-hash
 ```
 
-GitHub Actions 릴리스에서는 이 8개 파일을 루트에 담은 `tar.gz` 번들을 사용합니다.
+GitHub Actions 릴리스에서는 위 8개 파일과 아래 6열 파생본·sidecar를 합친 10개
+파일을 루트에 담은 `tar.gz` 번들을 사용합니다.
 조직 Secret `CHEMIGUARD119_DATA_BUNDLE_URL`과
 `CHEMIGUARD119_DATA_BUNDLE_SHA256`에 다운로드 주소와 SHA-256을 등록해야 합니다.
 
 ## 선택: 소방 사고–CAS source adaptation
 
-물질명 후보 Resolver 파인튜닝에는 다음 공개 파일을 추가로 사용합니다.
+물질명 후보 Resolver 파인튜닝에는 공식 원본에서 만든 다음 private 파생 파일과
+sidecar를 추가로 사용합니다.
 
 - `07_울산소방_화학사고별_유해물질판단.csv`
+- `07_울산소방_화학사고별_유해물질판단.manifest.json`
 - 출처: `https://bigdata-119.kr/goods/goodsInfo?goods_mng_sn=5`
 
 원본 전체를 Git에 넣지 않고 `발생연도·CAS·한글/영문 물질명·일반명`만 학습에
 사용합니다. 2015~2018년으로 검증 모델을 학습하고 2019년으로 검증한 뒤,
 2015~2019년 최종 후보 모델을 2020년 잠금셋에서 한 번 평가합니다.
+
+```bash
+PYTHONPATH=src python scripts/data/prepare_ulsan_resolver_source.py \
+  --source /private/raw/유해물질판단_2020_2015.csv \
+  --output /private/derived/07_울산소방_화학사고별_유해물질판단.csv \
+  --manifest /private/derived/07_울산소방_화학사고별_유해물질판단.manifest.json
+```
 
 기본 카탈로그에 없는 유효 CAS는 현재 재고나 상세 MSDS로 승격하지 않습니다. 과거 소방
 기록에 나온 정확 표현에서만 `catalog_candidate_only` 후보로 반환하고 fuzzy 검색에서는
@@ -57,7 +67,8 @@ GitHub Actions 릴리스에서는 이 8개 파일을 루트에 담은 `tar.gz` �
 ```bash
 chemiguard119 finetune-resolver \
   --base-model artifacts/resolver.joblib \
-  --incidents data/raw/07_울산소방_화학사고별_유해물질판단.csv \
+  --incidents /private/derived/07_울산소방_화학사고별_유해물질판단.csv \
+  --source-manifest /private/derived/07_울산소방_화학사고별_유해물질판단.manifest.json \
   --output-dir artifacts/incident_adaptation \
   --report outputs/modeling/incident_adapted_resolver_evaluation.json
 ```

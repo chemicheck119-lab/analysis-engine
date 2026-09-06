@@ -881,14 +881,19 @@ def test_release_workflow_keeps_signing_key_out_of_runtime_and_records_digest() 
     assert "service_account_key" not in workflow.lower()
 
 
-def test_release_workflow_adopts_incident_adapted_resolver_before_manifest() -> None:
+def test_release_workflow_adopts_provenance_bound_resolver_before_manifest() -> None:
     workflow = (
         CONFIG_DIR.parent / ".github" / "workflows" / "release-model.yml"
     ).read_text(encoding="utf-8")
 
     assert '"07_울산소방_화학사고별_유해물질판단.csv"' in workflow
+    assert '"07_울산소방_화학사고별_유해물질판단.manifest.json"' in workflow
     assert "--incident-adaptation-csv" in workflow
+    assert "--incident-adaptation-manifest" in workflow
     assert workflow.index("--incident-adaptation-csv") < workflow.index(
+        "Runtime manifest SHA-256 추출"
+    )
+    assert workflow.index("--incident-adaptation-manifest") < workflow.index(
         "Runtime manifest SHA-256 추출"
     )
 

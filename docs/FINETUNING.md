@@ -26,12 +26,16 @@ CAS는 정확한 과거 표현에 한해 확인 필요 후보로 포함합니다
 - 자료명: 울산소방 화학사고별 유해물질판단 2015~2020
 - 기관: 소방청·소방안전 빅데이터 플랫폼
 - URL: <https://bigdata-119.kr/goods/goodsInfo?goods_mng_sn=5>
-- 원천 행: 1,868
-- 유효 비모호 물질 표현: 1,530
-- 제외: checksum 오류 또는 복합 CAS 212행, 다중 CAS 공유 표현 2개
+- 과거 가공 입력 보고서 행: 1,868
+- 과거 보고서의 유효 비모호 물질 표현: 1,530
+- 과거 보고서의 제외: checksum 오류 또는 복합 CAS 212행, 다중 CAS 공유 표현 2개
 - 사용 필드: 발생연도, CAS, 한글·영문 물질명, 한글·영문 일반명
 - 사용하지 않은 필드: 상세 주소, 관할서, 센터, 사고 대응·위험 판정
-- 원천 SHA-256: `f013ebed301c5306178ad72f8dbbb62bdb5ecae1122ae3dfe7d1050f7ea0d765`
+- 과거 가공 입력 SHA-256: `f013ebed301c5306178ad72f8dbbb62bdb5ecae1122ae3dfe7d1050f7ea0d765`
+
+위 SHA-256은 당시 평가에 사용한 가공 입력의 hash이며 공식 다운로드 원본의 hash가 아닙니다.
+현재 공식 전체 CSV를 다시 확보하기 전까지 행 수·제외 수·아래 성능은 과거 보고서 수치로만
+취급하고, 새 원본 provenance와 결합된 재현 결과로 표현하지 않습니다.
 
 공모전 데이터 활용과 모델 학습은 가능하지만 파생 별칭 artifact를 공개 컨테이너에 재배포하는
 조건은 별도로 확인해야 하므로 registry 상태는 `REVIEW_REQUIRED`입니다.
@@ -69,14 +73,36 @@ CAS는 정확한 과거 표현에 한해 확인 필요 후보로 포함합니다
 
 ## 재현
 
+공식 원본은 관할서·도로명·우편번호 같은 Resolver 비필수 열을 포함합니다. 원본을 Git 작업
+경로가 아닌 승인된 private 저장소에 내려받은 뒤, 다음 명령으로 연도·CAS·물질명 여섯 열만
+별도 private 파생 파일로 투영합니다. 이 단계는 행을 필터링하거나 train/test를 나누지 않으며
+원본·파생 SHA-256과 컬럼 목록을 manifest에 기록합니다.
+
+```bash
+PYTHONPATH=src python scripts/data/prepare_ulsan_resolver_source.py \
+  --source /private/raw/유해물질판단_2020_2015.csv \
+  --output /private/derived/07_울산소방_화학사고별_유해물질판단.csv \
+  --manifest /private/derived/07_울산소방_화학사고별_유해물질판단.manifest.json
+```
+
+원본 음성·주소·전사문과 마찬가지로 이 파생 CSV와 manifest도 Git에 커밋하지 않습니다. 기존
+파일이 있으면 중단하며, 새 원본 버전은 기존 증거를 덮어쓰지 않고 새 버전 경로에 생성합니다.
+새 파생 파일은 과거 보고서의 source SHA-256과 다를 수 있으므로,
+419건과 미관측 60건을 처음부터 재평가해 과거 수치와 일치하는지 먼저 확인합니다.
+
 ```bash
 chemiguard119 finetune-resolver \
   --base-model artifacts/resolver.joblib \
-  --incidents data/raw/07_울산소방_화학사고별_유해물질판단.csv \
+  --incidents /private/derived/07_울산소방_화학사고별_유해물질판단.csv \
+  --source-manifest /private/derived/07_울산소방_화학사고별_유해물질판단.manifest.json \
   --output-dir artifacts/incident_adaptation \
   --report outputs/modeling/incident_adapted_resolver_evaluation.json \
   --json
 ```
+
+학습기는 sidecar의 원본·파생 SHA-256, 행 수, 컬럼 투영 계약을 먼저 검증하고,
+검증된 원본 SHA-256과 manifest SHA-256을 모델 metadata와 평가 보고서에 함께
+기록합니다. CSV와 sidecar 중 하나라도 달라지면 학습을 중단합니다.
 
 배포 후보 artifact:
 

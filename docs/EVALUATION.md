@@ -351,11 +351,16 @@ python scripts/evaluation/evaluate_material_ranker.py \
 ```bash
 chemiguard119 finetune-resolver \
   --base-model artifacts/resolver.joblib \
-  --incidents data/raw/07_울산소방_화학사고별_유해물질판단.csv \
+  --incidents /private/derived/07_울산소방_화학사고별_유해물질판단.csv \
+  --source-manifest /private/derived/07_울산소방_화학사고별_유해물질판단.manifest.json \
   --output-dir artifacts/incident_adaptation \
   --report outputs/modeling/incident_adapted_resolver_evaluation.json \
   --json
 ```
+
+공식 원본의 위치·대응 관련 열은 학습 입력에 직접 사용하지 않습니다. 먼저 최소
+6개 열 파생본과 intake sidecar를 만들고, 학습 시 두 파일의 SHA-256 및 행 수가
+일치하는지 검증합니다.
 
 ## 4. Resolver 지표
 

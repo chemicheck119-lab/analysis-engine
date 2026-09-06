@@ -116,6 +116,7 @@ jobs:
               "05_CAMEO_반응성그룹_호환성_고유조합.csv",
               "06_울산소방_화학물정보.csv",
               "07_울산소방_화학사고별_유해물질판단.csv",
+              "07_울산소방_화학사고별_유해물질판단.manifest.json",
               "13_ICIS_2024_화학물질_취급현황.csv",
               "19_ICIS_2024_시설후보_통합모델입력.csv",
           }
@@ -154,7 +155,7 @@ jobs:
                   if member.isdir():
                       continue
                   if not member.isfile() or len(path.parts) != 1:
-                      raise SystemExit(f"번들은 루트의 일반 CSV 파일만 허용합니다: {member.name}")
+                      raise SystemExit(f"번들은 루트의 허용된 일반 파일만 포함해야 합니다: {member.name}")
                   if path.name not in required:
                       raise SystemExit(f"허용되지 않은 번들 파일: {member.name}")
                   if path.name in extracted:
@@ -173,13 +174,16 @@ jobs:
                       shutil.copyfileobj(source, output)
                   with destination.open("rb") as handle:
                       if handle.read(200).lstrip().startswith(pointer_prefix):
-                          raise SystemExit(f"실제 CSV 대신 Git LFS 포인터가 포함되었습니다: {member.name}")
+                          raise SystemExit(
+                              "실제 데이터 대신 Git LFS 포인터가 포함되었습니다: "
+                              f"{member.name}"
+                          )
                   extracted.add(path.name)
 
           missing = sorted(required - extracted)
           if missing:
-              raise SystemExit(f"데이터 번들 필수 CSV 누락: {missing}")
-          print(f"데이터 번들 검증·추출 완료: {len(extracted)}개 CSV")
+              raise SystemExit(f"데이터 번들 필수 파일 누락: {missing}")
+          print(f"데이터 번들 검증·추출 완료: {len(extracted)}개 파일")
           PY
 
       - name: 독립 검수 평가·서명 번들 다운로드 및 검증
@@ -338,6 +342,7 @@ jobs:
             --retriever-model "$GITHUB_WORKSPACE/artifacts/retriever.joblib" \
             --config-dir "$GITHUB_WORKSPACE/config" \
             --incident-adaptation-csv "$GITHUB_WORKSPACE/data/raw/07_울산소방_화학사고별_유해물질판단.csv" \
+            --incident-adaptation-manifest "$GITHUB_WORKSPACE/data/raw/07_울산소방_화학사고별_유해물질판단.manifest.json" \
             --resolver-evaluation "$GITHUB_WORKSPACE/release-evidence/resolver_locked.csv" \
             --resolver-safety-evaluation "$GITHUB_WORKSPACE/release-evidence/resolver_hint_safety_locked.csv" \
             --retriever-evaluation "$GITHUB_WORKSPACE/release-evidence/retriever_legacy_locked.csv" \

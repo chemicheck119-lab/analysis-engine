@@ -485,11 +485,16 @@ chemiguard119 pipeline \
   --resolver-model artifacts/resolver.joblib \
   --retriever-model artifacts/retriever.joblib \
   --incident-adaptation-csv data/raw/07_울산소방_화학사고별_유해물질판단.csv \
+  --incident-adaptation-manifest data/raw/07_울산소방_화학사고별_유해물질판단.manifest.json \
   --config-dir config \
   --report-dir outputs/modeling \
   --include-hash \
   --json
 ```
+
+릴리스 번들의 `07_...csv`는 공식 원본 전체가 아니라 intake 단계에서 만든 6열
+private 파생본이어야 하며, 같은 실행에서 생성된 `07_...manifest.json`을 반드시
+함께 넣습니다. pipeline은 두 파일을 한 snapshot으로 검증한 뒤에만 학습합니다.
 
 재현성의 기준은 다음 묶음입니다.
 

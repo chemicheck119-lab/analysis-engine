@@ -44,13 +44,31 @@ def test_all_commands_have_callable_handlers(argv: list[str], command: str) -> N
     assert callable(args.handler)
 
 
-def test_pipeline_accepts_incident_source_adaptation_csv(tmp_path: Path) -> None:
+def test_pipeline_accepts_incident_source_adaptation_inputs(tmp_path: Path) -> None:
+    source = tmp_path / "incidents.csv"
+    manifest = tmp_path / "incidents.manifest.json"
+    args = cli.build_parser().parse_args(
+        [
+            "pipeline",
+            "--incident-adaptation-csv",
+            str(source),
+            "--incident-adaptation-manifest",
+            str(manifest),
+        ]
+    )
+
+    assert args.incident_adaptation_csv == source.resolve()
+    assert args.incident_adaptation_manifest == manifest.resolve()
+
+
+def test_pipeline_requires_incident_csv_and_manifest_together(tmp_path: Path) -> None:
     source = tmp_path / "incidents.csv"
     args = cli.build_parser().parse_args(
         ["pipeline", "--incident-adaptation-csv", str(source)]
     )
 
-    assert args.incident_adaptation_csv == source.resolve()
+    with pytest.raises(ValueError, match="함께 지정"):
+        cli._pipeline(args)
 
 
 @pytest.mark.parametrize("argv", [["--json", "doctor"], ["doctor", "--json"]])
