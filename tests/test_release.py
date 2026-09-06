@@ -981,12 +981,13 @@ def test_preview_runtime_version_preflight_rejects_dependency_drift(
     manifest.write_text(
         json.dumps(
             {
+                "git_commit": "a" * 40,
                 "runtime_versions": {
                     "python": "3.11.15",
                     "numpy": "2.4.6",
                     "scikit_learn": "1.9.0",
                     "joblib": "1.5.3",
-                }
+                },
             }
         ),
         encoding="utf-8",
@@ -1001,6 +1002,8 @@ def test_preview_runtime_version_preflight_rejects_dependency_drift(
             str(requirements),
             "--dockerfile",
             str(dockerfile),
+            "--expected-git-commit",
+            "a" * 40,
         ],
         check=False,
         capture_output=True,
@@ -1022,6 +1025,8 @@ def test_preview_runtime_version_preflight_rejects_dependency_drift(
             str(requirements),
             "--dockerfile",
             str(dockerfile),
+            "--expected-git-commit",
+            "a" * 40,
         ],
         check=False,
         capture_output=True,
@@ -1034,6 +1039,43 @@ def test_preview_runtime_version_preflight_rejects_dependency_drift(
         "manifest": "1.6.0",
         "serving": "1.5.3",
     }
+
+    payload["runtime_versions"]["joblib"] = "1.5.3"
+    payload["git_commit"] = "b" * 40
+    manifest.write_text(json.dumps(payload), encoding="utf-8")
+    wrong_commit = subprocess.run(
+        [
+            sys.executable,
+            str(validator),
+            "--manifest",
+            str(manifest),
+            "--requirements",
+            str(requirements),
+            "--dockerfile",
+            str(dockerfile),
+            "--expected-git-commit",
+            "a" * 40,
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert wrong_commit.returncode == 1
+    assert json.loads(wrong_commit.stdout)["mismatches"]["git_commit"] == {
+        "manifest": "b" * 40,
+        "serving": "a" * 40,
+    }
+
+
+def test_preview_build_requires_model_commit_to_match_clean_head() -> None:
+    project_root = CONFIG_DIR.parent
+    script = (
+        project_root / "scripts" / "deployment" / "build_cloud_run_preview.sh"
+    ).read_text(encoding="utf-8")
+
+    assert 'current_git_commit="$(git -C "$project_root" rev-parse HEAD)"' in script
+    assert 'test "$MODEL_GIT_COMMIT" = "$current_git_commit"' in script
+    assert '--expected-git-commit "$MODEL_GIT_COMMIT"' in script
 
 
 def test_competition_preview_deploy_is_separate_and_fail_closed() -> None:

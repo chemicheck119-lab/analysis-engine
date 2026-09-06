@@ -43,6 +43,7 @@ def validate_runtime_versions(
     manifest_path: Path,
     requirements_path: Path,
     dockerfile_path: Path,
+    expected_git_commit: str,
 ) -> dict[str, object]:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     runtime_versions = manifest.get("runtime_versions")
@@ -51,6 +52,14 @@ def validate_runtime_versions(
 
     pinned = _pinned_versions(requirements_path)
     mismatches: dict[str, dict[str, str | None]] = {}
+    manifest_git_commit = manifest.get("git_commit")
+    if manifest_git_commit != expected_git_commit:
+        mismatches["git_commit"] = {
+            "manifest": (
+                str(manifest_git_commit) if manifest_git_commit is not None else None
+            ),
+            "serving": expected_git_commit,
+        }
     for package_name, manifest_field in RUNTIME_PACKAGE_FIELDS.items():
         expected = pinned.get(_normalize_package_name(package_name))
         actual = runtime_versions.get(manifest_field)
@@ -82,12 +91,20 @@ def main() -> int:
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--requirements", type=Path, required=True)
     parser.add_argument("--dockerfile", type=Path, required=True)
+    parser.add_argument(
+        "--expected-git-commit",
+        required=True,
+    )
     args = parser.parse_args()
+
+    if re.fullmatch(r"[0-9a-f]{40}", args.expected_git_commit) is None:
+        parser.error("--expected-git-commit은 40자리 소문자 Git SHA여야 합니다.")
 
     result = validate_runtime_versions(
         args.manifest,
         args.requirements,
         args.dockerfile,
+        args.expected_git_commit,
     )
     print(json.dumps(result, ensure_ascii=False, sort_keys=True))
     return 0 if result["status"] == "VERIFIED" else 1

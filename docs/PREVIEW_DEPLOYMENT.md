@@ -112,9 +112,10 @@ scripts/deployment/build_cloud_run_preview.sh
 5. Artifact Registry digest 반환
 
 `runtime_manifest.json`은 반드시 `requirements-production.txt`와 `Dockerfile.preview`가 고정한
-serving runtime에서 생성합니다. 빌드 스크립트는 Python·NumPy·scikit-learn·joblib 버전을
-Cloud Build 업로드 전에 비교하며, 하나라도 다르면 비용이 발생하는 원격 빌드를 시작하지
-않습니다.
+serving runtime에서 생성합니다. `MODEL_GIT_COMMIT`은 수동으로 조립하지 않고 clean
+worktree의 `git rev-parse HEAD` 결과를 그대로 사용합니다. 빌드 스크립트는 manifest commit,
+현재 HEAD, Python·NumPy·scikit-learn·joblib 버전을 Cloud Build 업로드 전에 비교하며,
+하나라도 다르면 비용이 발생하는 원격 빌드를 시작하지 않습니다.
 
 ## preview Cloud Run 배포
 
