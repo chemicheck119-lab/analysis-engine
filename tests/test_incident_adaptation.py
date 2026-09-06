@@ -13,7 +13,10 @@ from chemiguard119.incident_adaptation import (
     run_training_and_evaluation,
     train_incident_adapted_resolver,
 )
-from chemiguard119.incident_source_intake import prepare_ulsan_resolver_source
+from chemiguard119.incident_source_intake import (
+    OFFICIAL_SOURCE_COLUMNS,
+    prepare_ulsan_resolver_source,
+)
 from chemiguard119.resolver import (
     INCIDENT_ADAPTED_MODEL_SCHEMA_VERSION,
     fit_resolver_rows,
@@ -48,13 +51,14 @@ def _write_official_incidents(path: Path, rows: list[dict[str, str]]) -> None:
         "일반명_한글": "gnrl_korn_nm",
         "일반명_영문": "gnrl_eng_nm",
     }
-    fields = [*field_map.values(), "road_nm"]
+    fields = [field.lower() for field in OFFICIAL_SOURCE_COLUMNS]
     with path.open("w", encoding="utf-8-sig", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
         for row in rows:
             writer.writerow(
                 {
+                    **{field: "" for field in fields},
                     **{raw: row[column] for column, raw in field_map.items()},
                     "road_nm": "비공개 경로에만 남을 위치 열",
                 }

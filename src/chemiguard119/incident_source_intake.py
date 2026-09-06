@@ -43,6 +43,39 @@ SOURCE_COLUMNS = {
     "GNRL_KORN_NM": "일반명_한글",
     "GNRL_ENG_NM": "일반명_영문",
 }
+OFFICIAL_SOURCE_COLUMNS = (
+    "CAS_NO",
+    "PLCSCN_NM",
+    "BSC_CHEM_SBSTN_NM",
+    "EMRG_RSCU_GUGUN_NM",
+    "EMRG_RSCU_SCL_NM",
+    "EMRG_RSCU_CLSF_NM",
+    "EMRG_RSCU_CTPV_NM",
+    "EMRG_RSCU_ZIP",
+    "EMRG_RSCU_EMD_NM",
+    "EMRG_RSCU_KND_NM",
+    "ROAD_NM",
+    "OCRN_YR",
+    "OCRN_MM",
+    "CRCNS_SBSTN_YN",
+    "ACDNT_PRPR_SBSTN_YN",
+    "SITTN_END_DT",
+    "CNTR_NM",
+    "HFLS_SBSTN_NO",
+    "HFLS_SBSTN_RMRK_CN",
+    "HFLS_SBSTN_TYPE_NM",
+    "HFLS_SBSTN_SPCQLT_NM",
+    "HFLS_CHEM_SBSTN_YN",
+    "EMD_SN",
+    "SN",
+    "GNRL_ENG_NM",
+    "GNRL_KORN_NM",
+    "EMPHS_MNG_YN",
+    "UDGD_YN",
+    "CHEM_SBSTN_ENG_NM",
+    "CHEM_SBSTN_KORN_NM",
+    "CHEM_SBSTN_IDNTY_DT",
+)
 SUPPORTED_ENCODINGS = ("utf-8-sig", "cp949")
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
@@ -138,6 +171,12 @@ def verify_ulsan_resolver_source_manifest(
         raise ValueError("intake manifest와 파생 CSV 행 수가 다릅니다.")
     if source.get("row_count") != expected_row_count:
         raise ValueError("intake manifest의 원본·파생 행 수가 다릅니다.")
+    if (
+        source.get("official_export_required_columns_present") is not True
+        or not isinstance(source.get("observed_column_count"), int)
+        or source["observed_column_count"] < len(OFFICIAL_SOURCE_COLUMNS)
+    ):
+        raise ValueError("intake manifest의 공식 원본 schema 계약이 다릅니다.")
     if derived.get("columns") != list(OUTPUT_COLUMNS):
         raise ValueError("intake manifest의 파생 컬럼 계약이 다릅니다.")
     if transformation != {
@@ -172,9 +211,9 @@ def verify_ulsan_resolver_source_manifest(
 
 def _source_projection(fieldnames: list[str]) -> dict[str, str]:
     normalized = {field.strip().upper(): field for field in fieldnames}
-    missing = sorted(set(SOURCE_COLUMNS) - set(normalized))
+    missing = sorted(set(OFFICIAL_SOURCE_COLUMNS) - set(normalized))
     if missing:
-        raise ValueError(f"울산 사고–CAS 원본 컬럼이 부족합니다: {missing}")
+        raise ValueError(f"울산 사고–CAS 공식 원본 컬럼이 부족합니다: {missing}")
     return {output: normalized[source] for source, output in SOURCE_COLUMNS.items()}
 
 
@@ -249,6 +288,8 @@ def prepare_ulsan_resolver_source(
                 "sha256": source_sha256,
                 "encoding": encoding,
                 "row_count": len(source_rows),
+                "observed_column_count": len(fieldnames),
+                "official_export_required_columns_present": True,
                 "contains_location_or_response_fields": True,
             },
             "derived": {
@@ -293,6 +334,7 @@ def prepare_ulsan_resolver_source(
 
 __all__ = [
     "INTAKE_SCHEMA_VERSION",
+    "OFFICIAL_SOURCE_COLUMNS",
     "OUTPUT_COLUMNS",
     "SOURCE_DATASET_ID",
     "SOURCE_URL",

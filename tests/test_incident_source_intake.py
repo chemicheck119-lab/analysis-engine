@@ -11,6 +11,7 @@ import chemiguard119.incident_source_intake as intake_module
 from chemiguard119.incident_adaptation import load_incident_alias_records
 from chemiguard119.incident_source_intake import (
     INTAKE_SCHEMA_VERSION,
+    OFFICIAL_SOURCE_COLUMNS,
     OUTPUT_COLUMNS,
     prepare_ulsan_resolver_source,
     verify_ulsan_resolver_source_manifest,
@@ -18,20 +19,11 @@ from chemiguard119.incident_source_intake import (
 
 
 def _write_source(path: Path, *, lowercase: bool = False) -> None:
-    fields = [
-        "SN",
-        "OCRN_YR",
-        "CAS_NO",
-        "CHEM_SBSTN_KORN_NM",
-        "CHEM_SBSTN_ENG_NM",
-        "GNRL_KORN_NM",
-        "GNRL_ENG_NM",
-        "ROAD_NM",
-        "EMRG_RSCU_ZIP",
-    ]
+    fields = list(OFFICIAL_SOURCE_COLUMNS)
     if lowercase:
         fields = [field.lower() for field in fields]
     values = {
+        **{field: "" for field in OFFICIAL_SOURCE_COLUMNS},
         "SN": "1",
         "OCRN_YR": "2020",
         "CAS_NO": "64-17-5",
@@ -144,11 +136,53 @@ def test_rejects_surplus_row_cell_with_six_column_header(tmp_path: Path) -> None
         load_incident_alias_records(output, manifest)
 
 
+def test_rejects_blank_record_in_derived_csv(tmp_path: Path) -> None:
+    source = tmp_path / "source.csv"
+    output = tmp_path / "output.csv"
+    manifest = tmp_path / "manifest.json"
+    _write_source(source)
+    payload = prepare_ulsan_resolver_source(source, output, manifest)
+    with output.open("a", encoding="utf-8") as handle:
+        handle.write("\n")
+    payload["derived"]["sha256"] = hashlib.sha256(output.read_bytes()).hexdigest()
+    manifest.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="열 개수가 다른 행"):
+        load_incident_alias_records(output, manifest)
+
+
 def test_rejects_missing_required_source_column(tmp_path: Path) -> None:
     source = tmp_path / "source.csv"
     source.write_text("OCRN_YR,CAS_NO\n2020,64-17-5\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="원본 컬럼이 부족"):
+        prepare_ulsan_resolver_source(
+            source,
+            tmp_path / "output.csv",
+            tmp_path / "manifest.json",
+        )
+
+
+def test_rejects_processed_six_column_csv_as_official_raw(tmp_path: Path) -> None:
+    source = tmp_path / "processed.csv"
+    with source.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(OUTPUT_COLUMNS))
+        writer.writeheader()
+        writer.writerow(
+            {
+                "발생연도": "2020",
+                "CAS번호": "64-17-5",
+                "화학물질명_한글": "에탄올",
+                "화학물질명_영문": "Ethanol",
+                "일반명_한글": "에틸 알코올",
+                "일반명_영문": "Ethyl alcohol",
+            }
+        )
+
+    with pytest.raises(ValueError, match="공식 원본 컬럼이 부족"):
         prepare_ulsan_resolver_source(
             source,
             tmp_path / "output.csv",

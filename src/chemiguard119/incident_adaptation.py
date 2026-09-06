@@ -70,8 +70,8 @@ def load_incident_alias_records(
     source_bytes = path.read_bytes()
     source_sha256 = hashlib.sha256(source_bytes).hexdigest()
     with io.StringIO(source_bytes.decode("utf-8-sig"), newline="") as handle:
-        reader = csv.DictReader(handle)
-        actual_columns = list(reader.fieldnames or [])
+        reader = csv.reader(handle)
+        actual_columns = next(reader, [])
         if actual_columns != list(OUTPUT_COLUMNS):
             missing = sorted(REQUIRED_COLUMNS - set(actual_columns))
             unexpected = sorted(set(actual_columns) - REQUIRED_COLUMNS)
@@ -79,17 +79,14 @@ def load_incident_alias_records(
                 "사고–CAS 파생 CSV는 manifest에 고정된 6개 컬럼과 순서가 "
                 f"정확히 같아야 합니다: missing={missing}, unexpected={unexpected}"
             )
-        source_rows = list(reader)
-    malformed_row_count = sum(
-        1
-        for row in source_rows
-        if None in row or any(row.get(column) is None for column in OUTPUT_COLUMNS)
-    )
-    if malformed_row_count:
-        raise RuntimeError(
-            "사고–CAS 파생 CSV에 header와 열 개수가 다른 행이 있습니다: "
-            f"{malformed_row_count}건"
-        )
+        source_rows: list[dict[str, str]] = []
+        for row_number, values in enumerate(reader, start=2):
+            if len(values) != len(OUTPUT_COLUMNS):
+                raise RuntimeError(
+                    "사고–CAS 파생 CSV에 header와 열 개수가 다른 행이 있습니다: "
+                    f"{row_number}행"
+                )
+            source_rows.append(dict(zip(OUTPUT_COLUMNS, values, strict=True)))
 
     invalid_year = 0
     invalid_cas = 0
