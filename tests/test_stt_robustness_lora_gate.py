@@ -29,7 +29,12 @@ def _signal(
     }
 
 
-def _report(source_digest: str, *, signals: list[dict] | None = None) -> dict:
+def _report(
+    source_digest: str,
+    *,
+    signals: list[dict] | None = None,
+    summary_digest: str = "a" * 64,
+) -> dict:
     gates = {
         name: {"passed": True}
         for name in (
@@ -51,7 +56,7 @@ def _report(source_digest: str, *, signals: list[dict] | None = None) -> dict:
             "derived_data": True,
         },
         "input_artifacts": {
-            "speech_summary_sha256": "a" * 64,
+            "speech_summary_sha256": summary_digest,
             "private_records_sha256": "b" * 64,
             "priority_terms_sha256": "f" * 64,
             "private_records_committed_to_git": False,
@@ -64,6 +69,12 @@ def _report(source_digest: str, *, signals: list[dict] | None = None) -> dict:
             "model": "small",
             "device": "cpu",
             "compute_type": "int8",
+            "language": "ko (configured, not detected)",
+            "beam_size": 5,
+            "temperature": 0.0,
+            "vad_filter": True,
+            "condition_on_previous_text": False,
+            "variants": ["baseline"],
         },
         "model_api_runtime": {
             "service_git_commit": "d" * 40,
@@ -84,12 +95,75 @@ def _report(source_digest: str, *, signals: list[dict] | None = None) -> dict:
     }
 
 
+def _runtime_provenance(incheon: dict, seoul: dict) -> dict:
+    reports = {"incheon": incheon, "seoul": seoul}
+    jobs = {
+        "incheon": "chemicheck119-speech-radio-sim-incheon-cpu",
+        "seoul": "chemicheck119-speech-radio-sim-seoul-cpu",
+    }
+    return {
+        "schema_version": "speech-radio-sim-runtime-provenance-v1",
+        "fact_status": "구현 완료",
+        "evidence_scope": "모의 통신 왜곡 실행 provenance; 현장 무전 검증 아님",
+        "source": "gcloud run jobs executions describe",
+        "collector": {
+            "repository": "chemicheck119-lab/speech-service",
+            "git_commit": "9" * 40,
+        },
+        "regions": {
+            region: {
+                "execution_name": jobs[region] + "-abcde",
+                "job_name": jobs[region],
+                "container_image_digest": report["speech_evaluator_artifact"][
+                    "container_image_digest"
+                ],
+                "start_time": "2026-09-06T00:00:00Z",
+                "completion_time": "2026-09-06T01:00:00Z",
+                "completion_succeeded": True,
+                "summary_sha256": report["input_artifacts"]["speech_summary_sha256"],
+                "source_manifest_sha256": report["dataset"]["source_manifest_sha256"],
+                "run_summary_sha256": ("7" if region == "incheon" else "8") * 64,
+                "priority_terms_sha256": report["input_artifacts"][
+                    "priority_terms_sha256"
+                ],
+                "record_count_per_condition": report["dataset"][
+                    "record_count_per_condition"
+                ],
+                "stt_runtime": {
+                    key: report["stt_runtime"][key]
+                    for key in (
+                        "implementation",
+                        "version",
+                        "model",
+                        "device",
+                        "compute_type",
+                        "language",
+                        "beam_size",
+                        "temperature",
+                        "vad_filter",
+                        "condition_on_previous_text",
+                        "variants",
+                    )
+                },
+            }
+            for region, report in reports.items()
+        },
+        "comparability_gate": {
+            "passed": True,
+            "final_lora_decision_made_here": False,
+        },
+    }
+
+
 def _build(incheon: dict, seoul: dict) -> dict:
+    provenance = _runtime_provenance(incheon, seoul)
     return build_cross_region_lora_gate(
         incheon_report=incheon,
         seoul_report=seoul,
         incheon_report_sha256="1" * 64,
         seoul_report_sha256="2" * 64,
+        runtime_provenance=provenance,
+        runtime_provenance_sha256="8" * 64,
         evaluator_git_commit="f" * 40,
         generated_at="2026-09-05T00:00:00Z",
     )
@@ -129,8 +203,8 @@ def test_loader_rejects_signal_outside_bound_priority_terms(tmp_path: Path) -> N
 
 def test_same_condition_term_and_reason_opens_experiment_design_gate() -> None:
     report = _build(
-        _report("1" * 64, signals=[_signal()]),
-        _report("2" * 64, signals=[_signal()]),
+        _report("1" * 64, signals=[_signal()], summary_digest="a" * 64),
+        _report("2" * 64, signals=[_signal()], summary_digest="9" * 64),
     )
 
     gate = report["whisper_lora_gate"]
@@ -148,8 +222,16 @@ def test_same_condition_term_and_reason_opens_experiment_design_gate() -> None:
 
 def test_non_repeated_signal_keeps_baseline() -> None:
     report = _build(
-        _report("1" * 64, signals=[_signal("wind_snr0")]),
-        _report("2" * 64, signals=[_signal("vehicle_snr0")]),
+        _report(
+            "1" * 64,
+            signals=[_signal("wind_snr0")],
+            summary_digest="a" * 64,
+        ),
+        _report(
+            "2" * 64,
+            signals=[_signal("vehicle_snr0")],
+            summary_digest="9" * 64,
+        ),
     )
 
     assert report["whisper_lora_gate"]["decision"] == (
@@ -159,8 +241,8 @@ def test_non_repeated_signal_keeps_baseline() -> None:
 
 
 def test_downstream_gate_failure_blocks_lora_even_with_repeated_signal() -> None:
-    incheon = _report("1" * 64, signals=[_signal()])
-    seoul = _report("2" * 64, signals=[_signal()])
+    incheon = _report("1" * 64, signals=[_signal()], summary_digest="a" * 64)
+    seoul = _report("2" * 64, signals=[_signal()], summary_digest="9" * 64)
     seoul["metrics"]["analysis_coverage_gate"]["passed"] = False
 
     report = _build(incheon, seoul)
@@ -172,8 +254,43 @@ def test_downstream_gate_failure_blocks_lora_even_with_repeated_signal() -> None
 
 
 def test_same_source_manifest_cannot_prove_cross_region_repetition() -> None:
-    incheon = _report("1" * 64, signals=[_signal()])
-    seoul = _report("1" * 64, signals=[_signal()])
+    incheon = _report("1" * 64, signals=[_signal()], summary_digest="a" * 64)
+    seoul = _report("1" * 64, signals=[_signal()], summary_digest="9" * 64)
 
     with pytest.raises(DownstreamEvaluationError, match="서로 다른"):
         _build(incheon, seoul)
+
+
+def test_runtime_provenance_must_bind_execution_to_summary() -> None:
+    incheon = _report("1" * 64, summary_digest="a" * 64)
+    seoul = _report("2" * 64, summary_digest="9" * 64)
+    provenance = _runtime_provenance(incheon, seoul)
+    provenance["regions"]["seoul"]["summary_sha256"] = "0" * 64
+
+    with pytest.raises(DownstreamEvaluationError, match="결합되지"):
+        build_cross_region_lora_gate(
+            incheon_report=incheon,
+            seoul_report=seoul,
+            incheon_report_sha256="1" * 64,
+            seoul_report_sha256="2" * 64,
+            runtime_provenance=provenance,
+            runtime_provenance_sha256="8" * 64,
+            evaluator_git_commit="f" * 40,
+        )
+
+
+def test_runtime_provenance_rejects_reused_regional_summary() -> None:
+    incheon = _report("1" * 64, summary_digest="a" * 64)
+    seoul = _report("2" * 64, summary_digest="a" * 64)
+    provenance = _runtime_provenance(incheon, seoul)
+
+    with pytest.raises(DownstreamEvaluationError, match="서로 다른 STT summary"):
+        build_cross_region_lora_gate(
+            incheon_report=incheon,
+            seoul_report=seoul,
+            incheon_report_sha256="1" * 64,
+            seoul_report_sha256="2" * 64,
+            runtime_provenance=provenance,
+            runtime_provenance_sha256="8" * 64,
+            evaluator_git_commit="f" * 40,
+        )

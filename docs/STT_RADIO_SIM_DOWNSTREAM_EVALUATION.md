@@ -45,15 +45,17 @@ Top-3 보존율이 낮더라도 공통 후보 오류 서명을 만들 수 없으
 서울과 인천에서 동일 조건·동일 공개 용어 누락이 반복되는지 확인한 다음에만 광주
 Training 기반 학습 가설을 세웁니다.
 
-두 지역 보고서가 준비되면 다음 비교 Gate를 실행합니다. 서로 다른 source manifest,
-동일한 우선용어 목록·STT 설정·후단 평가기·Model API artifact가 아니면 비교를
-거부합니다. 같은 조건과 같은 공개 용어 누락이 반복되어도 자동 학습을 허용하지 않고
-제한된 LoRA 실험 설계 자격만 부여합니다.
+두 지역 보고서가 준비되면 다음 비교 Gate를 실행합니다. `speech-service`가 생성한 runtime
+provenance로 완료된 Cloud Run execution·고정 Job·container digest와 각 STT summary
+SHA-256을 먼저 결합합니다. 서로 다른 source manifest, 동일한 우선용어 목록·STT 설정·후단
+평가기·Model API artifact가 아니면 비교를 거부합니다. 같은 조건과 같은 공개 용어 누락이
+반복되어도 자동 학습을 허용하지 않고 제한된 LoRA 실험 설계 자격만 부여합니다.
 
 ```bash
 python scripts/evaluation/evaluate_stt_robustness_lora_gate.py \
   --incheon-report /private/incheon/downstream-silver/report.json \
   --seoul-report /private/seoul/downstream-silver/report.json \
+  --runtime-provenance /private/radio-sim-runtime-provenance.json \
   --priority-terms /workspace/speech-service/config/domain_hotwords.txt \
   --evaluator-git-commit "$(git rev-parse HEAD)" \
   --output /private/radio-sim-v1-cross-region-lora-gate.json

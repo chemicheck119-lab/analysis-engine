@@ -15,6 +15,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--incheon-report", type=Path, required=True)
     parser.add_argument("--seoul-report", type=Path, required=True)
+    parser.add_argument("--runtime-provenance", type=Path, required=True)
     parser.add_argument("--priority-terms", type=Path, required=True)
     parser.add_argument("--evaluator-git-commit", required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -27,6 +28,7 @@ def main() -> int:
     report = build_from_paths(
         incheon_path=args.incheon_report,
         seoul_path=args.seoul_report,
+        runtime_provenance_path=args.runtime_provenance,
         priority_terms=priority_terms,
         priority_terms_sha256=sha256_file(args.priority_terms),
         evaluator_git_commit=args.evaluator_git_commit,

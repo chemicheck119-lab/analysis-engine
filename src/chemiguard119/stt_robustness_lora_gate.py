@@ -15,7 +15,9 @@ from chemiguard119.stt_robustness_downstream_evaluation import CONDITIONS, PROFI
 
 SCHEMA_VERSION = "stt-radio-sim-cross-region-lora-gate-v1"
 INPUT_SCHEMA_VERSION = "stt-radio-sim-downstream-silver-eval-v1"
+RUNTIME_PROVENANCE_SCHEMA_VERSION = "speech-radio-sim-runtime-provenance-v1"
 MAX_REPORT_BYTES = 32 * 1024 * 1024
+MAX_RUNTIME_PROVENANCE_BYTES = 1024 * 1024
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 GIT_COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 CONTAINER_DIGEST_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -25,6 +27,23 @@ ALLOWED_SIGNAL_REASONS = frozenset(
     }
 )
 REGIONS = ("incheon", "seoul")
+EXPECTED_JOBS = {
+    "incheon": "chemicheck119-speech-radio-sim-incheon-cpu",
+    "seoul": "chemicheck119-speech-radio-sim-seoul-cpu",
+}
+STT_RUNTIME_FIELDS = (
+    "implementation",
+    "version",
+    "model",
+    "device",
+    "compute_type",
+    "language",
+    "beam_size",
+    "temperature",
+    "vad_filter",
+    "condition_on_previous_text",
+    "variants",
+)
 
 
 def sha256_file(path: Path) -> str:
@@ -83,6 +102,25 @@ def _validate_signals(value: Any) -> list[dict[str, Any]]:
     return result
 
 
+def _stt_runtime_fingerprint(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise DownstreamEvaluationError("STT runtime 정보가 없습니다.")
+    fingerprint = {field: value.get(field) for field in STT_RUNTIME_FIELDS}
+    if (
+        fingerprint["implementation"] != "faster-whisper"
+        or fingerprint["model"] != "small"
+        or fingerprint["device"] != "cpu"
+        or fingerprint["compute_type"] != "int8"
+        or fingerprint["beam_size"] != 5
+        or fingerprint["temperature"] != 0.0
+        or fingerprint["vad_filter"] is not True
+        or fingerprint["condition_on_previous_text"] is not False
+        or fingerprint["variants"] != ["baseline"]
+    ):
+        raise DownstreamEvaluationError("사전 고정한 faster-whisper 기준선과 다릅니다.")
+    return fingerprint
+
+
 def load_region_report(
     path: Path,
     *,
@@ -104,6 +142,7 @@ def load_region_report(
     artifacts = report.get("input_artifacts")
     evaluation_runtime = report.get("evaluation_runtime")
     speech_artifact = report.get("speech_evaluator_artifact")
+    stt_runtime = report.get("stt_runtime")
     model_runtime = report.get("model_api_runtime")
     metrics = report.get("metrics")
     lora = report.get("whisper_lora_gate")
@@ -139,6 +178,7 @@ def load_region_report(
         or not CONTAINER_DIGEST_PATTERN.fullmatch(
             speech_artifact["container_image_digest"]
         )
+        or not isinstance(stt_runtime, dict)
         or not isinstance(model_runtime, dict)
         or not isinstance(model_runtime.get("service_git_commit"), str)
         or not GIT_COMMIT_PATTERN.fullmatch(model_runtime["service_git_commit"])
@@ -158,6 +198,7 @@ def load_region_report(
         raise DownstreamEvaluationError(
             "강건성 후단 보고서의 provenance·범위·Gate 계약이 잘못되었습니다."
         )
+    _stt_runtime_fingerprint(stt_runtime)
     signals = _validate_signals(lora.get("signals"))
     if any(signal["public_term"] not in priority_terms for signal in signals):
         raise DownstreamEvaluationError("허용 목록 밖 우선용어 LoRA 신호가 있습니다.")
@@ -169,12 +210,100 @@ def _gate_passed(report: dict[str, Any], gate: str) -> bool:
     return isinstance(value, dict) and value.get("passed") is True
 
 
+def validate_runtime_provenance(
+    payload: Any, *, reports: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    regions = payload.get("regions") if isinstance(payload, dict) else None
+    comparability = (
+        payload.get("comparability_gate") if isinstance(payload, dict) else None
+    )
+    collector = payload.get("collector") if isinstance(payload, dict) else None
+    if (
+        not isinstance(payload, dict)
+        or payload.get("schema_version") != RUNTIME_PROVENANCE_SCHEMA_VERSION
+        or payload.get("fact_status") != "구현 완료"
+        or "현장 무전" not in str(payload.get("evidence_scope") or "")
+        or payload.get("source") != "gcloud run jobs executions describe"
+        or not isinstance(collector, dict)
+        or collector.get("repository") != "chemicheck119-lab/speech-service"
+        or not isinstance(collector.get("git_commit"), str)
+        or not GIT_COMMIT_PATTERN.fullmatch(collector["git_commit"])
+        or not isinstance(comparability, dict)
+        or comparability.get("passed") is not True
+        or comparability.get("final_lora_decision_made_here") is not False
+        or not isinstance(regions, dict)
+        or set(regions) != set(REGIONS)
+    ):
+        raise DownstreamEvaluationError(
+            "radio-sim runtime provenance 계약 또는 비교 Gate가 잘못되었습니다."
+        )
+    for region in REGIONS:
+        evidence = regions[region]
+        report = reports[region]
+        if (
+            not isinstance(evidence, dict)
+            or evidence.get("job_name") != EXPECTED_JOBS[region]
+            or not isinstance(evidence.get("execution_name"), str)
+            or not evidence["execution_name"].startswith(EXPECTED_JOBS[region] + "-")
+            or evidence.get("completion_succeeded") is not True
+            or not isinstance(evidence.get("start_time"), str)
+            or not isinstance(evidence.get("completion_time"), str)
+            or not isinstance(evidence.get("container_image_digest"), str)
+            or not CONTAINER_DIGEST_PATTERN.fullmatch(
+                evidence["container_image_digest"]
+            )
+            or not isinstance(evidence.get("summary_sha256"), str)
+            or not SHA256_PATTERN.fullmatch(evidence["summary_sha256"])
+            or evidence["summary_sha256"]
+            != report["input_artifacts"]["speech_summary_sha256"]
+            or evidence.get("source_manifest_sha256")
+            != report["dataset"]["source_manifest_sha256"]
+            or evidence.get("priority_terms_sha256")
+            != report["input_artifacts"]["priority_terms_sha256"]
+            or evidence.get("container_image_digest")
+            != report["speech_evaluator_artifact"]["container_image_digest"]
+            or evidence.get("record_count_per_condition")
+            != report["dataset"]["record_count_per_condition"]
+            or evidence.get("stt_runtime")
+            != _stt_runtime_fingerprint(report["stt_runtime"])
+            or not isinstance(evidence.get("run_summary_sha256"), str)
+            or not SHA256_PATTERN.fullmatch(evidence["run_summary_sha256"])
+        ):
+            raise DownstreamEvaluationError(
+                f"{region} execution provenance와 downstream 보고서가 결합되지 않습니다."
+            )
+    if len({regions[region]["summary_sha256"] for region in REGIONS}) != len(REGIONS):
+        raise DownstreamEvaluationError(
+            "서울·인천 execution에는 서로 다른 STT summary SHA-256이 필요합니다."
+        )
+    return payload
+
+
+def load_runtime_provenance(
+    path: Path, *, reports: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    size = path.stat().st_size
+    if size <= 0 or size > MAX_RUNTIME_PROVENANCE_BYTES:
+        raise DownstreamEvaluationError(
+            "radio-sim runtime provenance 크기가 허용 범위를 벗어났습니다."
+        )
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        raise DownstreamEvaluationError(
+            "radio-sim runtime provenance JSON이 잘못되었습니다."
+        ) from error
+    return validate_runtime_provenance(payload, reports=reports)
+
+
 def build_cross_region_lora_gate(
     *,
     incheon_report: dict[str, Any],
     seoul_report: dict[str, Any],
     incheon_report_sha256: str,
     seoul_report_sha256: str,
+    runtime_provenance: dict[str, Any],
+    runtime_provenance_sha256: str,
     evaluator_git_commit: str,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
@@ -186,8 +315,13 @@ def build_cross_region_lora_gate(
             raise DownstreamEvaluationError(f"{label} SHA-256이 올바르지 않습니다.")
     if not GIT_COMMIT_PATTERN.fullmatch(evaluator_git_commit):
         raise DownstreamEvaluationError("비교 평가기 Git commit이 올바르지 않습니다.")
+    if not SHA256_PATTERN.fullmatch(runtime_provenance_sha256):
+        raise DownstreamEvaluationError(
+            "runtime provenance SHA-256이 올바르지 않습니다."
+        )
 
     reports = {"incheon": incheon_report, "seoul": seoul_report}
+    validate_runtime_provenance(runtime_provenance, reports=reports)
     source_manifests = {
         region: report["dataset"]["source_manifest_sha256"]
         for region, report in reports.items()
@@ -276,7 +410,12 @@ def build_cross_region_lora_gate(
         "input_artifacts": {
             "incheon_report_sha256": incheon_report_sha256,
             "seoul_report_sha256": seoul_report_sha256,
+            "runtime_provenance_sha256": runtime_provenance_sha256,
             "source_manifest_sha256_by_region": source_manifests,
+            "cloud_run_execution_by_region": {
+                region: runtime_provenance["regions"][region]["execution_name"]
+                for region in REGIONS
+            },
         },
         "evaluation_runtime": {
             "repository": "chemicheck119-lab/analysis-engine",
@@ -290,6 +429,7 @@ def build_cross_region_lora_gate(
             "same_downstream_evaluator": True,
             "same_model_api_artifact": True,
             "different_region_source_manifests": True,
+            "summary_hashes_bound_to_completed_cloud_run_executions": True,
         },
         "downstream_gates_by_region": gates,
         "repeated_signal": [
@@ -325,24 +465,34 @@ def build_from_paths(
     *,
     incheon_path: Path,
     seoul_path: Path,
+    runtime_provenance_path: Path,
     priority_terms: list[str],
     priority_terms_sha256: str,
     evaluator_git_commit: str,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
-    return build_cross_region_lora_gate(
-        incheon_report=load_region_report(
+    reports = {
+        "incheon": load_region_report(
             incheon_path,
             priority_terms=priority_terms,
             priority_terms_sha256=priority_terms_sha256,
         ),
-        seoul_report=load_region_report(
+        "seoul": load_region_report(
             seoul_path,
             priority_terms=priority_terms,
             priority_terms_sha256=priority_terms_sha256,
         ),
+    }
+    runtime_provenance = load_runtime_provenance(
+        runtime_provenance_path, reports=reports
+    )
+    return build_cross_region_lora_gate(
+        incheon_report=reports["incheon"],
+        seoul_report=reports["seoul"],
         incheon_report_sha256=sha256_file(incheon_path),
         seoul_report_sha256=sha256_file(seoul_path),
+        runtime_provenance=runtime_provenance,
+        runtime_provenance_sha256=sha256_file(runtime_provenance_path),
         evaluator_git_commit=evaluator_git_commit,
         generated_at=generated_at,
     )
@@ -353,5 +503,7 @@ __all__ = [
     "build_cross_region_lora_gate",
     "build_from_paths",
     "load_region_report",
+    "load_runtime_provenance",
     "sha256_file",
+    "validate_runtime_provenance",
 ]
