@@ -10,6 +10,8 @@ Resolver source adaptation에는 이 열이 필요하지 않으므로, 이 모�
 from __future__ import annotations
 
 import csv
+import os
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -47,13 +49,16 @@ def _read_source(path: Path) -> tuple[str, list[str], list[dict[str, str]]]:
                 fieldnames = [
                     str(item or "").strip() for item in reader.fieldnames or []
                 ]
-                rows = [
-                    {
-                        str(key or "").strip(): str(value or "").strip()
-                        for key, value in row.items()
-                    }
-                    for row in reader
-                ]
+                rows: list[dict[str, str]] = []
+                for row in reader:
+                    preserved: dict[str, str] = {}
+                    for key, value in row.items():
+                        if key is None:
+                            continue
+                        preserved[str(key).strip()] = (
+                            value if isinstance(value, str) else ""
+                        )
+                    rows.append(preserved)
             return encoding, fieldnames, rows
         except UnicodeDecodeError as error:
             last_error = error
@@ -70,6 +75,15 @@ def _source_projection(fieldnames: list[str]) -> dict[str, str]:
     if missing:
         raise ValueError(f"울산 사고–CAS 원본 컬럼이 부족합니다: {missing}")
     return {output: normalized[source] for source, output in SOURCE_COLUMNS.items()}
+
+
+def _write_projected_csv(path: Path, rows: list[dict[str, str]]) -> None:
+    with path.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(OUTPUT_COLUMNS))
+        writer.writeheader()
+        writer.writerows(rows)
+        handle.flush()
+        os.fsync(handle.fileno())
 
 
 def prepare_ulsan_resolver_source(
@@ -106,45 +120,73 @@ def prepare_ulsan_resolver_source(
     ]
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    with output_path.open("w", encoding="utf-8-sig", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(OUTPUT_COLUMNS))
-        writer.writeheader()
-        writer.writerows(projected_rows)
-
-    manifest: dict[str, Any] = {
-        "schema_version": INTAKE_SCHEMA_VERSION,
-        "created_at_utc": datetime.now(timezone.utc).isoformat(),
-        "source_dataset_id": SOURCE_DATASET_ID,
-        "source_url": SOURCE_URL,
-        "source": {
-            "file_name": source_path.name,
-            "sha256": sha256_file(source_path),
-            "encoding": encoding,
-            "row_count": len(source_rows),
-            "contains_location_or_response_fields": True,
-        },
-        "derived": {
-            "file_name": output_path.name,
-            "sha256": sha256_file(output_path),
-            "encoding": "utf-8-sig",
-            "row_count": len(projected_rows),
-            "columns": list(OUTPUT_COLUMNS),
-            "contains_location_or_response_fields": False,
-        },
-        "transformation": {
-            "type": "COLUMN_PROJECTION_ONLY",
-            "row_filtering_applied": False,
-            "value_relabeling_applied": False,
-            "training_split_applied": False,
-        },
-        "safety": {
-            "git_commit_allowed": False,
-            "private_storage_required": True,
-            "claim_scope": "SOURCE_INTAKE_ONLY_NOT_RESOLVER_PERFORMANCE",
-        },
-    }
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    write_json(manifest_path, manifest)
+    output_descriptor, output_temporary_name = tempfile.mkstemp(
+        dir=output_path.parent,
+        prefix=f".{output_path.name}.",
+        suffix=".tmp",
+    )
+    os.close(output_descriptor)
+    manifest_descriptor, manifest_temporary_name = tempfile.mkstemp(
+        dir=manifest_path.parent,
+        prefix=f".{manifest_path.name}.",
+        suffix=".tmp",
+    )
+    os.close(manifest_descriptor)
+    temporary_output = Path(output_temporary_name)
+    temporary_manifest = Path(manifest_temporary_name)
+    manifest: dict[str, Any]
+    try:
+        _write_projected_csv(temporary_output, projected_rows)
+        manifest = {
+            "schema_version": INTAKE_SCHEMA_VERSION,
+            "created_at_utc": datetime.now(timezone.utc).isoformat(),
+            "source_dataset_id": SOURCE_DATASET_ID,
+            "source_url": SOURCE_URL,
+            "source": {
+                "file_name": source_path.name,
+                "sha256": sha256_file(source_path),
+                "encoding": encoding,
+                "row_count": len(source_rows),
+                "contains_location_or_response_fields": True,
+            },
+            "derived": {
+                "file_name": output_path.name,
+                "sha256": sha256_file(temporary_output),
+                "encoding": "utf-8-sig",
+                "row_count": len(projected_rows),
+                "columns": list(OUTPUT_COLUMNS),
+                "contains_location_or_response_fields": False,
+            },
+            "transformation": {
+                "type": "COLUMN_PROJECTION_ONLY",
+                "row_filtering_applied": False,
+                "value_relabeling_applied": False,
+                "training_split_applied": False,
+            },
+            "safety": {
+                "git_commit_allowed": False,
+                "private_storage_required": True,
+                "claim_scope": "SOURCE_INTAKE_ONLY_NOT_RESOLVER_PERFORMANCE",
+            },
+        }
+        write_json(temporary_manifest, manifest)
+        with temporary_manifest.open("rb") as handle:
+            os.fsync(handle.fileno())
+        if not overwrite:
+            late_existing = [
+                path for path in (output_path, manifest_path) if path.exists()
+            ]
+            if late_existing:
+                raise FileExistsError(
+                    "게시 직전에 기존 파생 파일이 확인됐습니다: "
+                    + ", ".join(str(path) for path in late_existing)
+                )
+        temporary_output.replace(output_path)
+        temporary_manifest.replace(manifest_path)
+    finally:
+        temporary_output.unlink(missing_ok=True)
+        temporary_manifest.unlink(missing_ok=True)
     return manifest
 
 

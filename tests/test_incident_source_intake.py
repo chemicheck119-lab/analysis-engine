@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+import chemiguard119.incident_source_intake as intake_module
 from chemiguard119.incident_source_intake import (
     INTAKE_SCHEMA_VERSION,
     OUTPUT_COLUMNS,
@@ -31,7 +32,7 @@ def _write_source(path: Path, *, lowercase: bool = False) -> None:
         "SN": "1",
         "OCRN_YR": "2020",
         "CAS_NO": "64-17-5",
-        "CHEM_SBSTN_KORN_NM": "에탄올",
+        "CHEM_SBSTN_KORN_NM": "  에탄올  ",
         "CHEM_SBSTN_ENG_NM": "Ethanol",
         "GNRL_KORN_NM": "에틸 알코올",
         "GNRL_ENG_NM": "Ethyl alcohol",
@@ -67,6 +68,7 @@ def test_projects_only_resolver_columns_and_records_provenance(
     assert list(rows[0]) == list(OUTPUT_COLUMNS)
     assert rows[0]["발생연도"] == "2020"
     assert rows[0]["CAS번호"] == "64-17-5"
+    assert rows[0]["화학물질명_한글"] == "  에탄올  "
     assert "내보내면 안 되는 도로명" not in output.read_text(encoding="utf-8-sig")
     assert json.loads(manifest.read_text(encoding="utf-8")) == result
 
@@ -94,3 +96,23 @@ def test_refuses_to_overwrite_existing_outputs(tmp_path: Path) -> None:
         prepare_ulsan_resolver_source(source, output, manifest)
 
     assert output.read_text(encoding="utf-8") == "기존 파일"
+
+
+def test_does_not_publish_csv_when_manifest_staging_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "source.csv"
+    output = tmp_path / "output.csv"
+    manifest = tmp_path / "manifest.json"
+    _write_source(source)
+
+    def fail_manifest(*_args: object, **_kwargs: object) -> None:
+        raise OSError("synthetic manifest failure")
+
+    monkeypatch.setattr(intake_module, "write_json", fail_manifest)
+    with pytest.raises(OSError, match="synthetic manifest failure"):
+        prepare_ulsan_resolver_source(source, output, manifest)
+
+    assert not output.exists()
+    assert not manifest.exists()
+    assert not list(tmp_path.glob(".*.tmp"))
