@@ -31,6 +31,19 @@ EXPECTED_JOBS = {
     "incheon": "chemicheck119-speech-radio-sim-incheon-cpu",
     "seoul": "chemicheck119-speech-radio-sim-seoul-cpu",
 }
+STT_RUNTIME_FIELDS = (
+    "implementation",
+    "version",
+    "model",
+    "device",
+    "compute_type",
+    "language",
+    "beam_size",
+    "temperature",
+    "vad_filter",
+    "condition_on_previous_text",
+    "variants",
+)
 
 
 def sha256_file(path: Path) -> str:
@@ -89,6 +102,25 @@ def _validate_signals(value: Any) -> list[dict[str, Any]]:
     return result
 
 
+def _stt_runtime_fingerprint(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise DownstreamEvaluationError("STT runtime 정보가 없습니다.")
+    fingerprint = {field: value.get(field) for field in STT_RUNTIME_FIELDS}
+    if (
+        fingerprint["implementation"] != "faster-whisper"
+        or fingerprint["model"] != "small"
+        or fingerprint["device"] != "cpu"
+        or fingerprint["compute_type"] != "int8"
+        or fingerprint["beam_size"] != 5
+        or fingerprint["temperature"] != 0.0
+        or fingerprint["vad_filter"] is not True
+        or fingerprint["condition_on_previous_text"] is not False
+        or fingerprint["variants"] != ["baseline"]
+    ):
+        raise DownstreamEvaluationError("사전 고정한 faster-whisper 기준선과 다릅니다.")
+    return fingerprint
+
+
 def load_region_report(
     path: Path,
     *,
@@ -110,6 +142,7 @@ def load_region_report(
     artifacts = report.get("input_artifacts")
     evaluation_runtime = report.get("evaluation_runtime")
     speech_artifact = report.get("speech_evaluator_artifact")
+    stt_runtime = report.get("stt_runtime")
     model_runtime = report.get("model_api_runtime")
     metrics = report.get("metrics")
     lora = report.get("whisper_lora_gate")
@@ -145,6 +178,7 @@ def load_region_report(
         or not CONTAINER_DIGEST_PATTERN.fullmatch(
             speech_artifact["container_image_digest"]
         )
+        or not isinstance(stt_runtime, dict)
         or not isinstance(model_runtime, dict)
         or not isinstance(model_runtime.get("service_git_commit"), str)
         or not GIT_COMMIT_PATTERN.fullmatch(model_runtime["service_git_commit"])
@@ -164,6 +198,7 @@ def load_region_report(
         raise DownstreamEvaluationError(
             "강건성 후단 보고서의 provenance·범위·Gate 계약이 잘못되었습니다."
         )
+    _stt_runtime_fingerprint(stt_runtime)
     signals = _validate_signals(lora.get("signals"))
     if any(signal["public_term"] not in priority_terms for signal in signals):
         raise DownstreamEvaluationError("허용 목록 밖 우선용어 LoRA 신호가 있습니다.")
@@ -229,6 +264,8 @@ def validate_runtime_provenance(
             != report["speech_evaluator_artifact"]["container_image_digest"]
             or evidence.get("record_count_per_condition")
             != report["dataset"]["record_count_per_condition"]
+            or evidence.get("stt_runtime")
+            != _stt_runtime_fingerprint(report["stt_runtime"])
             or not isinstance(evidence.get("run_summary_sha256"), str)
             or not SHA256_PATTERN.fullmatch(evidence["run_summary_sha256"])
         ):

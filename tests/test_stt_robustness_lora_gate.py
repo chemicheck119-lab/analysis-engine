@@ -69,6 +69,12 @@ def _report(
             "model": "small",
             "device": "cpu",
             "compute_type": "int8",
+            "language": "ko (configured, not detected)",
+            "beam_size": 5,
+            "temperature": 0.0,
+            "vad_filter": True,
+            "condition_on_previous_text": False,
+            "variants": ["baseline"],
         },
         "model_api_runtime": {
             "service_git_commit": "d" * 40,
@@ -123,6 +129,22 @@ def _runtime_provenance(incheon: dict, seoul: dict) -> dict:
                 "record_count_per_condition": report["dataset"][
                     "record_count_per_condition"
                 ],
+                "stt_runtime": {
+                    key: report["stt_runtime"][key]
+                    for key in (
+                        "implementation",
+                        "version",
+                        "model",
+                        "device",
+                        "compute_type",
+                        "language",
+                        "beam_size",
+                        "temperature",
+                        "vad_filter",
+                        "condition_on_previous_text",
+                        "variants",
+                    )
+                },
             }
             for region, report in reports.items()
         },
