@@ -123,38 +123,42 @@ claim_scope=INTERNAL_REGRESSION_ONLY
 
 ### 2026-09-07 Cross-repo 안전 증거 bundle
 
-Speech radio-sim, Analysis E2E v4, Backend confirmation correction·stale·duplicate 보고서는
+Speech radio-sim, Analysis E2E v4, Backend 새 충돌 근거 확인·stale·duplicate 보고서는
 서로 다른 실행입니다. `aggregate-e2e-evidence`는 이들을 하나의 실험으로 합산하지 않고,
 잠금 manifest의 SHA-256·schema와 각 suite의 안전 Gate를 함께 검증합니다.
 
 ```bash
 chemiguard119 aggregate-e2e-evidence \
   --analysis-report <private-data>/experiments/analysis/e2e-v4-facility-history-r1/report.json \
-  --backend-report <private-data>/experiments/back/backend-safety-state-v1-r1/report.json \
+  --backend-report <private-data>/experiments/back/backend-safety-state-v2-r1/report.json \
   --seoul-speech-report <private-data>/experiments/speech/robustness/seoul/radio-sim-v1/20260906T050926Z/downstream-silver-119ce11-p68beeb4/report.json \
   --incheon-speech-report <private-data>/experiments/speech/robustness/incheon/radio-sim-v1/20260906T022037Z/downstream-silver-119ce11-p68beeb4/report.json \
-  --report <private-data>/experiments/analysis/cross-repo-safety-evidence-v2-r1/report.json
+  --report <private-data>/experiments/analysis/cross-repo-safety-evidence-v3-r1/report.json
 ```
 
 ```text
 증거 무결성 Gate 통과
 Speech 서울·인천 radio-sim 1,440개 조건 입력
 Analysis DRAFT 시나리오 11/11 통과
-Backend H2 PostgreSQL 호환 모드 검사 18/18 통과
+Backend H2 PostgreSQL 호환 모드 검사 23/23 통과
+새 SITE_MSDS 확인 뒤 재분석 요구 true / 이전 analysis 저장 0건
 분리 suite의 확인 전 Rule 실행·위험 노출·후보 승격 위반 관측 0건
 decision=CONDITIONALLY_ADOPT_FOR_INTERNAL_REGRESSION
 field_validated=false
 full_chain_executed=false
 ```
 
-- 결합 report SHA-256: `d5f5989fc1c817bafd5bf816adf1b0d428db3ce3c34942ead7aaad878c4f6454`
-- 잠금 manifest SHA-256: `476acb1794b6f23531e9abcefa98805ef7258a97f16a7add9f4c09b50b9b1f7c`
+- 결합 report SHA-256: `3568737bfc05a7fc0ad504b2ad5a4b156b32db17245201172959969045f563ec`
+- 잠금 manifest SHA-256: `6034aa4f4f0dab7afd4456f806d75f02a920eb65108cba8147b5d5224479cd5b`
 
 이 결과로 말할 수 있는 것은 네 보고서의 무결성과 **분리된 내부 회귀 suite에서 관측한**
-안전 계약뿐입니다. 시설 이력 없음은 모의 시설명 1건에서 확인했지만 음성부터 HTTP API와
-Backend 인계 기록까지 동일 `request_id`로 실행한 전체 경로는 아닙니다. 실제 현장 무전,
-음성 물질명의 CAS 사람 정답, Cloud SQL 동시성도 검증하지 않았습니다. 특히 speech 보고서는
-CAS 정답 평가가 아니므로 “잘못된 단일 CAS 확정 0건”이라고 표현하지 않습니다.
+안전 계약뿐입니다. 시설 이력 없음은 모의 시설명 1건에서 확인했고, 인증 사용자가 새
+`SITE_MSDS` 근거로 다른 CAS를 확인했을 때 이전 analysis 저장이 차단됨을 확인했습니다.
+하지만 STT·OCR·Retriever 후보가 사람 확인과 상충하는지를 자동 탐지한 결과는 아니며,
+음성부터 HTTP API와 Backend 인계 기록까지 동일 `request_id`로 실행한 전체 경로도 아닙니다.
+실제 현장 무전, 음성 물질명의 CAS 사람 정답, Cloud SQL 동시성도 검증하지 않았습니다.
+특히 speech 보고서는 CAS 정답 평가가 아니므로 “잘못된 단일 CAS 확정 0건”이라고 표현하지
+않습니다.
 
 ### 향후 사람 검수용 E2E 50건 후보
 

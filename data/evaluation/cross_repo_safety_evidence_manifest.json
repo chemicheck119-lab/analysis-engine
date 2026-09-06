@@ -9,8 +9,8 @@
     },
     "backend_state": {
       "repository": "chemicheck119-lab/back",
-      "expected_schema_version": "chemicheck119-backend-safety-evaluation-v1",
-      "expected_sha256": "deca81276b8d339d9be9940e6b3cccefa2af89f5c992bbb1616bb5c5074cc25e"
+      "expected_schema_version": "chemicheck119-backend-safety-evaluation-v2",
+      "expected_sha256": "44afd74f32143afc7bc8604f9d89fcc66fa900a6ea0b020502de7b5f3799aec1"
     },
     "speech_seoul_radio_sim": {
       "repository": "chemicheck119-lab/speech-service",

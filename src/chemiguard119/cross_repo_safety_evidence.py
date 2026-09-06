@@ -15,7 +15,7 @@ from chemiguard119.utils import sha256_file, write_json
 
 
 MANIFEST_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-manifest-v1"
-REPORT_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-report-v2"
+REPORT_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-report-v3"
 SOURCE_IDS = (
     "analysis_engine",
     "backend_state",
@@ -37,8 +37,14 @@ REQUIRED_ANALYSIS_CAPABILITIES = frozenset(
     }
 )
 REQUIRED_BACKEND_CHECKS: dict[str, Any] = {
+    "confirmation_revision_count_after_new_evidence": 2,
     "old_confirmation_status": "SUPERSEDED",
+    "old_confirmation_superseded_by_new_evidence": True,
     "active_confirmation_status": "ACTIVE",
+    "new_evidence_confirmation_basis": "SITE_MSDS",
+    "new_evidence_confirmed_cas": "7664-93-9",
+    "new_evidence_confirmation_revision": 2,
+    "new_evidence_reanalyze_required": True,
     "stale_record_http_status": 409,
     "record_count_after_stale_attempt": 0,
     "fresh_record_http_status": 201,
@@ -500,6 +506,12 @@ def aggregate_cross_repo_safety_evidence(
         "record_count_after_exact_retry": backend_checks.get(
             "record_count_after_exact_retry", {}
         ).get("actual"),
+        "new_evidence_reanalysis_required": backend_checks.get(
+            "new_evidence_reanalyze_required", {}
+        ).get("actual"),
+        "old_analysis_persisted_after_new_evidence_count": backend_checks.get(
+            "record_count_after_stale_attempt", {}
+        ).get("actual"),
         "wrong_single_cas_promotion_ground_truth_count": None,
         "cas_ground_truth_available_for_speech": False,
     }
@@ -561,6 +573,7 @@ def aggregate_cross_repo_safety_evidence(
             "분리된 내부 회귀 suite에서 관측된 안전 계약 위반 건수",
             "Speech·Analysis·Backend 각 구현 경계의 제한된 회귀 상태",
             "모의 시설명의 과거 공개 이력 NO_HISTORY_MATCH에서 시설 확인 Gate가 유지됨",
+            "인증 사용자의 새 SITE_MSDS 확인 뒤 이전 confirmation과 analysis가 stale 처리됨",
         ],
         "claims_not_allowed": [
             "한 요청의 음성→인계 전체 경로가 실행됐다는 주장",
