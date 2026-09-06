@@ -154,6 +154,14 @@ evidence 감사 결과는
 평가기 v2 보고서는 v3 릴리스 정책을 통과하지 못하므로 artifact와 보고서를 v3로 다시
 생성해야 합니다.
 
+### 100~200질의 독립 검수 준비
+
+`retriever-review` 명령은 KOSHA 상세가 있는 물질마다 19개 질문 유형과 검수용 evidence
+pool을 만들고, 두 사람의 독립 CSV가 완전히 일치할 때만
+`DOUBLE_REVIEWED_NON_EXPERT` 평가 JSONL로 병합합니다. 9종 artifact 기준 후보는
+171질의(답변 불가 36질의)지만 아직 사람 정답이 없으므로 성능 수치가 아닙니다. 사용법과 남은 Gate는
+[`RETRIEVER_QREL_REVIEW.md`](RETRIEVER_QREL_REVIEW.md)에 기록했습니다.
+
 ## 공개 검증 CAMEO 물질쌍 회귀 평가
 
 공개 검증 crosswalk가 늘어날 때마다 모든 고유 물질쌍을 실제 CAMEO 원자료 DB에 연결해

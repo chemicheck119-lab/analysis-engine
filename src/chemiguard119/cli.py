@@ -725,6 +725,42 @@ def _e2e_review(args: argparse.Namespace) -> dict[str, Any]:
     raise ValueError(f"지원하지 않는 e2e-review action={args.e2e_review_action!r}")
 
 
+def _retriever_review(args: argparse.Namespace) -> dict[str, Any]:
+    from chemiguard119.retrieval_review import (
+        export_review_sheet,
+        generate_qrel_candidate_pool,
+        merge_review_sheets,
+    )
+
+    if args.retriever_review_action == "generate":
+        return generate_qrel_candidate_pool(
+            args.db,
+            args.retriever_model,
+            args.output,
+            top_k=args.top_k,
+            max_substances=args.max_substances,
+        )
+    if args.retriever_review_action == "export":
+        return export_review_sheet(
+            args.candidates,
+            args.output,
+            actor_role=args.actor_role,
+            actor_id=args.actor_id,
+        )
+    if args.retriever_review_action == "merge":
+        return merge_review_sheets(
+            args.candidates,
+            args.labeler_sheet,
+            args.reviewer_sheet,
+            args.db,
+            args.output,
+            report_path=args.report,
+        )
+    raise ValueError(
+        f"지원하지 않는 retriever-review action={args.retriever_review_action!r}"
+    )
+
+
 def _resolve(args: argparse.Namespace) -> dict[str, Any]:
     from chemiguard119.resolver import load_resolver, resolve_substance
 
@@ -1521,6 +1557,62 @@ def build_parser() -> argparse.ArgumentParser:
         default=e2e_review_dir / "e2e_candidate_preflight.json",
     )
     _add_json_option(review_preflight)
+
+    retriever_review = subparsers.add_parser(
+        "retriever-review",
+        help="Retriever qrel 후보 생성·독립 검수·합의 병합",
+    )
+    retriever_review_actions = retriever_review.add_subparsers(
+        dest="retriever_review_action",
+        required=True,
+    )
+    retriever_review.set_defaults(handler=_retriever_review)
+
+    retriever_review_dir = DEFAULT_REPORT_DIR / "retriever_review"
+    retriever_review_generate = retriever_review_actions.add_parser(
+        "generate",
+        help="KOSHA 물질별 19개 질문과 검수 전 evidence pool 생성",
+    )
+    retriever_review_generate.add_argument("--db", type=_path, default=DEFAULT_DB_PATH)
+    retriever_review_generate.add_argument(
+        "--retriever-model",
+        type=_path,
+        default=DEFAULT_RETRIEVER_MODEL,
+    )
+    retriever_review_generate.add_argument("--top-k", type=int, default=12)
+    retriever_review_generate.add_argument("--max-substances", type=int)
+    retriever_review_generate.add_argument(
+        "--output",
+        type=_path,
+        default=retriever_review_dir / "retriever_qrel_candidates.jsonl",
+    )
+    _add_json_option(retriever_review_generate)
+
+    retriever_review_export = retriever_review_actions.add_parser(
+        "export",
+        help="정답이 비어 있는 라벨러 또는 독립 검수자 CSV 생성",
+    )
+    retriever_review_export.add_argument("--candidates", type=_path, required=True)
+    retriever_review_export.add_argument(
+        "--actor-role",
+        choices=("LABELER", "REVIEWER"),
+        required=True,
+    )
+    retriever_review_export.add_argument("--actor-id", required=True)
+    retriever_review_export.add_argument("--output", type=_path, required=True)
+    _add_json_option(retriever_review_export)
+
+    retriever_review_merge = retriever_review_actions.add_parser(
+        "merge",
+        help="두 독립 qrel 검수 결과가 완전히 일치할 때 locked JSONL 생성",
+    )
+    retriever_review_merge.add_argument("--candidates", type=_path, required=True)
+    retriever_review_merge.add_argument("--labeler-sheet", type=_path, required=True)
+    retriever_review_merge.add_argument("--reviewer-sheet", type=_path, required=True)
+    retriever_review_merge.add_argument("--db", type=_path, default=DEFAULT_DB_PATH)
+    retriever_review_merge.add_argument("--output", type=_path, required=True)
+    retriever_review_merge.add_argument("--report", type=_path)
+    _add_json_option(retriever_review_merge)
 
     resolve = subparsers.add_parser(
         "resolve", help="물질명·CAS·별칭에서 후보 물질 검색"
