@@ -7,12 +7,52 @@ import pytest
 
 from chemiguard119.stt_downstream_evaluation import (
     DownstreamEvaluationError,
+    bearer_token_from_env,
     build_report,
     evaluate_pairs,
     load_private_records,
     load_speech_summary,
     write_outputs,
 )
+
+
+def test_bearer_token_can_be_omitted_only_for_local_model_api(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("TEST_IDENTITY_TOKEN", raising=False)
+
+    assert (
+        bearer_token_from_env("TEST_IDENTITY_TOKEN", base_url="http://127.0.0.1:8000")
+        is None
+    )
+    assert (
+        bearer_token_from_env("TEST_IDENTITY_TOKEN", base_url="http://localhost:8000")
+        is None
+    )
+    assert (
+        bearer_token_from_env("TEST_IDENTITY_TOKEN", base_url="http://[::1]:8000")
+        is None
+    )
+
+    with pytest.raises(DownstreamEvaluationError, match="원격 Model API"):
+        bearer_token_from_env(
+            "TEST_IDENTITY_TOKEN",
+            base_url="https://model-api.example.run.app",
+        )
+
+
+def test_bearer_token_is_preserved_for_remote_model_api(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TEST_IDENTITY_TOKEN", "identity-token")
+
+    assert (
+        bearer_token_from_env(
+            "TEST_IDENTITY_TOKEN",
+            base_url="https://model-api.example.run.app",
+        )
+        == "identity-token"
+    )
 
 
 def _response(

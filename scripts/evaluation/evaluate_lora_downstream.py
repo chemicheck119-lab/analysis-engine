@@ -10,6 +10,7 @@ from pathlib import Path
 from chemiguard119.stt_downstream_evaluation import (
     MAX_WORKERS,
     ModelApiClient,
+    bearer_token_from_env,
     required_secret_from_env,
     sha256_file,
 )
@@ -45,7 +46,9 @@ def main() -> int:
     client = ModelApiClient(
         base_url=args.model_api_base_url,
         api_key=required_secret_from_env(args.api_key_env),
-        bearer_token=required_secret_from_env(args.bearer_token_env),
+        bearer_token=bearer_token_from_env(
+            args.bearer_token_env, base_url=args.model_api_base_url
+        ),
         timeout_seconds=args.timeout_seconds,
         max_retries=args.max_retries,
     )
