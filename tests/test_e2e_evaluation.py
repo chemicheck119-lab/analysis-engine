@@ -99,6 +99,7 @@ def _evaluate(
     monkeypatch: pytest.MonkeyPatch,
     rows: list[dict[str, Any]],
     analyzer: Any,
+    facility_searcher: Any | None = None,
 ) -> dict[str, Any]:
     path = tmp_path / "e2e.jsonl"
     _write(path, rows)
@@ -113,6 +114,7 @@ def _evaluate(
         resolver_artifact={},
         retriever_artifact={},
         analyzer=analyzer,
+        facility_searcher=facility_searcher,
     )
 
 
@@ -127,7 +129,7 @@ def test_e2e_evaluator_reports_safe_abstention(
         lambda *_args, **_kwargs: _safe_output(),
     )
 
-    assert report["metrics_version"] == "incident-e2e-evaluation-v3"
+    assert report["metrics_version"] == "incident-e2e-evaluation-v4"
     assert report["status"] == "COMPLETED"
     assert report["claim_scope"] == "INTERNAL_REGRESSION_ONLY"
     assert report["is_field_performance_estimate"] is False
@@ -276,8 +278,93 @@ def test_repository_e2e_scenarios_have_supported_schema(
         resolver_artifact={},
         retriever_artifact={},
         analyzer=analyzer,
+        facility_searcher=lambda *_args, **_kwargs: {
+            "status": "NO_HISTORY_MATCH",
+            "results": [],
+        },
     )
-    assert report["case_count"] == 10
+    assert report["case_count"] == 11
+
+
+def test_e2e_facility_history_absence_stays_outside_rule_gate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed: dict[str, Any] = {}
+
+    def searcher(query: str, db_path: Path, **kwargs: Any) -> dict[str, Any]:
+        observed.update(query=query, db_path=db_path, **kwargs)
+        return {
+            "status": "NO_HISTORY_MATCH",
+            "warning": "과거 공개 이력 후보이며 현재 재고가 아닙니다.",
+            "results": [],
+        }
+
+    output = {
+        "status": "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+        "substance_candidates": [{"role": "INCIDENT"}],
+        "evidence": [
+            {
+                "role": "INCIDENT",
+                "cas_basis": "RESPONDER_CONFIRMED",
+                "retrieval": {"status": "COMPLETED", "results": []},
+            }
+        ],
+        "rule_review": {
+            "executed": False,
+            "status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+            "missing_confirmations": ["facility_cas"],
+        },
+        "output_validation": {"status": "PASSED", "errors": []},
+    }
+    row = _row(
+        capabilities=["FACILITY_HISTORY_ABSENCE", "CONFIRMATION_GATE"],
+        input={
+            "raw_text": "차아염소산나트륨 누출",
+            "confirmed_incident_cas": "7681-52-9",
+            "confirmed_facility_cas": None,
+            "facility_history_query": "모의 미등록 시설",
+            "facility_history_province": "세종특별자치시",
+        },
+        expected={
+            "status": "NEEDS_FACILITY_SUBSTANCE_CONFIRMATION",
+            "rule_executed": False,
+            "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+            "missing_confirmations": ["facility_cas"],
+            "candidate_count": 1,
+            "candidate_roles": ["INCIDENT"],
+            "evidence_bases": {"INCIDENT": "RESPONDER_CONFIRMED"},
+            "retrieval_statuses": ["COMPLETED"],
+            "output_validation_status": "PASSED",
+            "expect_abstention": True,
+            "facility_history": {
+                "status": "NO_HISTORY_MATCH",
+                "result_count": 0,
+                "any_current_inventory_confirmed": False,
+                "any_rule_eligible": False,
+            },
+        },
+    )
+
+    report = _evaluate(
+        tmp_path,
+        monkeypatch,
+        [row],
+        lambda *_args, **_kwargs: output,
+        facility_searcher=searcher,
+    )
+
+    assert report["status"] == "COMPLETED"
+    assert report["metrics"]["facility_history_expected_count"] == 1
+    assert report["metrics"]["facility_history_absence_pass_rate"] == 1.0
+    assert report["cases"][0]["facility_history"] == {
+        "status": "NO_HISTORY_MATCH",
+        "result_count": 0,
+        "any_current_inventory_confirmed": False,
+        "any_rule_eligible": False,
+    }
+    assert observed["query"] == "모의 미등록 시설"
+    assert observed["province"] == "세종특별자치시"
 
 
 def test_e2e_fault_fixture_injects_retriever_timeout(
