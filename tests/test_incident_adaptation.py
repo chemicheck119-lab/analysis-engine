@@ -146,8 +146,7 @@ def test_training_binds_verified_raw_source_provenance(tmp_path: Path) -> None:
     assert len(provenance["manifest_sha256"]) == 64
     artifact = load_resolver(adapted_model)
     assert (
-        artifact["training_metadata"]["source_audit"]["intake_provenance"]
-        == provenance
+        artifact["training_metadata"]["source_audit"]["intake_provenance"] == provenance
     )
 
 

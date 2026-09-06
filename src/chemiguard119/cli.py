@@ -1656,10 +1656,7 @@ def build_parser() -> argparse.ArgumentParser:
     finetune_resolver.add_argument(
         "--source-manifest",
         type=_path,
-        default=(
-            FINAL_DATA_DIR
-            / "07_울산소방_화학사고별_유해물질판단.manifest.json"
-        ),
+        default=(FINAL_DATA_DIR / "07_울산소방_화학사고별_유해물질판단.manifest.json"),
         help="공식 원본과 파생 CSV SHA-256을 결합하는 intake sidecar",
     )
     finetune_resolver.add_argument(

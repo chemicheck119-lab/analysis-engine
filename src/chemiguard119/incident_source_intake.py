@@ -98,7 +98,9 @@ def verify_ulsan_resolver_source_manifest(
         manifest_bytes = manifest_path.read_bytes()
         payload = json.loads(manifest_bytes.decode("utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
-        raise ValueError(f"intake manifest를 읽을 수 없습니다: {manifest_path}") from error
+        raise ValueError(
+            f"intake manifest를 읽을 수 없습니다: {manifest_path}"
+        ) from error
     if not isinstance(payload, Mapping):
         raise ValueError("intake manifest 최상위는 객체여야 합니다.")
     if payload.get("schema_version") != INTAKE_SCHEMA_VERSION:
@@ -141,8 +143,7 @@ def verify_ulsan_resolver_source_manifest(
         or derived.get("contains_location_or_response_fields") is not False
         or safety.get("git_commit_allowed") is not False
         or safety.get("private_storage_required") is not True
-        or safety.get("claim_scope")
-        != "SOURCE_INTAKE_ONLY_NOT_RESOLVER_PERFORMANCE"
+        or safety.get("claim_scope") != "SOURCE_INTAKE_ONLY_NOT_RESOLVER_PERFORMANCE"
     ):
         raise ValueError("intake manifest의 private 저장·주장 범위 계약이 다릅니다.")
     return {
