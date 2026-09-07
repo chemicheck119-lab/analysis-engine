@@ -9,8 +9,6 @@ from chemiguard119.stt_downstream_evaluation import DownstreamEvaluationError
 from chemiguard119.stt_lora_downstream_evaluation import (
     ARMS,
     EXPECTED_CONDITION,
-    EXPECTED_DATASET_ID,
-    EXPECTED_DATASET_VERSION,
     EXPECTED_EVIDENCE_SCOPE,
     EXPECTED_EVALUATION_ID,
     EXPECTED_RECORDS,
@@ -106,8 +104,11 @@ def _fixtures(
             "model_arm": arm,
             "automatic_adoption_allowed": False,
             "dataset": {
-                "dataset_id": EXPECTED_DATASET_ID,
-                "dataset_version": EXPECTED_DATASET_VERSION,
+                "dataset_id": "aihub_71768_gwangju_fire_lora_dev_wind_snr0",
+                "dataset_version": (
+                    "dataset-71768_downloaded-2026-09-05"
+                    "+whisper-lora-clean-wind-snr0-v1"
+                ),
                 "evaluation_id": EXPECTED_EVALUATION_ID,
                 "record_count": EXPECTED_RECORDS,
                 "expected_record_count": EXPECTED_RECORDS,
@@ -153,8 +154,10 @@ def _fixtures(
         "fact_status": "부분 구현 또는 개발용 데모",
         "evidence_scope": EXPECTED_EVIDENCE_SCOPE,
         "dataset": {
-            "dataset_id": EXPECTED_DATASET_ID,
-            "dataset_version": EXPECTED_DATASET_VERSION,
+            "dataset_id": "aihub_71768_gwangju_fire_lora_dev_wind_snr0",
+            "dataset_version": (
+                "dataset-71768_downloaded-2026-09-05+whisper-lora-clean-wind-snr0-v1"
+            ),
             "evaluation_id": EXPECTED_EVALUATION_ID,
             "record_count": EXPECTED_RECORDS,
             "manifest_sha256": "1" * 64,
