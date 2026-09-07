@@ -100,6 +100,44 @@ def _backend_report() -> dict:
     }
 
 
+def _backend_cancellation_report() -> dict:
+    values = {
+        "cancel_http_status": 200,
+        "cancel_response_status": "CANCELLED",
+        "cancel_reanalyze_required": True,
+        "cancel_retry_http_status": 200,
+        "cancel_retry_keeps_original_time": True,
+        "active_confirmation_count": 1,
+        "active_facility_confirmation_present": False,
+        "cancelled_confirmation_status": "CANCELLED",
+        "cancellation_audit_count": 1,
+        "stale_record_http_status": 409,
+        "stale_record_error_code": "INCIDENT_REFERENCE_CONFLICT",
+        "record_count_after_stale_attempt": 0,
+        "post_cancel_facility_binding_is_null": True,
+        "post_cancel_rule_executed": False,
+        "post_cancel_risk_display_allowed": False,
+        "fresh_record_http_status": 201,
+        "fresh_record_confirmation_reference_count": 1,
+    }
+    checks = [
+        {"name": name, "expected": value, "actual": value, "passed": True}
+        for name, value in values.items()
+    ]
+    return {
+        "schema_version": "chemicheck119-confirmation-cancellation-evaluation-v1",
+        "status": "COMPLETED",
+        "claim_scope": "INTERNAL_REGRESSION_ONLY",
+        "field_validated": False,
+        "cloud_sql_validated": False,
+        "database_runtime": "H2",
+        "check_count": len(checks),
+        "passed_check_count": len(checks),
+        "failed_check_count": 0,
+        "checks": checks,
+    }
+
+
 def _speech_report(source_digest: str) -> dict:
     return {
         "schema_version": "stt-radio-sim-downstream-silver-eval-v1",
@@ -139,16 +177,19 @@ def _fixture(tmp_path: Path) -> dict[str, Path]:
     paths = {
         "analysis_engine": tmp_path / "analysis.json",
         "backend_state": tmp_path / "backend.json",
+        "backend_cancellation": tmp_path / "backend-cancellation.json",
         "speech_seoul_radio_sim": tmp_path / "seoul.json",
         "speech_incheon_radio_sim": tmp_path / "incheon.json",
     }
     _write(paths["analysis_engine"], _analysis_report())
     _write(paths["backend_state"], _backend_report())
+    _write(paths["backend_cancellation"], _backend_cancellation_report())
     _write(paths["speech_seoul_radio_sim"], _speech_report("1" * 64))
     _write(paths["speech_incheon_radio_sim"], _speech_report("2" * 64))
     schemas = {
         "analysis_engine": "chemicheck119-e2e-evaluation-report-v4",
         "backend_state": "chemicheck119-backend-safety-evaluation-v2",
+        "backend_cancellation": "chemicheck119-confirmation-cancellation-evaluation-v1",
         "speech_seoul_radio_sim": "stt-radio-sim-downstream-silver-eval-v1",
         "speech_incheon_radio_sim": "stt-radio-sim-downstream-silver-eval-v1",
     }
@@ -174,6 +215,7 @@ def _aggregate(paths: dict[str, Path], output: Path | None = None) -> dict:
         manifest_path=paths["manifest"],
         analysis_report_path=paths["analysis_engine"],
         backend_report_path=paths["backend_state"],
+        backend_cancellation_report_path=paths["backend_cancellation"],
         seoul_speech_report_path=paths["speech_seoul_radio_sim"],
         incheon_speech_report_path=paths["speech_incheon_radio_sim"],
         report_path=output,
@@ -193,6 +235,7 @@ def test_aggregate_accepts_locked_separate_internal_suites(tmp_path: Path) -> No
     assert report["field_validated"] is False
     assert report["full_chain_executed"] is False
     assert report["coverage"]["speech"]["condition_input_count"] == 1440
+    assert report["coverage"]["backend_cancellation"]["check_count"] == 17
     assert (
         report["safety_observations_across_separate_suites"][
             "rule_execution_before_two_confirmations_observed_count"
@@ -217,6 +260,18 @@ def test_aggregate_accepts_locked_separate_internal_suites(tmp_path: Path) -> No
         ]
         == 0
     )
+    assert (
+        report["safety_observations_across_separate_suites"][
+            "confirmation_cancellation_reanalysis_required"
+        ]
+        is True
+    )
+    assert (
+        report["safety_observations_across_separate_suites"][
+            "cancellation_stale_attempt_persisted_record_count"
+        ]
+        == 0
+    )
     assert output.is_file()
 
 
@@ -238,6 +293,33 @@ def test_aggregate_rejects_report_changed_after_manifest_lock(tmp_path: Path) ->
     assert (
         "ANALYSIS_METRIC_FAILED:unsafe_conflict_execution_count"
         in report["evidence_integrity_gate"]["errors_by_source"]["analysis_engine"]
+    )
+
+
+def test_aggregate_rejects_cancellation_rule_execution_even_when_relocked(
+    tmp_path: Path,
+) -> None:
+    paths = _fixture(tmp_path)
+    cancellation = json.loads(paths["backend_cancellation"].read_text(encoding="utf-8"))
+    target = next(
+        check
+        for check in cancellation["checks"]
+        if check["name"] == "post_cancel_rule_executed"
+    )
+    target["actual"] = True
+    _write(paths["backend_cancellation"], cancellation)
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    manifest["sources"]["backend_cancellation"]["expected_sha256"] = sha256_file(
+        paths["backend_cancellation"]
+    )
+    _write(paths["manifest"], manifest)
+
+    report = _aggregate(paths)
+
+    assert report["status"] == "FAILED"
+    assert (
+        "BACKEND_CANCELLATION_REQUIRED_CHECK_FAILED:post_cancel_rule_executed"
+        in report["evidence_integrity_gate"]["errors_by_source"]["backend_cancellation"]
     )
 
 

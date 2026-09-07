@@ -14,11 +14,12 @@ from typing import Any, Mapping
 from chemiguard119.utils import sha256_file, write_json
 
 
-MANIFEST_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-manifest-v1"
-REPORT_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-report-v3"
+MANIFEST_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-manifest-v2"
+REPORT_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-report-v4"
 SOURCE_IDS = (
     "analysis_engine",
     "backend_state",
+    "backend_cancellation",
     "speech_seoul_radio_sim",
     "speech_incheon_radio_sim",
 )
@@ -51,6 +52,25 @@ REQUIRED_BACKEND_CHECKS: dict[str, Any] = {
     "retry_record_http_status": 201,
     "record_count_after_exact_retry": 1,
     "analysis_reference_count_after_exact_retry": 1,
+}
+REQUIRED_CANCELLATION_CHECKS: dict[str, Any] = {
+    "cancel_http_status": 200,
+    "cancel_response_status": "CANCELLED",
+    "cancel_reanalyze_required": True,
+    "cancel_retry_http_status": 200,
+    "cancel_retry_keeps_original_time": True,
+    "active_confirmation_count": 1,
+    "active_facility_confirmation_present": False,
+    "cancelled_confirmation_status": "CANCELLED",
+    "cancellation_audit_count": 1,
+    "stale_record_http_status": 409,
+    "stale_record_error_code": "INCIDENT_REFERENCE_CONFLICT",
+    "record_count_after_stale_attempt": 0,
+    "post_cancel_facility_binding_is_null": True,
+    "post_cancel_rule_executed": False,
+    "post_cancel_risk_display_allowed": False,
+    "fresh_record_http_status": 201,
+    "fresh_record_confirmation_reference_count": 1,
 }
 SPEECH_SAFETY_FIELDS = (
     "candidate_promotion_violation_count",
@@ -293,6 +313,82 @@ def _validate_backend(report: Mapping[str, Any]) -> list[str]:
     return errors
 
 
+def _validate_backend_cancellation(report: Mapping[str, Any]) -> list[str]:
+    errors: list[str] = []
+    _append_if(
+        errors,
+        report.get("status") != "COMPLETED",
+        "BACKEND_CANCELLATION_NOT_COMPLETED",
+    )
+    _append_if(
+        errors,
+        report.get("claim_scope") != "INTERNAL_REGRESSION_ONLY",
+        "BACKEND_CANCELLATION_CLAIM_SCOPE_UNSAFE",
+    )
+    for field in ("field_validated", "cloud_sql_validated"):
+        _append_if(
+            errors,
+            report.get(field) is not False,
+            f"BACKEND_CANCELLATION_SCOPE_UNSAFE:{field}",
+        )
+    _append_if(
+        errors,
+        report.get("database_runtime") != "H2",
+        "BACKEND_CANCELLATION_RUNTIME_MISMATCH",
+    )
+    checks = report.get("checks")
+    check_rows = checks if isinstance(checks, list) else []
+    check_count = report.get("check_count")
+    passed_count = report.get("passed_check_count")
+    failed_count = report.get("failed_check_count")
+    _append_if(
+        errors,
+        check_count != len(check_rows),
+        "BACKEND_CANCELLATION_CHECK_COUNT_MISMATCH",
+    )
+    _append_if(
+        errors,
+        passed_count
+        != sum(
+            item.get("passed") is True
+            for item in check_rows
+            if isinstance(item, Mapping)
+        ),
+        "BACKEND_CANCELLATION_PASS_COUNT_MISMATCH",
+    )
+    _append_if(
+        errors,
+        not _is_count(check_count)
+        or not _is_count(passed_count)
+        or not _is_count(failed_count)
+        or check_count < 1
+        or passed_count != check_count
+        or failed_count != 0,
+        "BACKEND_CANCELLATION_STATE_GATE_FAILED",
+    )
+    check_map = _backend_check_map(report)
+    check_names = [
+        str(row.get("name"))
+        for row in check_rows
+        if isinstance(row, Mapping) and row.get("name")
+    ]
+    _append_if(
+        errors,
+        len(check_names) != len(set(check_names)),
+        "BACKEND_CANCELLATION_DUPLICATE_CHECK_NAME",
+    )
+    for name, expected in REQUIRED_CANCELLATION_CHECKS.items():
+        row = check_map.get(name)
+        if (
+            row is None
+            or row.get("expected") != expected
+            or row.get("actual") != expected
+            or row.get("passed") is not True
+        ):
+            errors.append(f"BACKEND_CANCELLATION_REQUIRED_CHECK_FAILED:{name}")
+    return errors
+
+
 def _validate_speech(report: Mapping[str, Any], region: str) -> list[str]:
     prefix = f"SPEECH_{region.upper()}"
     errors: list[str] = []
@@ -405,11 +501,12 @@ def aggregate_cross_repo_safety_evidence(
     manifest_path: Path,
     analysis_report_path: Path,
     backend_report_path: Path,
+    backend_cancellation_report_path: Path,
     seoul_speech_report_path: Path,
     incheon_speech_report_path: Path,
     report_path: Path | None = None,
 ) -> dict[str, Any]:
-    """잠금 보고서 네 개의 무결성·범위·안전 Gate를 결합한다."""
+    """잠금 보고서 다섯 개의 무결성·범위·안전 Gate를 결합한다."""
 
     manifest_path = Path(manifest_path)
     manifest = _load_object(manifest_path)
@@ -420,6 +517,7 @@ def aggregate_cross_repo_safety_evidence(
     paths = {
         "analysis_engine": Path(analysis_report_path),
         "backend_state": Path(backend_report_path),
+        "backend_cancellation": Path(backend_cancellation_report_path),
         "speech_seoul_radio_sim": Path(seoul_speech_report_path),
         "speech_incheon_radio_sim": Path(incheon_speech_report_path),
     }
@@ -439,6 +537,9 @@ def aggregate_cross_repo_safety_evidence(
     )
     validation_errors["backend_state"].extend(
         _validate_backend(reports["backend_state"])
+    )
+    validation_errors["backend_cancellation"].extend(
+        _validate_backend_cancellation(reports["backend_cancellation"])
     )
     validation_errors["speech_seoul_radio_sim"].extend(
         _validate_speech(reports["speech_seoul_radio_sim"], "seoul")
@@ -471,6 +572,7 @@ def aggregate_cross_repo_safety_evidence(
 
     analysis_metrics = reports["analysis_engine"].get("metrics") or {}
     backend_checks = _backend_check_map(reports["backend_state"])
+    cancellation_checks = _backend_check_map(reports["backend_cancellation"])
     speech_metrics = [
         (seoul.get("metrics") or {}),
         (incheon.get("metrics") or {}),
@@ -511,6 +613,18 @@ def aggregate_cross_repo_safety_evidence(
         ).get("actual"),
         "old_analysis_persisted_after_new_evidence_count": backend_checks.get(
             "record_count_after_stale_attempt", {}
+        ).get("actual"),
+        "confirmation_cancellation_reanalysis_required": cancellation_checks.get(
+            "cancel_reanalyze_required", {}
+        ).get("actual"),
+        "cancellation_stale_attempt_persisted_record_count": cancellation_checks.get(
+            "record_count_after_stale_attempt", {}
+        ).get("actual"),
+        "post_cancellation_rule_executed": cancellation_checks.get(
+            "post_cancel_rule_executed", {}
+        ).get("actual"),
+        "post_cancellation_risk_display_allowed": cancellation_checks.get(
+            "post_cancel_risk_display_allowed", {}
         ).get("actual"),
         "wrong_single_cas_promotion_ground_truth_count": None,
         "cas_ground_truth_available_for_speech": False,
@@ -558,6 +672,15 @@ def aggregate_cross_repo_safety_evidence(
                 ),
                 "database_runtime": reports["backend_state"].get("database_runtime"),
             },
+            "backend_cancellation": {
+                "check_count": reports["backend_cancellation"].get("check_count"),
+                "passed_check_count": reports["backend_cancellation"].get(
+                    "passed_check_count"
+                ),
+                "database_runtime": reports["backend_cancellation"].get(
+                    "database_runtime"
+                ),
+            },
         },
         "safety_observations_across_separate_suites": combined_safety,
         "unverified_gaps": [
@@ -569,11 +692,12 @@ def aggregate_cross_repo_safety_evidence(
             "독립 검수된 파일럿 E2E 200건 이상",
         ],
         "claims_allowed": [
-            "잠긴 네 보고서가 manifest SHA-256·schema와 일치함",
+            "잠긴 다섯 보고서가 manifest SHA-256·schema와 일치함",
             "분리된 내부 회귀 suite에서 관측된 안전 계약 위반 건수",
             "Speech·Analysis·Backend 각 구현 경계의 제한된 회귀 상태",
             "모의 시설명의 과거 공개 이력 NO_HISTORY_MATCH에서 시설 확인 Gate가 유지됨",
             "인증 사용자의 새 SITE_MSDS 확인 뒤 이전 confirmation과 analysis가 stale 처리됨",
+            "정확한 활성 ID 취소 뒤 감사 이벤트가 보존되고 과거 analysis 저장이 차단됨",
         ],
         "claims_not_allowed": [
             "한 요청의 음성→인계 전체 경로가 실행됐다는 주장",

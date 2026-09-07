@@ -7,6 +7,9 @@
 
 ### Added
 
+- Backend 확인 취소 보고서를 SHA-256·schema로 잠그고, 취소 뒤 재분석 요구·과거 analysis
+  저장 차단·Rule 미실행·위험 표시 차단을 기존 Speech·Analysis·Backend 내부 회귀와 분리해
+  결합 검증하는 Cross-repo 안전 증거 bundle v4
 - `radio-sim-v1` clean+17개 왜곡 STT 결과를 조건별 Parser·Resolver 실버 보존율과 2-CAS
   Gate 위반으로 평가하고, 독립 지역 비교 전에는 LoRA 결정을 보류하는 비공개 평가기
 - 서울·인천에서 동일 왜곡 조건·동일 저성능 신호가 반복되고 후단 Gate가 모두 통과할 때만

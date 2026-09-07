@@ -321,6 +321,7 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
         speech = coverage.get("speech") or {}
         analysis = coverage.get("analysis_engine") or {}
         backend = coverage.get("backend_state") or {}
+        cancellation = coverage.get("backend_cancellation") or {}
         print(f"증거 무결성 Gate: {_short(integrity.get('passed'))}")
         print(
             "분리 suite 범위: "
@@ -328,7 +329,9 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
             f"Analysis {analysis.get('passed_scenario_count', 0)}/"
             f"{analysis.get('scenario_count', 0)} 시나리오, "
             f"Backend {backend.get('passed_check_count', 0)}/"
-            f"{backend.get('check_count', 0)} 검사"
+            f"{backend.get('check_count', 0)} 검사, "
+            f"확인 취소 {cancellation.get('passed_check_count', 0)}/"
+            f"{cancellation.get('check_count', 0)} 검사"
         )
         print(f"판정: {_short(payload.get('decision'))}")
         print(
@@ -705,6 +708,7 @@ def _aggregate_e2e_evidence(args: argparse.Namespace) -> dict[str, Any]:
         manifest_path=args.manifest,
         analysis_report_path=args.analysis_report,
         backend_report_path=args.backend_report,
+        backend_cancellation_report_path=args.backend_cancellation_report,
         seoul_speech_report_path=args.seoul_speech_report,
         incheon_speech_report_path=args.incheon_speech_report,
         report_path=args.report,
@@ -1512,6 +1516,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     aggregate_e2e.add_argument("--analysis-report", type=_path, required=True)
     aggregate_e2e.add_argument("--backend-report", type=_path, required=True)
+    aggregate_e2e.add_argument(
+        "--backend-cancellation-report", type=_path, required=True
+    )
     aggregate_e2e.add_argument("--seoul-speech-report", type=_path, required=True)
     aggregate_e2e.add_argument("--incheon-speech-report", type=_path, required=True)
     aggregate_e2e.add_argument(

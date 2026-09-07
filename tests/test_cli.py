@@ -26,6 +26,8 @@ from chemiguard119 import cli
                 "analysis.json",
                 "--backend-report",
                 "backend.json",
+                "--backend-cancellation-report",
+                "backend-cancellation.json",
                 "--seoul-speech-report",
                 "seoul.json",
                 "--incheon-speech-report",
