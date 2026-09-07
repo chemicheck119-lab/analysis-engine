@@ -27,8 +27,10 @@ from chemiguard119.stt_downstream_evaluation import (
 SCHEMA_VERSION = "stt-lora-wind-downstream-silver-eval-v1"
 SPEECH_WIND_PROTOCOL_ID = "whisper-small-lora-wind-dev-evaluation-v1"
 SPEECH_ARM_PROTOCOL_ID = "whisper-small-lora-wind-dev-arm-v1"
-EXPECTED_DATASET_ID = "aihub_71768_gwangju_fire"
-EXPECTED_DATASET_VERSION = "dataset-71768_downloaded-2026-09-05"
+EXPECTED_DATASET_ID = "aihub_71768_gwangju_fire_lora_dev_wind_snr0"
+EXPECTED_DATASET_VERSION = (
+    "dataset-71768_downloaded-2026-09-05+whisper-lora-clean-wind-snr0-v1"
+)
 EXPECTED_RECORDS = 132
 EXPECTED_CONDITION = "wind_snr0"
 EXPECTED_EVALUATION_ID = "speech_aihub119_gwangju_lora_dev_wind_snr0_132"
