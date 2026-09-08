@@ -18,6 +18,7 @@ from chemiguard119.retrieval_review import (
     audit_review_sheet,
     export_review_sheet,
     generate_qrel_candidate_pool,
+    generate_retriever_pool_run,
     load_candidate_rows,
     merge_review_sheets,
 )
@@ -154,6 +155,7 @@ def _pool_run(
         "schema_version": POOL_RUN_SCHEMA_VERSION,
         "system_id": "test-system",
         "system_version": "test-v1",
+        "candidate_sha256": hashlib.sha256(candidates.read_bytes()).hexdigest(),
         "system_artifact_sha256": "1" * 64,
         "database_sha256": hashlib.sha256(db.read_bytes()).hexdigest(),
         "top_k": 5,
@@ -275,6 +277,61 @@ def test_pool_audit_accepts_declared_results_already_in_candidate_pool(
     assert report["is_performance_result"] is False
 
 
+def test_generate_pool_run_is_private_and_auditable(tmp_path: Path) -> None:
+    db, candidates = _generate(tmp_path)
+    model = tmp_path / "retriever.joblib"
+    output = tmp_path / "pool-run.json"
+
+    generation = generate_retriever_pool_run(
+        candidates,
+        db,
+        model,
+        output,
+        system_id="baseline-lexical-hybrid",
+        system_version="evidence-hybrid-tfidf-v2@test",
+        retriever_artifact={},
+        searcher=_searcher,
+    )
+    audit = audit_candidate_pool_coverage(candidates, db, [output])
+    run = json.loads(output.read_text(encoding="utf-8"))
+
+    assert generation["status"] == "COMPLETED"
+    assert generation["case_count"] == len(QUERY_TEMPLATES)
+    assert generation["is_performance_result"] is False
+    assert output.stat().st_mode & 0o777 == 0o600
+    assert "query" not in run["results"][0]
+    assert audit["status"] == "COMPLETE_FOR_DECLARED_SYSTEMS"
+
+
+def test_generate_pool_run_rejects_changed_database(tmp_path: Path) -> None:
+    db, candidates = _generate(tmp_path)
+    with sqlite3.connect(db) as connection:
+        connection.execute(
+            "INSERT INTO evidence VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                "KOSHA:CHANGED",
+                "KOSHA",
+                "64-17-5",
+                "변경된 문서",
+                "변경된 본문",
+                "https://example.test/changed",
+                "2026-01-02",
+            ),
+        )
+
+    with pytest.raises(ValueError, match="DB artifact가 변경"):
+        generate_retriever_pool_run(
+            candidates,
+            db,
+            tmp_path / "retriever.joblib",
+            tmp_path / "pool-run.json",
+            system_id="baseline-lexical-hybrid",
+            system_version="test",
+            retriever_artifact={},
+            searcher=_searcher,
+        )
+
+
 def test_pool_audit_requires_expansion_for_unpooled_same_cas_result(
     tmp_path: Path,
 ) -> None:
@@ -378,6 +435,22 @@ def test_pool_audit_blocks_changed_query(tmp_path: Path) -> None:
 
     assert report["status"] == "BLOCKED_POOL_AUDIT"
     assert {item["code"] for item in report["blockers"]} == {"POOL_RUN_QUERY_MISMATCH"}
+
+
+def test_pool_audit_blocks_different_candidate_artifact(tmp_path: Path) -> None:
+    db, candidates = _generate(tmp_path)
+    run = tmp_path / "system.json"
+    _pool_run(run, db, candidates)
+    payload = json.loads(run.read_text(encoding="utf-8"))
+    payload["candidate_sha256"] = "3" * 64
+    run.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    report = audit_candidate_pool_coverage(candidates, db, [run])
+
+    assert report["status"] == "BLOCKED_POOL_AUDIT"
+    assert {item["code"] for item in report["blockers"]} == {
+        "POOL_RUN_CANDIDATE_MISMATCH"
+    }
 
 
 def test_unanswerable_no_result_uses_explicit_negative_control_pool(
@@ -523,8 +596,27 @@ def test_cli_exposes_retriever_review_actions() -> None:
             "bm25.json",
         ]
     )
+    pool_run = parser.parse_args(
+        [
+            "retriever-review",
+            "pool-run",
+            "--candidates",
+            "candidates.jsonl",
+            "--db",
+            "db.sqlite",
+            "--retriever-model",
+            "retriever.joblib",
+            "--system-id",
+            "baseline",
+            "--system-version",
+            "v1",
+            "--output",
+            "pool-run.json",
+        ]
+    )
 
     assert generate.handler.__name__ == "_retriever_review"
     assert export.retriever_review_action == "export"
     assert status.retriever_review_action == "status"
+    assert pool_run.retriever_review_action == "pool-run"
     assert pool_audit.retriever_review_action == "pool-audit"
