@@ -33,6 +33,7 @@ from chemiguard119.paths import (
     EVALUATION_DIR,
     FINAL_DATA_DIR,
 )
+from chemiguard119.utils import sha256_file
 
 
 SAFETY_NOTICE = (
@@ -102,6 +103,7 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
         "evaluate": "모델 평가",
         "evaluate-e2e": "사고 분석 E2E 안전 평가",
         "aggregate-e2e-evidence": "Cross-repo E2E 안전 증거 결합",
+        "evaluate-cross-service-flow": "Backend·Model API 실제 HTTP 상태 전이 평가",
         "evaluate-agent-trajectories": "Agent trajectory 안전 평가",
         "evaluate-official-incidents": "전국 공식 화학사고 외부 기준선 평가",
         "e2e-review": "E2E 독립 검수팩",
@@ -336,6 +338,22 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
         print(f"판정: {_short(payload.get('decision'))}")
         print(
             "주의: 서로 다른 내부 회귀를 결합한 보고서이며 단일 전체 경로 실행이 아닙니다."
+        )
+    elif command == "evaluate-cross-service-flow":
+        print(
+            "검사: "
+            f"{payload.get('passed_check_count', 0)}/"
+            f"{payload.get('check_count', 0)} 통과"
+        )
+        print(f"판정: {_short(payload.get('decision'))}")
+        print(
+            "경계: "
+            f"{_short(payload.get('service_boundary'))}, "
+            f"DB={_short(payload.get('database_runtime'))}"
+        )
+        print(
+            "주의: 공개 합성 지령의 Backend→Model API HTTP 회귀이며 "
+            "음성→인계 전체 경로나 현장 검증이 아닙니다."
         )
     elif command == "evaluate-agent-trajectories":
         metrics = payload.get("metrics") or {}
@@ -711,6 +729,32 @@ def _aggregate_e2e_evidence(args: argparse.Namespace) -> dict[str, Any]:
         backend_cancellation_report_path=args.backend_cancellation_report,
         seoul_speech_report_path=args.seoul_speech_report,
         incheon_speech_report_path=args.incheon_speech_report,
+        report_path=args.report,
+    )
+
+
+def _evaluate_cross_service_flow(args: argparse.Namespace) -> dict[str, Any]:
+    from chemiguard119.cross_service_confirmation_evaluation import (
+        HttpCrossServiceFlowClient,
+        evaluate_cross_service_confirmation_flow,
+    )
+
+    client = HttpCrossServiceFlowClient(
+        bff_base_url=args.bff_base_url,
+        model_base_url=args.model_base_url,
+        origin=args.origin,
+        timeout_seconds=args.timeout_seconds,
+        allow_non_loopback=args.allow_non_loopback,
+    )
+    return evaluate_cross_service_confirmation_flow(
+        client,
+        station_id=args.station_id,
+        scenario_id=args.scenario_id,
+        backend_git_commit=args.backend_git_commit,
+        model_git_commit=args.model_git_commit,
+        runtime_manifest_sha256=args.runtime_manifest_sha256,
+        runtime_manifest_actual_sha256=sha256_file(args.runtime_manifest),
+        database_runtime=args.database_runtime,
         report_path=args.report,
     )
 
@@ -1315,6 +1359,7 @@ def _interactive(args: argparse.Namespace) -> dict[str, Any]:
             "evaluate",
             "evaluate-e2e",
             "aggregate-e2e-evidence",
+            "evaluate-cross-service-flow",
             "evaluate-agent-trajectories",
             "evaluate-official-incidents",
             "e2e-review",
@@ -1528,6 +1573,44 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_json_option(aggregate_e2e)
     aggregate_e2e.set_defaults(handler=_aggregate_e2e_evidence)
+
+    cross_service = subparsers.add_parser(
+        "evaluate-cross-service-flow",
+        help="공개 합성 사고의 Backend→Model API 실제 HTTP 확인 상태 전이 평가",
+    )
+    cross_service.add_argument("--bff-base-url", default="http://127.0.0.1:18080")
+    cross_service.add_argument("--model-base-url", default="http://127.0.0.1:18000")
+    cross_service.add_argument(
+        "--origin", default="https://local.chemicheck119.invalid"
+    )
+    cross_service.add_argument("--station-id", default="nfa-0985")
+    cross_service.add_argument("--scenario-id", default="CONTEST-LIVE-CHEMICAL-001")
+    cross_service.add_argument("--backend-git-commit", required=True)
+    cross_service.add_argument("--model-git-commit", required=True)
+    cross_service.add_argument("--runtime-manifest-sha256", required=True)
+    cross_service.add_argument("--runtime-manifest", type=_path, required=True)
+    cross_service.add_argument(
+        "--database-runtime",
+        choices=(
+            "H2_POSTGRESQL_COMPATIBILITY_MODE",
+            "POSTGRESQL_TESTCONTAINER",
+            "CLOUD_SQL_POSTGRESQL",
+        ),
+        required=True,
+    )
+    cross_service.add_argument("--timeout-seconds", type=float, default=20.0)
+    cross_service.add_argument(
+        "--allow-non-loopback",
+        action="store_true",
+        help="명시 승인한 원격 테스트 환경 호출 허용",
+    )
+    cross_service.add_argument(
+        "--report",
+        type=_path,
+        default=DEFAULT_REPORT_DIR / "cross_service_confirmation_flow.json",
+    )
+    _add_json_option(cross_service)
+    cross_service.set_defaults(handler=_evaluate_cross_service_flow)
 
     evaluate_agent = subparsers.add_parser(
         "evaluate-agent-trajectories",

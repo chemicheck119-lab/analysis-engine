@@ -35,6 +35,22 @@ from chemiguard119 import cli
             ],
             "aggregate-e2e-evidence",
         ),
+        (
+            [
+                "evaluate-cross-service-flow",
+                "--backend-git-commit",
+                "1" * 40,
+                "--model-git-commit",
+                "2" * 40,
+                "--runtime-manifest-sha256",
+                "3" * 64,
+                "--runtime-manifest",
+                "runtime_manifest.json",
+                "--database-runtime",
+                "H2_POSTGRESQL_COMPATIBILITY_MODE",
+            ],
+            "evaluate-cross-service-flow",
+        ),
         (["evaluate-agent-trajectories"], "evaluate-agent-trajectories"),
         (
             ["evaluate-official-incidents", "--split", "development"],

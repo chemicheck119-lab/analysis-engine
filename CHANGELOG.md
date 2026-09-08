@@ -7,6 +7,8 @@
 
 ### Added
 
+- 공개 합성 사고 한 건을 실제 Backend·Model API HTTP로 실행해 0개 확인→1개 확인→2개 확인
+  →확인 취소의 Rule·위험 표시 상태를 검증하고 원문과 동적 ID를 저장하지 않는 교차 서비스 평가기
 - Backend 확인 취소 보고서를 SHA-256·schema로 잠그고, 취소 뒤 재분석 요구·과거 analysis
   저장 차단·Rule 미실행·위험 표시 차단을 기존 Speech·Analysis·Backend 내부 회귀와 분리해
   결합 검증하는 Cross-repo 안전 증거 bundle v4

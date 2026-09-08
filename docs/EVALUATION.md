@@ -168,6 +168,29 @@ analysis 저장과 Rule·위험 표시를 차단하는 상태 전이를 확인�
 특히 speech 보고서는 CAS 정답 평가가 아니므로 “잘못된 단일 CAS 확정 0건”이라고 표현하지
 않습니다.
 
+### 2026-09-08 Backend→Model API 실제 HTTP 상태 전이
+
+분리된 보고서 결합과 별도로, 공개 합성 replay 한 건을 실제 Backend HTTP와 실제 Model API
+HTTP로 실행했습니다. 하나의 `incidentId`에서 0개 확인→사고물질만 확인→2개 확인→시설 확인
+취소 상태를 이어서 평가한 결과 69/69 검사가 통과했습니다.
+
+- 0개·1개 확인: Rule 실행 `false`, 위험 표시 `false`
+- 2개 확인: CAMEO Rule 실행 `true`, 위험 표시 `true`
+- 시설 확인 취소 뒤: Rule 실행 `false`, 위험 표시 `false`
+- report SHA-256: `3325e3d1da0c7e86d0e4b2299a839ae4018881fce4c15c5daf371e9d714c7331`
+- r1·r2: byte-identical
+- `fact_status=부분 구현 또는 개발용 데모`
+- `database_runtime=H2_POSTGRESQL_COMPATIBILITY_MODE`
+- `database_runtime_verified=false` — 실행 선언이며 평가기가 DB 종류를 자동 판별하지 않음
+- `speech_input_executed=false`
+- `cloud_run_validated=false`
+- `full_voice_to_handoff_chain_executed=false`
+
+여러 상태 변경 요청은 고유 `requestId`를 사용하고 workflow는 `incidentId`로 묶습니다. 각 분석
+요청 안에서만 같은 ID가 Backend→Model API→응답까지 보존됩니다. 자세한 재현 절차와 주장
+제한은 [Backend·Model API 실제 HTTP 확인 상태 전이 평가](CROSS_SERVICE_CONFIRMATION_EVALUATION.md)에
+있습니다.
+
 ### 향후 사람 검수용 E2E 50건 후보
 
 8건 DRAFT에서 바로 “정확도”를 주장하지 않도록, 공개 검증 CAMEO 15쌍의 확인 상태 전이

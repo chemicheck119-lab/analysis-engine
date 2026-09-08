@@ -8,7 +8,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)](docs/API.md)
 [![Docker](https://img.shields.io/badge/Deploy-Docker%20%7C%20Cloud%20Run-4285F4?logo=googlecloud&logoColor=white)](docs/DEPLOYMENT.md)
-[![Tests](https://img.shields.io/badge/Tests-490%20passed-2E7D32)](docs/EVALUATION.md)
+[![Tests](https://img.shields.io/badge/Tests-508%20passed-2E7D32)](docs/EVALUATION.md)
 
 - **참가 부문:** [제6회 소방안전 빅데이터 활용 및 아이디어 경진대회](https://www.bigdata-119.kr/bbs/view?bbsctt_id=571) · 서비스 개발 부문
 - **AI 스택:** Incident Agent · Resolver Fine-tuning · Hybrid Retrieval · Grounded RAG · CAMEO Rule Engine · FastAPI
@@ -244,6 +244,7 @@ scripts/             데이터 준비·학습·평가·artifact 도구
 - [아키텍처](docs/ARCHITECTURE.md) — Agent와 전체 처리 흐름
 - [데이터와 모델](docs/DATA_AND_MODEL.md) — 데이터 출처·전처리·모델 역할
 - [모델 평가](docs/EVALUATION.md) — 평가셋·지표·실패 사례·재현 방법
+- [Backend·Model API 실제 HTTP 확인 상태 전이](docs/CROSS_SERVICE_CONFIRMATION_EVALUATION.md) — 공개 합성 0→1→2→취소 Gate 회귀
 - [Retriever qrel 독립 검수](docs/RETRIEVER_QREL_REVIEW.md) — 171질의 후보·이중 검수·병합 Gate
 - [STT 후단 실버 평가](docs/STT_DOWNSTREAM_SILVER_EVALUATION.md) — 참조 전사 대비 Parser·Resolver 후보 보존 평가
 - [모의 통신 왜곡 STT 후단 평가](docs/STT_RADIO_SIM_DOWNSTREAM_EVALUATION.md) — `radio-sim-v1` 18조건 후보 보존·확인 Gate 회귀 평가
