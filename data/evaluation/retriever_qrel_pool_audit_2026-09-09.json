@@ -1,0 +1,36 @@
+{
+  "schema_version": "chemicheck119-retriever-pool-audit-evidence-v1",
+  "pool_run_created_at_utc": "2026-09-08T18:49:20.918708+00:00",
+  "fact_state": "PARTIAL_IMPLEMENTATION_OR_DEVELOPMENT_DEMO",
+  "status": "COMPLETE_FOR_DECLARED_SYSTEMS",
+  "candidate_count": 171,
+  "evidence_judgment_count": 1848,
+  "declared_system_count": 1,
+  "system": {
+    "system_id": "baseline-lexical-hybrid",
+    "system_version": "evidence-hybrid-tfidf-v2@570985d",
+    "system_artifact_sha256": "2e93e066648890400b26f56b532d6ed608b828203f8668e4af3cf63de1bc544b",
+    "top_k": 5,
+    "returned_occurrence_count": 803,
+    "abstained_case_count": 1,
+    "missing_pool_occurrence_count": 0,
+    "private_run_sha256": "baad12cc8634a4a82e09a086cd9ef1f24ad95506144535faa83b076cc4795320"
+  },
+  "safe_abstention_observation": {
+    "case_id": "RET-QREL-1310732-CURRENT_WIND",
+    "intent": "UNANSWERABLE",
+    "cas_number": "1310-73-2",
+    "retrieval_status": "NO_EVIDENCE_FOUND",
+    "result_count": 0
+  },
+  "missing_unique_case_evidence_pair_count": 0,
+  "affected_case_count": 0,
+  "blockers": [],
+  "candidate_sha256": "e9e7992bb7be67f6abdf0cdae6d3c67c362993d62a0b46483ca73c93e9ca6ffc",
+  "database_sha256": "ed81fe9aac45a38880920d967ce8f3954acabfedf7b2f6ea59464552e7958b91",
+  "labeler_review_status": "NOT_STARTED",
+  "labeler_valid_completed_case_count": 0,
+  "independent_review_complete": false,
+  "is_performance_result": false,
+  "claim_limit": "현재 baseline-lexical-hybrid의 Top-5가 171질의 검수 후보풀에 포함됐는지만 확인한다. pool 완전성, 문서 관련성, Retriever 정확도, 독립 이중 검수 또는 현장 성능을 증명하지 않는다."
+}

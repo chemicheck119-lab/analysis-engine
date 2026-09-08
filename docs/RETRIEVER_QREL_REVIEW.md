@@ -21,10 +21,16 @@ KOSHA 상세가 있는 물질
 | 독립 검수 CSV export·병합 Gate | 구현 완료 |
 | 질의 단위 검수 배치 분할·재조립 Gate | 구현 완료 |
 | 검수 진행률·원문 무결성 감사 | 구현 완료 |
-| 선언된 검색기 Top-K pool coverage 감사 | 구현 완료 |
+| 선언된 검색기 Top-K pool coverage 감사 | 구현·기준선 실행 완료 |
 | 배포 artifact 기반 171질의 후보 | 부분 구현 또는 개발용 데모 |
 | 171질의 사람 이중 검수 | 설계 완료·구현 전 |
 | BM25·Dense·Hybrid·RRF·Reranker 비교 | 설계 완료·구현 전 |
+
+2026-09-09 기준 `baseline-lexical-hybrid` Top-5를 171질의에 실행한 결과 803개 반환
+occurrence가 기존 후보 pool에 모두 포함됐고, 누락 pair는 0건이었다. 답변 불가 질의 1건은
+`NO_EVIDENCE_FOUND`로 기권했다. 사람 라벨은 0/171로 시작 전이며, 이 결과는 검색 정확도가
+아닌 **현재 기준선에 한정된 검수 pool 포함 감사**다. 공개 가능한 집계·artifact hash는
+`data/evaluation/retriever_qrel_pool_audit_2026-09-09.json`에 기록했다.
 | 현장 검색 정확도 | 검증되지 않은 가설 |
 
 기계 생성 질문은 실제 신고·무전 질문 분포가 아니다. 최종 병합 결과도 비전문가 두 명이
