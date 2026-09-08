@@ -121,21 +121,23 @@ claim_scope=INTERNAL_REGRESSION_ONLY
 물질이 없다는 뜻이 아닙니다. 모의 시설명 1건의 내부 회귀이므로 실제 시설 검색 recall이나
 현장 재고 정확도를 측정하지 않습니다.
 
-### 2026-09-08 Cross-repo 안전 증거 bundle v4
+### 2026-09-08 Cross-repo 안전 증거 bundle v5
 
 Speech radio-sim 2개 지역, Analysis E2E v4, Backend 새 충돌 근거 확인·stale·duplicate,
-Backend 확인 취소 보고서는 서로 다른 실행입니다. `aggregate-e2e-evidence`는 이들을 하나의
-실험으로 합산하지 않고, 잠금 manifest의 SHA-256·schema와 각 suite의 안전 Gate를 함께
-검증합니다.
+Backend 확인 취소 보고서는 서로 다른 실행입니다. 여기에 공개 합성 사고 1건을 실제
+Backend→Model API HTTP로 실행한 확인 상태 전이 보고서를 추가했습니다.
+`aggregate-e2e-evidence`는 분리 suite를 하나의 실험으로 합산하지 않고, 잠금 manifest의
+SHA-256·schema와 각 suite의 안전 Gate를 함께 검증합니다.
 
 ```bash
 chemiguard119 aggregate-e2e-evidence \
   --analysis-report <private-data>/experiments/analysis/e2e-v4-facility-history-r1/report.json \
   --backend-report <private-data>/experiments/back/backend-safety-state-v2-r1/report.json \
   --backend-cancellation-report <private-data>/experiments/e2e/confirmation-cancellation-state-v1.json \
+  --cross-service-report <private-data>/experiments/e2e/cross-service-confirmation-flow-v1-r1.json \
   --seoul-speech-report <private-data>/experiments/speech/robustness/seoul/radio-sim-v1/20260906T050926Z/downstream-silver-119ce11-p68beeb4/report.json \
   --incheon-speech-report <private-data>/experiments/speech/robustness/incheon/radio-sim-v1/20260906T022037Z/downstream-silver-119ce11-p68beeb4/report.json \
-  --report <private-data>/experiments/analysis/cross-repo-safety-evidence-v4-r1/report.json
+  --report <private-data>/experiments/analysis/cross-repo-safety-evidence-v5-r1/report.json
 ```
 
 ```text
@@ -144,6 +146,8 @@ Speech 서울·인천 radio-sim 1,440개 조건 입력
 Analysis DRAFT 시나리오 11/11 통과
 Backend H2 PostgreSQL 호환 모드 검사 23/23 통과
 Backend 확인 취소 H2 검사 20/20 통과
+실제 Backend→Model API HTTP 확인 상태 전이 69/69 통과
+0개·1개 확인 Rule 실행 false / 2개 확인 Rule 실행 true / 취소 뒤 false
 새 SITE_MSDS 확인 뒤 재분석 요구 true / 이전 analysis 저장 0건
 확인 취소 뒤 재분석 요구 true / 과거 analysis 저장 0건 / Rule 실행 false / 위험 표시 false
 분리 suite의 확인 전 Rule 실행·위험 노출·후보 승격 위반 관측 0건
@@ -152,18 +156,22 @@ field_validated=false
 full_chain_executed=false
 ```
 
-- 결합 report SHA-256: `5c996f78abad88386342c8eef7f5f0ed065906e2a5e35f4fff81a228000c8547`
-- 잠금 manifest SHA-256: `1ff8ec9804b446bf53ab5386161a4019c580e7932103187c45bef2088d0b9d2a`
+- 결합 report SHA-256: `0c103f4ce8bcfe66f19d92bd46e264f67fd75fc1dcd2e822fd6df133df5a4140`
+- 잠금 manifest SHA-256: `08a04b6ba999b856a2737349b072deab9ee422bc4b895dccd4b0cce446b4dd20`
 - 확인 취소 report SHA-256: `bda9205e48d7d5901d6f18f272e36b4315194ff2016e88bf972da96ad400cb94`
-- 동일 입력 재실행 결과: v4-r1과 v4-r2 byte-identical
+- 실제 HTTP report SHA-256: `3325e3d1da0c7e86d0e4b2299a839ae4018881fce4c15c5daf371e9d714c7331`
+- 동일 입력 재실행 결과: v5-r1과 v5-r2 byte-identical
 
-이 결과로 말할 수 있는 것은 다섯 보고서의 무결성과 **분리된 내부 회귀 suite에서 관측한**
-안전 계약뿐입니다. 시설 이력 없음은 모의 시설명 1건에서 확인했고, 인증 사용자가 새
+이 결과로 말할 수 있는 것은 여섯 보고서의 무결성, **분리된 내부 회귀 suite에서 관측한**
+안전 계약, 공개 합성 사고 1건에서 실행한 실제 Backend→Model API HTTP 상태 전이입니다.
+시설 이력 없음은 모의 시설명 1건에서 확인했고, 인증 사용자가 새
 `SITE_MSDS` 근거로 다른 CAS를 확인했을 때 이전 analysis 저장이 차단됨을 확인했습니다.
 또한 정확한 활성 확인 ID를 취소한 뒤 취소 감사기록을 보존하고, 해당 확인을 참조하는 이전
 analysis 저장과 Rule·위험 표시를 차단하는 상태 전이를 확인했습니다.
 하지만 STT·OCR·Retriever 후보가 사람 확인과 상충하는지를 자동 탐지한 결과는 아니며,
-음성부터 HTTP API와 Backend 인계 기록까지 동일 `request_id`로 실행한 전체 경로도 아닙니다.
+음성부터 HTTP API와 Backend 인계 기록까지 실행한 전체 경로도 아닙니다. 여러 HTTP 요청은
+각각 고유 `requestId`를 사용하고 같은 workflow는 `incidentId`로 연결했습니다. 각 분석
+요청 안에서만 Backend→Model API→응답까지 같은 `requestId`를 확인했습니다.
 실제 현장 무전, 음성 물질명의 CAS 사람 정답, Cloud SQL 동시성도 검증하지 않았습니다.
 특히 speech 보고서는 CAS 정답 평가가 아니므로 “잘못된 단일 CAS 확정 0건”이라고 표현하지
 않습니다.

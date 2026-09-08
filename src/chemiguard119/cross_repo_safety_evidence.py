@@ -14,12 +14,13 @@ from typing import Any, Mapping
 from chemiguard119.utils import sha256_file, write_json
 
 
-MANIFEST_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-manifest-v2"
-REPORT_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-report-v4"
+MANIFEST_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-manifest-v3"
+REPORT_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-report-v5"
 SOURCE_IDS = (
     "analysis_engine",
     "backend_state",
     "backend_cancellation",
+    "cross_service_confirmation_flow",
     "speech_seoul_radio_sim",
     "speech_incheon_radio_sim",
 )
@@ -71,6 +72,30 @@ REQUIRED_CANCELLATION_CHECKS: dict[str, Any] = {
     "post_cancel_risk_display_allowed": False,
     "fresh_record_http_status": 201,
     "fresh_record_confirmation_reference_count": 1,
+}
+REQUIRED_CROSS_SERVICE_CHECKS: dict[str, Any] = {
+    "model_ready": "READY",
+    "model_runtime_integrity": "VERIFIED",
+    "model_runtime_manifest_verified": True,
+    "synthetic_data_classification": "PUBLIC_SYNTHETIC",
+    "synthetic_contains_personal_information": False,
+    "zero_rule_execution_allowed": False,
+    "zero_conflict_executed": False,
+    "zero_risk_display_allowed": False,
+    "one_rule_execution_allowed": False,
+    "one_conflict_executed": False,
+    "one_risk_display_allowed": False,
+    "two_rule_execution_allowed": True,
+    "two_conflict_executed": True,
+    "two_risk_display_allowed": True,
+    "cancelled_rule_execution_allowed": False,
+    "cancelled_conflict_executed": False,
+    "cancelled_risk_display_allowed": False,
+    "two_rule_id": "CAMEO-REACTIVE-GROUP-COMPATIBILITY-MATRIX",
+    "two_rule_incident_cas": "7681-52-9",
+    "two_rule_facility_cas": "7647-01-0",
+    "cancel_status": "CANCELLED",
+    "cancel_reanalysis_required": True,
 }
 SPEECH_SAFETY_FIELDS = (
     "candidate_promotion_violation_count",
@@ -389,6 +414,119 @@ def _validate_backend_cancellation(report: Mapping[str, Any]) -> list[str]:
     return errors
 
 
+def _is_sha256(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(char in "0123456789abcdef" for char in value)
+    )
+
+
+def _validate_cross_service(report: Mapping[str, Any]) -> list[str]:
+    errors: list[str] = []
+    expected_top_level: dict[str, Any] = {
+        "status": "COMPLETED",
+        "fact_status": "부분 구현 또는 개발용 데모",
+        "claim_scope": "LOCAL_CROSS_SERVICE_SYNTHETIC_REGRESSION_ONLY",
+        "field_validated": False,
+        "cloud_run_validated": False,
+        "speech_input_executed": False,
+        "analysis_backend_http_chain_executed": True,
+        "full_voice_to_handoff_chain_executed": False,
+        "database_runtime": "H2_POSTGRESQL_COMPATIBILITY_MODE",
+        "database_runtime_verified": False,
+        "database_runtime_evidence": "OPERATOR_DECLARED",
+        "data_classification": "PUBLIC_SYNTHETIC",
+        "service_boundary": "BFF_REAL_HTTP_TO_MODEL_API_REAL_HTTP",
+    }
+    for field, expected in expected_top_level.items():
+        _append_if(
+            errors,
+            report.get(field) != expected,
+            f"CROSS_SERVICE_SCOPE_FAILED:{field}",
+        )
+
+    checks = report.get("checks")
+    check_rows = checks if isinstance(checks, list) else []
+    check_count = report.get("check_count")
+    passed_count = report.get("passed_check_count")
+    failed_count = report.get("failed_check_count")
+    _append_if(
+        errors,
+        check_count != len(check_rows),
+        "CROSS_SERVICE_CHECK_COUNT_MISMATCH",
+    )
+    _append_if(
+        errors,
+        passed_count
+        != sum(
+            item.get("passed") is True
+            for item in check_rows
+            if isinstance(item, Mapping)
+        ),
+        "CROSS_SERVICE_PASS_COUNT_MISMATCH",
+    )
+    _append_if(
+        errors,
+        not _is_count(check_count)
+        or not _is_count(passed_count)
+        or not _is_count(failed_count)
+        or check_count < len(REQUIRED_CROSS_SERVICE_CHECKS)
+        or passed_count != check_count
+        or failed_count != 0,
+        "CROSS_SERVICE_STATE_GATE_FAILED",
+    )
+    check_map = _backend_check_map(report)
+    check_names = [
+        str(row.get("name"))
+        for row in check_rows
+        if isinstance(row, Mapping) and row.get("name")
+    ]
+    _append_if(
+        errors,
+        len(check_names) != len(set(check_names)),
+        "CROSS_SERVICE_DUPLICATE_CHECK_NAME",
+    )
+    for name, expected in REQUIRED_CROSS_SERVICE_CHECKS.items():
+        row = check_map.get(name)
+        if (
+            row is None
+            or row.get("expected") != expected
+            or row.get("actual") != expected
+            or row.get("passed") is not True
+        ):
+            errors.append(f"CROSS_SERVICE_REQUIRED_CHECK_FAILED:{name}")
+
+    provenance = report.get("provenance")
+    provenance_payload = provenance if isinstance(provenance, Mapping) else {}
+    runtime_digest = provenance_payload.get("runtime_manifest_sha256")
+    runtime_row = check_map.get("runtime_manifest_sha256")
+    _append_if(
+        errors,
+        not _is_sha256(runtime_digest)
+        or runtime_row is None
+        or runtime_row.get("expected") != runtime_digest
+        or runtime_row.get("actual") != runtime_digest
+        or runtime_row.get("passed") is not True,
+        "CROSS_SERVICE_RUNTIME_MANIFEST_UNVERIFIED",
+    )
+    _append_if(
+        errors,
+        not _is_sha256(provenance_payload.get("evaluator_source_sha256")),
+        "CROSS_SERVICE_EVALUATOR_SHA256_INVALID",
+    )
+    for field in ("backend_git_commit", "model_git_commit"):
+        value = provenance_payload.get(field)
+        _append_if(
+            errors,
+            not isinstance(value, str)
+            or len(value) != 40
+            or any(char not in "0123456789abcdef" for char in value),
+            f"CROSS_SERVICE_PROVENANCE_INVALID:{field}",
+        )
+    return errors
+
+
 def _validate_speech(report: Mapping[str, Any], region: str) -> list[str]:
     prefix = f"SPEECH_{region.upper()}"
     errors: list[str] = []
@@ -502,11 +640,12 @@ def aggregate_cross_repo_safety_evidence(
     analysis_report_path: Path,
     backend_report_path: Path,
     backend_cancellation_report_path: Path,
+    cross_service_report_path: Path,
     seoul_speech_report_path: Path,
     incheon_speech_report_path: Path,
     report_path: Path | None = None,
 ) -> dict[str, Any]:
-    """잠금 보고서 다섯 개의 무결성·범위·안전 Gate를 결합한다."""
+    """잠금 보고서 여섯 개의 무결성·범위·안전 Gate를 결합한다."""
 
     manifest_path = Path(manifest_path)
     manifest = _load_object(manifest_path)
@@ -518,6 +657,7 @@ def aggregate_cross_repo_safety_evidence(
         "analysis_engine": Path(analysis_report_path),
         "backend_state": Path(backend_report_path),
         "backend_cancellation": Path(backend_cancellation_report_path),
+        "cross_service_confirmation_flow": Path(cross_service_report_path),
         "speech_seoul_radio_sim": Path(seoul_speech_report_path),
         "speech_incheon_radio_sim": Path(incheon_speech_report_path),
     }
@@ -540,6 +680,9 @@ def aggregate_cross_repo_safety_evidence(
     )
     validation_errors["backend_cancellation"].extend(
         _validate_backend_cancellation(reports["backend_cancellation"])
+    )
+    validation_errors["cross_service_confirmation_flow"].extend(
+        _validate_cross_service(reports["cross_service_confirmation_flow"])
     )
     validation_errors["speech_seoul_radio_sim"].extend(
         _validate_speech(reports["speech_seoul_radio_sim"], "seoul")
@@ -573,6 +716,9 @@ def aggregate_cross_repo_safety_evidence(
     analysis_metrics = reports["analysis_engine"].get("metrics") or {}
     backend_checks = _backend_check_map(reports["backend_state"])
     cancellation_checks = _backend_check_map(reports["backend_cancellation"])
+    cross_service_checks = _backend_check_map(
+        reports["cross_service_confirmation_flow"]
+    )
     speech_metrics = [
         (seoul.get("metrics") or {}),
         (incheon.get("metrics") or {}),
@@ -638,6 +784,11 @@ def aggregate_cross_repo_safety_evidence(
         "claim_scope": "CROSS_REPO_INTERNAL_REGRESSION_ONLY",
         "field_validated": False,
         "full_chain_executed": False,
+        "analysis_backend_http_chain_executed": gate_passed
+        and reports["cross_service_confirmation_flow"].get(
+            "analysis_backend_http_chain_executed"
+        )
+        is True,
         "training_executed": False,
         "decision": (
             "CONDITIONALLY_ADOPT_FOR_INTERNAL_REGRESSION"
@@ -681,27 +832,73 @@ def aggregate_cross_repo_safety_evidence(
                     "database_runtime"
                 ),
             },
+            "cross_service_confirmation_flow": {
+                "check_count": reports["cross_service_confirmation_flow"].get(
+                    "check_count"
+                ),
+                "passed_check_count": reports["cross_service_confirmation_flow"].get(
+                    "passed_check_count"
+                ),
+                "service_boundary": reports["cross_service_confirmation_flow"].get(
+                    "service_boundary"
+                ),
+                "database_runtime": reports["cross_service_confirmation_flow"].get(
+                    "database_runtime"
+                ),
+                "database_runtime_verified": reports[
+                    "cross_service_confirmation_flow"
+                ].get("database_runtime_verified"),
+            },
         },
         "safety_observations_across_separate_suites": combined_safety,
+        "cross_service_http_safety_observations": {
+            "zero_confirmation_rule_executed": cross_service_checks.get(
+                "zero_conflict_executed", {}
+            ).get("actual"),
+            "zero_confirmation_risk_display_allowed": cross_service_checks.get(
+                "zero_risk_display_allowed", {}
+            ).get("actual"),
+            "one_confirmation_rule_executed": cross_service_checks.get(
+                "one_conflict_executed", {}
+            ).get("actual"),
+            "one_confirmation_risk_display_allowed": cross_service_checks.get(
+                "one_risk_display_allowed", {}
+            ).get("actual"),
+            "two_confirmation_rule_executed": cross_service_checks.get(
+                "two_conflict_executed", {}
+            ).get("actual"),
+            "two_confirmation_risk_display_allowed": cross_service_checks.get(
+                "two_risk_display_allowed", {}
+            ).get("actual"),
+            "post_cancellation_rule_executed": cross_service_checks.get(
+                "cancelled_conflict_executed", {}
+            ).get("actual"),
+            "post_cancellation_risk_display_allowed": cross_service_checks.get(
+                "cancelled_risk_display_allowed", {}
+            ).get("actual"),
+        },
         "unverified_gaps": [
-            "음성부터 Backend 인계 기록까지 동일 request_id로 실행한 단일 전체 경로",
-            "시설 과거 이력 없음 결과를 HTTP API부터 Backend 인계까지 연결한 동일 request_id 경로",
+            "음성 입력부터 Backend 인계 기록까지 실행한 단일 전체 경로",
+            "시설 과거 이력 없음 결과를 HTTP API부터 Backend 인계까지 연결한 경로",
             "실제 현장 무전 음성과 실제 화학사고 결과",
             "음성 물질명의 CAS 사람 정답",
             "Cloud SQL PostgreSQL 동시성·복구·가용성",
             "독립 검수된 파일럿 E2E 200건 이상",
         ],
         "claims_allowed": [
-            "잠긴 다섯 보고서가 manifest SHA-256·schema와 일치함",
+            "잠긴 여섯 보고서가 manifest SHA-256·schema와 일치함",
             "분리된 내부 회귀 suite에서 관측된 안전 계약 위반 건수",
             "Speech·Analysis·Backend 각 구현 경계의 제한된 회귀 상태",
+            "공개 합성 사고 1건에서 실제 Backend→Model API HTTP 0→1→2→취소 상태 전이가 실행됨",
+            "각 분석 요청의 request ID가 Backend→Model API→응답 안에서 보존됨",
             "모의 시설명의 과거 공개 이력 NO_HISTORY_MATCH에서 시설 확인 Gate가 유지됨",
             "인증 사용자의 새 SITE_MSDS 확인 뒤 이전 confirmation과 analysis가 stale 처리됨",
             "정확한 활성 ID 취소 뒤 감사 이벤트가 보존되고 과거 analysis 저장이 차단됨",
         ],
         "claims_not_allowed": [
-            "한 요청의 음성→인계 전체 경로가 실행됐다는 주장",
+            "음성→인계 전체 경로가 실행됐다는 주장",
             "현장 정확도·현장 안전성·상용 운영 성능",
+            "Cloud SQL PostgreSQL에서 같은 상태 전이가 검증됐다는 주장",
             "speech의 잘못된 단일 CAS 확정이 0건이라는 정답 기반 주장",
             "서로 다른 suite의 입력 수를 독립 현장 표본 수로 합산",
         ],
