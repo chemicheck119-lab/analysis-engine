@@ -7,6 +7,8 @@
 
 ### Added
 
+- 잠긴 공개 합성 WAV 한 건을 실제 Speech API·Backend·Model API HTTP와 record 저장까지
+  연결하고 0-CAS Gate, 합성 2-CAS 확인, 권위 참조와 멱등성을 검증하는 평가기
 - 공개 합성 사고 한 건을 실제 Backend·Model API HTTP로 실행해 0개 확인→1개 확인→2개 확인
   →확인 취소의 Rule·위험 표시 상태를 검증하고 원문과 동적 ID를 저장하지 않는 교차 서비스 평가기
 - Backend 확인 취소 보고서를 SHA-256·schema로 잠그고, 취소 뒤 재분석 요구·과거 analysis

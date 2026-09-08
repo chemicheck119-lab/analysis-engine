@@ -104,6 +104,7 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
         "evaluate-e2e": "사고 분석 E2E 안전 평가",
         "aggregate-e2e-evidence": "Cross-repo E2E 안전 증거 결합",
         "evaluate-cross-service-flow": "Backend·Model API 실제 HTTP 상태 전이 평가",
+        "evaluate-cross-service-voice-flow": "합성 음성→record 실제 HTTP 평가",
         "evaluate-agent-trajectories": "Agent trajectory 안전 평가",
         "evaluate-official-incidents": "전국 공식 화학사고 외부 기준선 평가",
         "e2e-review": "E2E 독립 검수팩",
@@ -354,6 +355,17 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
         print(
             "주의: 공개 합성 지령의 Backend→Model API HTTP 회귀이며 "
             "음성→인계 전체 경로나 현장 검증이 아닙니다."
+        )
+    elif command == "evaluate-cross-service-voice-flow":
+        print(
+            "검사: "
+            f"{payload.get('passed_check_count', 0)}/"
+            f"{payload.get('check_count', 0)} 통과"
+        )
+        print(f"판정: {_short(payload.get('decision'))}")
+        print(
+            "주의: 선택된 공개 합성 TTS 1건의 로컬 연결성 회귀이며 "
+            "현장 무전 정확도·사람 확인·운영 인계 검증이 아닙니다."
         )
     elif command == "evaluate-agent-trajectories":
         metrics = payload.get("metrics") or {}
@@ -753,6 +765,37 @@ def _evaluate_cross_service_flow(args: argparse.Namespace) -> dict[str, Any]:
         scenario_id=args.scenario_id,
         backend_git_commit=args.backend_git_commit,
         model_git_commit=args.model_git_commit,
+        runtime_manifest_sha256=args.runtime_manifest_sha256,
+        runtime_manifest_actual_sha256=sha256_file(args.runtime_manifest),
+        database_runtime=args.database_runtime,
+        report_path=args.report,
+    )
+
+
+def _evaluate_cross_service_voice_flow(args: argparse.Namespace) -> dict[str, Any]:
+    from chemiguard119.cross_service_confirmation_evaluation import (
+        HttpCrossServiceFlowClient,
+    )
+    from chemiguard119.cross_service_voice_evaluation import (
+        evaluate_cross_service_voice_flow,
+    )
+
+    client = HttpCrossServiceFlowClient(
+        bff_base_url=args.bff_base_url,
+        model_base_url=args.model_base_url,
+        origin=args.origin,
+        timeout_seconds=args.timeout_seconds,
+        allow_non_loopback=args.allow_non_loopback,
+    )
+    return evaluate_cross_service_voice_flow(
+        client,
+        manifest_path=args.voice_manifest,
+        audio_path=args.audio,
+        station_id=args.station_id,
+        scenario_id=args.scenario_id,
+        backend_git_commit=args.backend_git_commit,
+        model_git_commit=args.model_git_commit,
+        speech_git_commit=args.speech_git_commit,
         runtime_manifest_sha256=args.runtime_manifest_sha256,
         runtime_manifest_actual_sha256=sha256_file(args.runtime_manifest),
         database_runtime=args.database_runtime,
@@ -1361,6 +1404,7 @@ def _interactive(args: argparse.Namespace) -> dict[str, Any]:
             "evaluate-e2e",
             "aggregate-e2e-evidence",
             "evaluate-cross-service-flow",
+            "evaluate-cross-service-voice-flow",
             "evaluate-agent-trajectories",
             "evaluate-official-incidents",
             "e2e-review",
@@ -1613,6 +1657,49 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_json_option(cross_service)
     cross_service.set_defaults(handler=_evaluate_cross_service_flow)
+
+    voice_flow = subparsers.add_parser(
+        "evaluate-cross-service-voice-flow",
+        help="선택된 공개 합성 WAV의 Speech→Backend→Model→record HTTP 평가",
+    )
+    voice_flow.add_argument("--bff-base-url", default="http://127.0.0.1:18080")
+    voice_flow.add_argument("--model-base-url", default="http://127.0.0.1:18000")
+    voice_flow.add_argument("--origin", default="https://local.chemicheck119.invalid")
+    voice_flow.add_argument("--station-id", default="nfa-0985")
+    voice_flow.add_argument("--scenario-id", default="CONTEST-LIVE-CHEMICAL-001")
+    voice_flow.add_argument("--backend-git-commit", required=True)
+    voice_flow.add_argument("--model-git-commit", required=True)
+    voice_flow.add_argument("--speech-git-commit", required=True)
+    voice_flow.add_argument("--runtime-manifest-sha256", required=True)
+    voice_flow.add_argument("--runtime-manifest", type=_path, required=True)
+    voice_flow.add_argument(
+        "--voice-manifest",
+        type=_path,
+        default=EVALUATION_DIR / "synthetic_voice_e2e_manifest.json",
+    )
+    voice_flow.add_argument("--audio", type=_path, required=True)
+    voice_flow.add_argument(
+        "--database-runtime",
+        choices=(
+            "H2_POSTGRESQL_COMPATIBILITY_MODE",
+            "POSTGRESQL_TESTCONTAINER",
+            "CLOUD_SQL_POSTGRESQL",
+        ),
+        required=True,
+    )
+    voice_flow.add_argument("--timeout-seconds", type=float, default=60.0)
+    voice_flow.add_argument(
+        "--allow-non-loopback",
+        action="store_true",
+        help="명시 승인한 원격 테스트 환경 호출 허용",
+    )
+    voice_flow.add_argument(
+        "--report",
+        type=_path,
+        default=DEFAULT_REPORT_DIR / "cross_service_voice_to_record.json",
+    )
+    _add_json_option(voice_flow)
+    voice_flow.set_defaults(handler=_evaluate_cross_service_voice_flow)
 
     evaluate_agent = subparsers.add_parser(
         "evaluate-agent-trajectories",

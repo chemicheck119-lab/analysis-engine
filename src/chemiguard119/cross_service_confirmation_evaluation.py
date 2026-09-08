@@ -60,6 +60,17 @@ class CrossServiceFlowClient(Protocol):
         request_id: str,
     ) -> Mapping[str, Any]: ...
 
+    def transcribe(
+        self, incident_id: str, audio: bytes, request_id: str
+    ) -> Mapping[str, Any]: ...
+
+    def save_record(
+        self,
+        incident_id: str,
+        payload: Mapping[str, Any],
+        request_id: str,
+    ) -> Mapping[str, Any]: ...
+
 
 class _NoRedirect(request.HTTPRedirectHandler):
     def redirect_request(
@@ -184,6 +195,40 @@ class HttpCrossServiceFlowClient:
             headers={"X-Request-Id": request_id},
         )
 
+    def transcribe(
+        self, incident_id: str, audio: bytes, request_id: str
+    ) -> Mapping[str, Any]:
+        _, response_body = self._exchange(
+            "POST",
+            self.bff_base_url
+            + "/api/c2guard/v1/incidents/"
+            + parse.quote(incident_id, safe="")
+            + "/transcriptions",
+            body=audio,
+            headers={
+                "Content-Type": "audio/wav",
+                "X-Request-Id": request_id,
+            },
+            allowed_statuses={200},
+        )
+        return self._decode_json(response_body)
+
+    def save_record(
+        self,
+        incident_id: str,
+        payload: Mapping[str, Any],
+        request_id: str,
+    ) -> Mapping[str, Any]:
+        return self._json(
+            "POST",
+            self.bff_base_url
+            + "/api/c2guard/v1/incidents/"
+            + parse.quote(incident_id, safe="")
+            + "/record",
+            payload=payload,
+            headers={"X-Request-Id": request_id},
+        )
+
     def _json(
         self,
         method: str,
@@ -206,6 +251,9 @@ class HttpCrossServiceFlowClient:
             headers=merged_headers,
             allowed_statuses={200, 201},
         )
+        return self._decode_json(response_body)
+
+    def _decode_json(self, response_body: bytes) -> Mapping[str, Any]:
         decoded = json.loads(response_body.decode("utf-8"))
         if not isinstance(decoded, dict):
             raise RuntimeError("HTTP JSON 응답의 최상위 값이 객체가 아닙니다.")
