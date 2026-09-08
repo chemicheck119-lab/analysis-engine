@@ -14,6 +14,7 @@ from chemiguard119.retrieval_review import (
     CANDIDATE_SCHEMA_VERSION,
     QUERY_TEMPLATES,
     assemble_review_batches,
+    audit_review_sheet,
     create_review_batches,
     export_review_sheet,
     generate_qrel_candidate_pool,
@@ -506,3 +507,69 @@ def test_cli_exposes_retriever_review_actions() -> None:
     assert export.retriever_review_action == "export"
     assert batch.retriever_review_action == "batch"
     assert assemble.retriever_review_action == "assemble"
+
+
+def test_audit_blank_review_sheet_reports_not_started(tmp_path: Path) -> None:
+    _db, candidates = _generate(tmp_path)
+    sheet = tmp_path / "labeler.csv"
+    export_review_sheet(candidates, sheet, actor_role="LABELER", actor_id="labeler-01")
+
+    report = audit_review_sheet(candidates, sheet, actor_role="LABELER")
+
+    assert report["status"] == "NOT_STARTED"
+    assert report["progress"]["valid_completed_case_count"] == 0
+    assert report["progress"]["untouched_case_count"] == len(QUERY_TEMPLATES)
+    assert report["is_performance_result"] is False
+
+
+def test_audit_complete_review_sheet_is_ready_for_independent_merge(
+    tmp_path: Path,
+) -> None:
+    _db, candidates = _generate(tmp_path)
+    sheet = tmp_path / "labeler.csv"
+    export_review_sheet(candidates, sheet, actor_role="LABELER", actor_id="labeler-01")
+    _fill_sheet(sheet)
+
+    report = audit_review_sheet(candidates, sheet, actor_role="LABELER")
+
+    assert report["status"] == "READY_FOR_INDEPENDENT_MERGE"
+    assert report["progress"]["valid_completed_case_count"] == len(QUERY_TEMPLATES)
+    assert report["ready_for_independent_merge"] is True
+
+
+def test_audit_changed_candidate_context_blocks_review_gate(tmp_path: Path) -> None:
+    _db, candidates = _generate(tmp_path)
+    sheet = tmp_path / "labeler.csv"
+    export_review_sheet(candidates, sheet, actor_role="LABELER", actor_id="labeler-01")
+    with sheet.open(encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        fieldnames = list(reader.fieldnames or [])
+        rows = [dict(row) for row in reader]
+    rows[0]["body"] = "수정된 원문"
+    with sheet.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    report = audit_review_sheet(candidates, sheet, actor_role="LABELER")
+
+    assert report["status"] == "BLOCKED_REVIEW_GATE"
+    assert report["blockers"] == [
+        {"code": "CANDIDATE_CONTEXT_CHANGED", "evidence_row_count": 1}
+    ]
+
+
+def test_cli_exposes_review_status_action():
+    args = build_parser().parse_args(
+        [
+            "retriever-review",
+            "status",
+            "--candidates",
+            "candidates.jsonl",
+            "--review-sheet",
+            "sheet.csv",
+            "--actor-role",
+            "LABELER",
+        ]
+    )
+    assert args.retriever_review_action == "status"
