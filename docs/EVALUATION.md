@@ -199,6 +199,27 @@ HTTP로 실행했습니다. 하나의 `incidentId`에서 0개 확인→사고물
 제한은 [Backend·Model API 실제 HTTP 확인 상태 전이 평가](CROSS_SERVICE_CONFIRMATION_EVALUATION.md)에
 있습니다.
 
+### 2026-09-08 합성 음성→record 실제 HTTP 연결성 회귀
+
+SHA-256으로 잠근 공개 합성 WAV 1건을 Backend 음성 BFF를 통해 실제 Speech API로 전사하고,
+그 결과를 실제 Backend→Model API 분석, 합성 2-CAS 확인, Backend record 저장까지 연결했습니다.
+64/64 결정적 검사가 통과했고 r1·r2 보고서는 byte-identical입니다.
+
+- 0개·1개 확인: Rule 실행 `false`, 위험 표시 `false`
+- 합성 2-CAS 확인 뒤: 제한된 CAMEO Rule 실행 `true`, 위험 표시 `true`
+- 권위 analysis·confirmation 참조 record 저장 성공, 동일 payload 재요청은 같은 record ID 반환
+- report SHA-256: `ef116d33b8d0f46e04a2477dbe4b69d23481565fec4da154b18abd09e1e6f7ab`
+- manifest SHA-256: `2dad97f53b6b1547c6d4aebf534f97ce1571efa032cbd263442929e5c26bccd5`
+- `fact_status=부분 구현 또는 개발용 데모`
+- `claim_scope=LOCAL_SYNTHETIC_VOICE_TO_RECORD_REGRESSION_ONLY`
+
+첫 붙여 읽기 clip은 `차아염소산나트륨→최하염소산나트륨` 오류와 잘못된 Resolver Top-1
+후보를 냈습니다. 연결성 검사용으로 선택한 띄어 읽기 clip도 `누출→노출` 오류가 남았습니다.
+따라서 본 결과는 STT 성능·현장 무전·사람 검토·실제 인계·Cloud Run·Cloud SQL 검증이
+아닙니다. 자세한 입력 선택 편향, 재현 절차와 허용·금지 표현은
+[합성 음성부터 기록 저장까지 실제 HTTP 평가](CROSS_SERVICE_VOICE_TO_RECORD_EVALUATION.md)에
+있습니다.
+
 ### 향후 사람 검수용 E2E 50건 후보
 
 8건 DRAFT에서 바로 “정확도”를 주장하지 않도록, 공개 검증 CAMEO 15쌍의 확인 상태 전이

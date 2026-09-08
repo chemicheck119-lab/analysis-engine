@@ -1,0 +1,39 @@
+{
+  "schema_version": "chemicheck119-synthetic-voice-e2e-manifest-v1",
+  "fact_status": "부분 구현 또는 개발용 데모",
+  "purpose": "LOCAL_CROSS_SERVICE_CONNECTIVITY_REGRESSION_ONLY",
+  "source_type": "SYNTHETIC_TTS",
+  "data_classification": "PUBLIC_SYNTHETIC",
+  "contains_personal_information": false,
+  "audio": {
+    "expected_sha256": "6b584709c1dda8c35f6a900282fc39fa398af84a57b7e5461f3d489684dfd257",
+    "media_type": "audio/wav",
+    "sample_rate_hz": 16000,
+    "channels": 1,
+    "sample_width_bits": 16,
+    "script_sha256": "dea34de7d548b32fd2b9603a27f211b96e0601b8fa8d37e9196616d9896f23ad",
+    "expected_surface_forms": [
+      "차아염소산 나트륨",
+      "염산"
+    ]
+  },
+  "generator": {
+    "implementation": "macOS say + afconvert",
+    "voice": "Yuna",
+    "locale": "ko_KR",
+    "rate": 135,
+    "operating_system_version": "26.3",
+    "reproducibility": "AUDIO_HASH_LOCKED_GENERATOR_OUTPUT_NOT_GUARANTEED"
+  },
+  "selection_disclosure": {
+    "selected_for_connectivity_not_accuracy": true,
+    "prior_unspaced_trial_failed_incident_term": true,
+    "prior_unspaced_trial_asr_surface": "최하염소산나트륨",
+    "performance_claim_allowed": false
+  },
+  "claims_not_allowed": [
+    "합성 음성 1건을 신고음성 또는 현장 무전 정확도로 표현",
+    "명료하게 띄어 읽은 선택 clip을 비선택 표본 성능으로 표현",
+    "TTS 결과를 실제 대원 음성이나 실제 통신 왜곡으로 표현"
+  ]
+}
