@@ -91,6 +91,10 @@ Resolver Top-1이 다른 CAS `7775-09-9`를 반환했습니다. 이는 실제 �
   `5d8439371abcb5c5017bde8d4e31c1902f3c67962987665f78bdeed511adf0c1`
 - Model runtime manifest SHA-256:
   `637074a44fbc969baf292435f570800937ef75a72b42a6970034bc0416990b2e`
+- Cross-repo bundle v6 report SHA-256:
+  `6625b4e87ea0586a8eb30fc5a637b128c7be2912404219fc8ecef531dc60899e`
+- Cross-repo manifest v4 SHA-256:
+  `299c9cd279a3eea94381ddac9b0be118f980ba149e0718623f4f51c27a3d57bc`
 
 ## 재현 절차
 
@@ -137,6 +141,10 @@ chemiguard119 evaluate-cross-service-voice-flow \
 - “음성부터 실제 현장 인계까지 운영 검증했다.”
 - “H2 결과로 Cloud SQL 고가용성을 증명했다.”
 - “Speech 모델 artifact와 commit을 API가 검증했다.”
+
+이 보고서는 Cross-repo bundle v6에 일곱 번째 독립 입력으로 포함됐습니다. Bundle 통과는
+각 보고서의 무결성과 제한된 Gate를 함께 확인한다는 뜻이며, 서로 다른 평가 건수를 합쳐
+현장 표본 수나 정확도로 주장한다는 뜻이 아닙니다.
 
 ## GPU를 사용하지 않은 이유와 다음 Gate
 

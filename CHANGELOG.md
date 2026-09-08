@@ -7,6 +7,8 @@
 
 ### Added
 
+- 합성 음성→record 보고서의 schema·SHA·입력 manifest·WAV hash와 0→1→2 확인 Gate를
+  일곱 번째 독립 입력으로 잠그는 Cross-repo 안전 증거 bundle v6
 - 잠긴 공개 합성 WAV 한 건을 실제 Speech API·Backend·Model API HTTP와 record 저장까지
   연결하고 0-CAS Gate, 합성 2-CAS 확인, 권위 참조와 멱등성을 검증하는 평가기
 - 공개 합성 사고 한 건을 실제 Backend·Model API HTTP로 실행해 0개 확인→1개 확인→2개 확인
