@@ -162,6 +162,17 @@ def test_resolver_keeps_name_exact_match_as_confirmation_candidate(
     assert result["candidates"][0]["authority_level"] == "PUBLIC_AUTHORITY_SOURCE"
 
 
+def test_text_hint_accepts_long_hangul_alias_with_asr_internal_spacing(
+    resolver_artifact: dict,
+) -> None:
+    result = select_evidence_cas_hint_from_text(
+        "차아 염소산 나트륨 저장 탱크 누출 의심",
+        resolver_artifact,
+    )
+
+    assert result == "7681-52-9"
+
+
 def test_resolver_classifies_generic_configured_alias_without_word_hardcoding(
     resolver_artifact: dict,
 ) -> None:

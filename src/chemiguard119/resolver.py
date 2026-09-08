@@ -38,8 +38,9 @@ SUPPORTED_MODEL_SCHEMA_VERSIONS = {
     LEGACY_INCIDENT_ADAPTED_MODEL_SCHEMA_VERSION,
     INCIDENT_ADAPTED_MODEL_SCHEMA_VERSION,
 }
-RUNTIME_INDEX_VERSION = "resolver-runtime-index-v2"
+RUNTIME_INDEX_VERSION = "resolver-runtime-index-v3-asr-whitespace"
 RUNTIME_INDEX_KEY = "_runtime_index"
+MIN_ASR_WHITESPACE_TOLERANT_HANGUL_LENGTH = 6
 
 ICIS_CANDIDATE_STATUS = "PUBLIC_CATALOG_CANDIDATE"
 AUTHORITATIVE_ALIAS_TYPES = {
@@ -69,6 +70,25 @@ AUTHORITY_PRIORITY = {
     "PROJECT_CONFIG_CANDIDATE": 3,
     "UNVERIFIED": 4,
 }
+
+
+def _compile_alias_surface_pattern(alias: str) -> re.Pattern[str]:
+    """명시된 공백과 긴 한글 별칭의 ASR 내부 공백만 허용한다.
+
+    ``차아염소산 나트륨``이 x86 CPU int8 전사에서 ``차아 염소산 나트륨``으로
+    갈라진 사례를 원문 수정 없이 찾기 위한 제한 규칙이다. 짧은 별칭까지 문자별로
+    합치면 서로 다른 단어를 하나의 물질로 오인할 수 있으므로 6글자 미만의 한글
+    별칭은 기존 경계를 유지한다.
+    """
+
+    compact_alias = compact_text(alias)
+    if len(compact_alias) >= MIN_ASR_WHITESPACE_TOLERANT_HANGUL_LENGTH and all(
+        "가" <= character <= "힣" for character in compact_alias
+    ):
+        parts = list(compact_alias)
+    else:
+        parts = re.split(r"\s+", alias.strip())
+    return re.compile(r"\s*".join(re.escape(part) for part in parts), re.IGNORECASE)
 
 
 def _load_alias_rows(db_path: Path) -> list[dict[str, Any]]:
@@ -246,11 +266,7 @@ def build_resolver_runtime_index(
     eligible_matchers_by_initial: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for normalized_alias, group in alias_groups.items():
         for alias in sorted(group["eligible_surfaces"]):
-            parts = re.split(r"\s+", alias)
-            pattern = re.compile(
-                r"\s*".join(re.escape(part) for part in parts),
-                re.IGNORECASE,
-            )
+            pattern = _compile_alias_surface_pattern(alias)
             initial = alias[0].casefold()
             eligible_matchers_by_initial[initial].append(
                 {
@@ -442,12 +458,15 @@ def find_exact_alias_spans(
     if not text or len(value) < 2:
         return []
     candidates: list[tuple[int, int]]
-    if any(character.isspace() for character in value):
-        # 원천별 띄어쓰기 차이를 허용해야 하는 소수 별칭에만 정규식을 사용한다.
-        alias_pattern = r"\s*".join(re.escape(part) for part in re.split(r"\s+", value))
+    if any(character.isspace() for character in value) or (
+        len(compact_text(value)) >= MIN_ASR_WHITESPACE_TOLERANT_HANGUL_LENGTH
+        and all("가" <= character <= "힣" for character in compact_text(value))
+    ):
+        # 원천에 공백이 있거나 긴 한글 별칭이 ASR에서 내부 분리된 경우에만
+        # 제한적으로 정규식을 사용한다.
+        alias_pattern = _compile_alias_surface_pattern(value)
         candidates = [
-            (match.start(), match.end())
-            for match in re.finditer(alias_pattern, text, re.IGNORECASE)
+            (match.start(), match.end()) for match in alias_pattern.finditer(text)
         ]
     else:
         # 대다수 별칭은 문자열 인덱스로 찾는다. casefold가 원문 길이를 바꾸는

@@ -1,0 +1,82 @@
+{
+  "schema_version": "chemicheck119-asr-internal-whitespace-candidate-v1",
+  "fact_status": "부분 구현 또는 개발용 데모",
+  "goal": "Cloud x86 CPU int8 전사에서 생긴 긴 한글 물질명의 내부 공백을 원문 수정 없이 후보 탐색에 반영",
+  "observed_failure": {
+    "cloud_e2e_report_sha256": "80bdd8cb7e3199cba57f4f409b5ca41ac0c92e72839b3b05143cb81fc4106c2e",
+    "passed_checks": 61,
+    "check_count": 64,
+    "failure_signature": "ASR_INTERNAL_WHITESPACE_SPLIT",
+    "wrong_incident_candidate_cas": "7440-23-5",
+    "expected_incident_candidate_cas": "7681-52-9",
+    "pre_confirmation_rule_execution_count": 0
+  },
+  "runtime_comparison": {
+    "same_faster_whisper_version": "1.2.1",
+    "same_ctranslate2_version": "4.8.2",
+    "same_model_revision": "536b0662742c02347bc0e980a01041f333bce120",
+    "same_model_bin_sha256": "3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671",
+    "local_architecture": "arm64",
+    "cloud_architecture": "x86_64",
+    "inference_mode": "CPU_INT8",
+    "interpretation": "현재 관측 범위에서 가중치 차이는 기각하며 CPU 아키텍처별 int8 디코딩 표기 변형으로 분류"
+  },
+  "candidate_rule": {
+    "scope": "길이 6 이상인 한글 별칭",
+    "behavior": "별칭 문자 사이의 ASR 공백을 허용하되 원문 surface와 전사문은 그대로 보존",
+    "auto_confirmation_allowed": false,
+    "rule_input_eligible": false
+  },
+  "official_incident_regression": {
+    "source_id": "CSI_NATIONAL_CHEMICAL_ACCIDENTS_2014_2025",
+    "source_sha256": "a1ef8e4b6b0c6ef96fb7277edce2b1cf5c1b935a88f4274c88d878713bb7fba5",
+    "split": "locked_test_2021_2025",
+    "case_count": 442,
+    "resolver_artifact_sha256": "2696fa7f067163055ff556e5e12ccfa15e7dc08c9ff803838f0db074aa002dff",
+    "baseline_resolver_source_sha256": "b6a4947eab2de213725f99df9fbafe0da6feb8d4221234a5856fc2ba00f45f37",
+    "candidate_resolver_source_sha256": "b499d18bc3432cd8f4bb142f4344536522830e236ea3210eb217d6099dcd3401",
+    "metrics": {
+      "incident_type_recall": {
+        "baseline": 0.837587,
+        "candidate": 0.837587
+      },
+      "substance_exact_surface_recall": {
+        "baseline": 0.711599,
+        "candidate": 0.695925
+      },
+      "substance_containment_surface_recall": {
+        "baseline": 0.824451,
+        "candidate": 0.824451
+      },
+      "resolver_reachable_recall": {
+        "baseline": 0.966102,
+        "candidate": 0.970339
+      },
+      "unsafe_rule_eligible_mention_count": {
+        "baseline": 0,
+        "candidate": 0
+      }
+    },
+    "baseline_private_report_sha256": "80a88d9e851c1a65b2c6f4b7a44eba63b6dcb615b3907cc",
+    "candidate_private_report_sha256": "160c94ca98d8e520d88ce96a4bbb75e1e2837f374c7c3cc5c2397805eb689628"
+  },
+  "decision": "CONDITIONALLY_ADOPT_FOR_HUMAN_REVIEW_NOT_RUNTIME",
+  "decision_reason": [
+    "관측된 합성 실패 문장에서는 기대 CAS 후보를 회복했다.",
+    "공식 사고문 containment Recall과 안전 Gate는 회귀하지 않았다.",
+    "정확 표면형 Recall이 하락했고 새로 선택된 긴 span의 정답 여부를 자동 판정할 수 없다."
+  ],
+  "runtime_default_change_allowed": false,
+  "next_gate": "2014~2020 개발 구간에서 변경된 span을 사람 검수한 뒤 오탐 증가가 없을 때만 재검토",
+  "claims_allowed": [
+    "동일 모델과 추론 설정에서도 CPU 아키텍처에 따라 합성 음성의 띄어쓰기 결과가 달라진 1건을 관측했다.",
+    "후보 규칙은 관측된 합성 실패 문장에서 기대 CAS 후보를 로컬로 회복했다.",
+    "전국 공식 사고문 442건의 containment Recall은 유지됐고 정확 표면형 Recall은 하락했다."
+  ],
+  "claims_not_allowed": [
+    "실제 신고음성 또는 현장 무전에서 일반화됐다고 표현",
+    "정확 표면형 Recall 하락을 숨기고 전체 Parser 성능이 개선됐다고 표현",
+    "사람 검수 전 후보 규칙을 운영 기본값으로 채택",
+    "후보 CAS를 확인된 CAS 또는 Rule 입력으로 표현"
+  ]
+}

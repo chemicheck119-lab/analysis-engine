@@ -110,6 +110,39 @@ def test_parser_prefers_longest_exact_alias_despite_source_spacing(
     assert mention["resolver"]["candidates"][0]["cas_number"] == "7681-52-9"
 
 
+def test_parser_preserves_long_hangul_alias_with_asr_internal_spacing(
+    resolver_artifact: dict,
+) -> None:
+    source = (
+        "차아 염소산 나트륨 저장 탱크에서 노출이 의심됩니다. "
+        "인접 저장고에는 염산 표기가 있습니다."
+    )
+
+    parsed = deterministic_parse(source, resolver_artifact)
+    mentions = _mentions_by_surface(parsed)
+
+    assert "차아 염소산 나트륨" in mentions
+    assert mentions["차아 염소산 나트륨"]["role"] == "INCIDENT"
+    assert mentions["차아 염소산 나트륨"]["resolver"]["status"] == (
+        "EXACT_ALIAS_CANDIDATE"
+    )
+    assert (
+        mentions["차아 염소산 나트륨"]["resolver"]["candidates"][0]["cas_number"]
+        == "7681-52-9"
+    )
+    assert "나트륨" not in mentions
+    assert mentions["염산"]["role"] == "FACILITY"
+    assert validate_parser_output(parsed, source) == []
+
+
+def test_parser_does_not_join_short_alias_across_whitespace(
+    resolver_artifact: dict,
+) -> None:
+    parsed = deterministic_parse("염 산 저장고에서 누출", resolver_artifact)
+
+    assert parsed["substance_mentions"] == []
+
+
 @pytest.mark.parametrize(
     "source",
     [
