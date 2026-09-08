@@ -30,6 +30,8 @@ from chemiguard119 import cli
                 "backend-cancellation.json",
                 "--cross-service-report",
                 "cross-service.json",
+                "--voice-flow-report",
+                "voice-to-record.json",
                 "--seoul-speech-report",
                 "seoul.json",
                 "--incheon-speech-report",

@@ -176,6 +176,51 @@ analysis 저장과 Rule·위험 표시를 차단하는 상태 전이를 확인�
 특히 speech 보고서는 CAS 정답 평가가 아니므로 “잘못된 단일 CAS 확정 0건”이라고 표현하지
 않습니다.
 
+### 2026-09-08 Cross-repo 안전 증거 bundle v6
+
+v5의 여섯 잠금 보고서에 선택 공개 합성 WAV의 실제
+Speech API→Backend→Model API→record 보고서를 일곱 번째 독립 입력으로 추가했습니다. 입력
+manifest와 WAV SHA-256도 Cross-repo manifest에 별도로 고정합니다. 서로 다른 suite의 건수를
+하나의 정확도 표본으로 합산하지 않습니다.
+
+```bash
+chemiguard119 aggregate-e2e-evidence \
+  --analysis-report <private-data>/experiments/analysis/e2e-v4-facility-history-r1/report.json \
+  --backend-report <private-data>/experiments/back/backend-safety-state-v2-r1/report.json \
+  --backend-cancellation-report <private-data>/experiments/e2e/confirmation-cancellation-state-v1.json \
+  --cross-service-report <private-data>/experiments/e2e/cross-service-confirmation-flow-v1-r1.json \
+  --voice-flow-report <private-data>/experiments/e2e/cross-service-voice-to-record-v1-r1.json \
+  --seoul-speech-report <private-data>/experiments/speech/robustness/seoul/radio-sim-v1/20260906T050926Z/downstream-silver-119ce11-p68beeb4/report.json \
+  --incheon-speech-report <private-data>/experiments/speech/robustness/incheon/radio-sim-v1/20260906T022037Z/downstream-silver-119ce11-p68beeb4/report.json \
+  --report <private-data>/experiments/analysis/cross-repo-safety-evidence-v6-r1/report.json
+```
+
+```text
+증거 무결성 Gate 통과, 오류 0건
+잠긴 독립 보고서 7개
+Speech 서울·인천 radio-sim 1,440개 조건 입력
+Analysis DRAFT 시나리오 11/11
+Backend 상태 23/23, 확인 취소 20/20
+Backend→Model API 확인 상태 전이 69/69
+선택 합성 음성→record 실제 HTTP 64/64
+음성 경로 0개·1개 확인 Rule 실행 false / 위험 표시 false
+음성 경로 2개 확인 Rule 실행 true / 위험 표시 true
+record exact retry same ID true
+decision=CONDITIONALLY_ADOPT_FOR_INTERNAL_REGRESSION
+field_validated=false
+full_voice_to_operational_handoff_validated=false
+```
+
+- 결합 report SHA-256: `6625b4e87ea0586a8eb30fc5a637b128c7be2912404219fc8ecef531dc60899e`
+- 잠금 manifest SHA-256: `299c9cd279a3eea94381ddac9b0be118f980ba149e0718623f4f51c27a3d57bc`
+- 음성→record report SHA-256: `ef116d33b8d0f46e04a2477dbe4b69d23481565fec4da154b18abd09e1e6f7ab`
+- r1·r2: byte-identical
+
+이는 선택 합성 음성 1건의 로컬 연결과 일곱 보고서의 무결성 증거입니다. 사람 전사 검토,
+실제 CAS 확인, 비선택 승인 음성, 현장 무전, 실제 운영 인계, Cloud Run·Cloud SQL을 검증하지
+않았습니다. 따라서 `voice_to_record_http_chain_executed=true`와
+`full_voice_to_operational_handoff_validated=false`를 동시에 보존합니다.
+
 ### 2026-09-08 Backend→Model API 실제 HTTP 상태 전이
 
 분리된 보고서 결합과 별도로, 공개 합성 replay 한 건을 실제 Backend HTTP와 실제 Model API
