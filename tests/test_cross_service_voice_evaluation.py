@@ -27,9 +27,15 @@ class FakeVoiceFlowClient:
         *,
         unsafe_before_confirmation: bool = False,
         data_classification: str = "PUBLIC_SYNTHETIC",
+        transcript: str = TRANSCRIPT,
+        incident_surface: str = "차아염소산 나트륨",
+        incident_cas: str = "7681-52-9",
     ) -> None:
         self.unsafe_before_confirmation = unsafe_before_confirmation
         self.data_classification = data_classification
+        self.transcript = transcript
+        self.incident_surface = incident_surface
+        self.incident_cas = incident_cas
         self.confirmed: set[str] = set()
         self.transcribe_call_count = 0
         self.record_id = "REC-SYNTHETIC-001"
@@ -81,7 +87,7 @@ class FakeVoiceFlowClient:
             "status": "TRANSCRIBED",
             "abstained": False,
             "requiresResponderReview": True,
-            "transcript": {"text": TRANSCRIPT},
+            "transcript": {"text": self.transcript},
             "input": {"audioRetained": False},
             "runtime": {
                 "model": "small",
@@ -101,7 +107,7 @@ class FakeVoiceFlowClient:
 
     def analyze(self, payload: Mapping[str, Any], request_id: str) -> Mapping[str, Any]:
         assert payload["incidentId"] == "INC-SYNTHETIC-001"
-        assert payload["text"] == TRANSCRIPT
+        assert payload["text"] == self.transcript
         assert payload["inputType"] == "VOICE_TRANSCRIPT"
         both = self.confirmed == {"INCIDENT", "FACILITY"}
         conflict_executed = both or self.unsafe_before_confirmation
@@ -133,10 +139,12 @@ class FakeVoiceFlowClient:
             "riskDisplayAllowed": conflict_executed,
             "substanceCandidates": [
                 {
-                    "surfaceText": "차아염소산 나트륨",
+                    "surfaceText": self.incident_surface,
                     "role": "INCIDENT",
                     "resolverStatus": "EXACT_ALIAS_CANDIDATE",
-                    "candidates": [{"casNumber": "7681-52-9", "ruleEligible": False}],
+                    "candidates": [
+                        {"casNumber": self.incident_cas, "ruleEligible": False}
+                    ],
                 },
                 {
                     "surfaceText": "염산",
@@ -265,6 +273,33 @@ def test_voice_flow_rejects_rule_execution_before_confirmation(tmp_path: Path) -
     assert "zero_risk_display_allowed" in failed
     assert "one_conflict_executed" in failed
     assert "one_risk_display_allowed" in failed
+
+
+def test_failed_asr_surface_is_not_reported_as_successful_claim(tmp_path: Path) -> None:
+    manifest, audio = _fixture(tmp_path)
+    client = FakeVoiceFlowClient(
+        transcript=(
+            "차아 염소산 나트륨 저장 탱크에서 노출이 의심됩니다. "
+            "인접 저장고에는 염산 표기가 있습니다."
+        ),
+        incident_surface="나트륨",
+        incident_cas="7440-23-5",
+    )
+
+    report = _evaluate(client, manifest, audio)
+
+    assert report["status"] == "FAILED"
+    assert not any(
+        "두 물질 표면형과 후보 CAS가 보존됨" in claim
+        for claim in report["claims_allowed"]
+    )
+    assert (
+        "실패한 물질 표면형 또는 후보 CAS 보존을 성공한 것으로 표현"
+        in report["claims_not_allowed"]
+    )
+    assert (
+        "음성 후보만 있는 상태에서 Rule·위험 표시가 차단됨" in report["claims_allowed"]
+    )
 
 
 def test_voice_flow_rejects_tampered_audio_before_http(tmp_path: Path) -> None:

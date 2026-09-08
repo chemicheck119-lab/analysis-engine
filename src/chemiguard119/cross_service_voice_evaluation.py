@@ -526,6 +526,70 @@ def evaluate_cross_service_voice_flow(
 
     passed_count = sum(check.get("passed") is True for check in checks)
     complete = passed_count == len(checks)
+    passed_by_name = {
+        str(check["name"]): check.get("passed") is True for check in checks
+    }
+
+    def all_passed(*names: str) -> bool:
+        return all(passed_by_name.get(name, False) for name in names)
+
+    claims_allowed = [
+        "잠긴 공개 합성 WAV 1건이 실제 Speech API·Backend·Model API HTTP를 통과함"
+    ]
+    if all_passed(
+        "speech_expected_surface_1_present",
+        "speech_expected_surface_2_present",
+        "incident_surface",
+        "facility_surface",
+        "incident_candidate_cas",
+        "facility_candidate_cas",
+    ):
+        claims_allowed.append(
+            "명료하게 띄어 읽은 선택 clip에서 두 물질 표면형과 후보 CAS가 보존됨"
+        )
+    if all_passed(
+        "zero_rule_execution_allowed",
+        "zero_conflict_executed",
+        "zero_risk_display_allowed",
+        "one_rule_execution_allowed",
+        "one_conflict_executed",
+        "one_risk_display_allowed",
+    ):
+        claims_allowed.append("음성 후보만 있는 상태에서 Rule·위험 표시가 차단됨")
+    if all_passed(
+        "two_all_required_confirmed",
+        "two_rule_execution_allowed",
+        "two_conflict_executed",
+        "two_rule_id",
+        "two_rule_incident_cas",
+        "two_rule_facility_cas",
+        "record_id_present",
+    ):
+        claims_allowed.append(
+            "합성 2-CAS 확인 뒤 제한된 CAMEO 결과를 권위 snapshot과 함께 record로 저장함"
+        )
+    if all_passed("record_exact_retry_same_id"):
+        claims_allowed.append("동일 record payload 재요청이 같은 record ID를 반환함")
+
+    claims_not_allowed = [
+        "합성 음성 1건을 신고음성·현장 무전 정확도로 표현",
+        "사람이 전사문과 두 CAS를 실제 확인했다고 표현",
+        "record 저장을 실제 현장 인계나 대응 조치 수행으로 표현",
+        "H2 실행을 Cloud SQL·상용 운영 검증으로 표현",
+        "Speech model artifact와 commit이 API에서 검증됐다고 표현",
+    ]
+    if not all_passed(
+        "speech_expected_surface_1_present",
+        "speech_expected_surface_2_present",
+        "incident_surface",
+        "facility_surface",
+        "incident_candidate_cas",
+        "facility_candidate_cas",
+    ):
+        claims_not_allowed.append(
+            "실패한 물질 표면형 또는 후보 CAS 보존을 성공한 것으로 표현"
+        )
+
     report = {
         "schema_version": REPORT_SCHEMA_VERSION,
         "status": "COMPLETED" if complete else "FAILED",
@@ -587,20 +651,8 @@ def evaluate_cross_service_voice_flow(
             if complete
             else "REJECT_SYNTHETIC_VOICE_TO_RECORD_FLOW"
         ),
-        "claims_allowed": [
-            "잠긴 공개 합성 WAV 1건이 실제 Speech API·Backend·Model API HTTP를 통과함",
-            "명료하게 띄어 읽은 선택 clip에서 두 물질 표면형과 후보 CAS가 보존됨",
-            "음성 후보만 있는 상태에서 Rule·위험 표시가 차단됨",
-            "합성 2-CAS 확인 뒤 제한된 CAMEO 결과를 권위 snapshot과 함께 record로 저장함",
-            "동일 record payload 재요청이 같은 record ID를 반환함",
-        ],
-        "claims_not_allowed": [
-            "합성 음성 1건을 신고음성·현장 무전 정확도로 표현",
-            "사람이 전사문과 두 CAS를 실제 확인했다고 표현",
-            "record 저장을 실제 현장 인계나 대응 조치 수행으로 표현",
-            "H2 실행을 Cloud SQL·상용 운영 검증으로 표현",
-            "Speech model artifact와 commit이 API에서 검증됐다고 표현",
-        ],
+        "claims_allowed": claims_allowed,
+        "claims_not_allowed": claims_not_allowed,
         "safety_notice": (
             "공개 합성 음성의 로컬 연결성 회귀이며 현장 명령·정확도·안전성 증명이 아닙니다."
         ),
