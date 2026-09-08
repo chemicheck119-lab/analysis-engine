@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import sqlite3
 from pathlib import Path
@@ -11,7 +12,9 @@ import pytest
 from chemiguard119.cli import build_parser
 from chemiguard119.retrieval_review import (
     CANDIDATE_SCHEMA_VERSION,
+    POOL_RUN_SCHEMA_VERSION,
     QUERY_TEMPLATES,
+    audit_candidate_pool_coverage,
     audit_review_sheet,
     export_review_sheet,
     generate_qrel_candidate_pool,
@@ -125,6 +128,40 @@ def _fill_sheet(path: Path, *, disagreement: bool = False) -> None:
         writer.writerows(rows)
 
 
+def _pool_run(
+    path: Path,
+    db: Path,
+    candidates: Path,
+    *,
+    evidence_id: str | None = None,
+) -> None:
+    candidate_rows = load_candidate_rows(candidates)
+    results = []
+    for candidate in candidate_rows:
+        returned = [
+            evidence_id or str(candidate["evidence_candidates"][0]["evidence_id"])
+        ]
+        results.append(
+            {
+                "case_id": candidate["case_id"],
+                "query_sha256": hashlib.sha256(
+                    str(candidate["query"]).encode("utf-8")
+                ).hexdigest(),
+                "returned_evidence_ids": returned,
+            }
+        )
+    payload = {
+        "schema_version": POOL_RUN_SCHEMA_VERSION,
+        "system_id": "test-system",
+        "system_version": "test-v1",
+        "system_artifact_sha256": "1" * 64,
+        "database_sha256": hashlib.sha256(db.read_bytes()).hexdigest(),
+        "top_k": 5,
+        "results": results,
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+
 def test_generate_qrel_candidates_has_no_gold_labels(tmp_path: Path) -> None:
     _db, candidates = _generate(tmp_path)
     rows = load_candidate_rows(candidates)
@@ -221,6 +258,126 @@ def test_audit_changed_candidate_context_blocks_review_gate(tmp_path: Path) -> N
     assert report["blockers"] == [
         {"code": "CANDIDATE_CONTEXT_CHANGED", "evidence_row_count": 1}
     ]
+
+
+def test_pool_audit_accepts_declared_results_already_in_candidate_pool(
+    tmp_path: Path,
+) -> None:
+    db, candidates = _generate(tmp_path)
+    run = tmp_path / "system.json"
+    _pool_run(run, db, candidates)
+
+    report = audit_candidate_pool_coverage(candidates, db, [run])
+
+    assert report["status"] == "COMPLETE_FOR_DECLARED_SYSTEMS"
+    assert report["missing_unique_case_evidence_pair_count"] == 0
+    assert report["systems"][0]["system_artifact_sha256"] == "1" * 64
+    assert report["is_performance_result"] is False
+
+
+def test_pool_audit_requires_expansion_for_unpooled_same_cas_result(
+    tmp_path: Path,
+) -> None:
+    db, candidates = _generate(tmp_path)
+    run = tmp_path / "system.json"
+    _pool_run(run, db, candidates, evidence_id="KOSHA:SECTION-2")
+    with sqlite3.connect(db) as connection:
+        connection.execute(
+            "INSERT INTO evidence VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                "KOSHA:SECTION-2",
+                "KOSHA",
+                "64-17-5",
+                "에탄올 MSDS 2장 시험 항목",
+                "에탄올 2장 공식 시험 본문",
+                "https://example.test/msds/2",
+                "2026-01-01",
+            ),
+        )
+    # DB 변경을 허용하는 테스트가 아니라 동일 artifact에서 빠진 pool을 검사해야 하므로
+    # 후보를 새 DB hash로 다시 생성한다.
+    candidates.unlink()
+    model = tmp_path / "retriever.joblib"
+    generate_qrel_candidate_pool(
+        db,
+        model,
+        candidates,
+        max_substances=1,
+        retriever_artifact={},
+        searcher=_searcher,
+    )
+    _pool_run(run, db, candidates, evidence_id="KOSHA:SECTION-2")
+
+    report = audit_candidate_pool_coverage(candidates, db, [run])
+
+    assert report["status"] == "POOL_EXPANSION_REQUIRED"
+    assert report["missing_unique_case_evidence_pair_count"] == len(QUERY_TEMPLATES)
+
+
+def test_pool_audit_blocks_unknown_evidence(tmp_path: Path) -> None:
+    db, candidates = _generate(tmp_path)
+    run = tmp_path / "system.json"
+    _pool_run(run, db, candidates, evidence_id="KOSHA:UNKNOWN")
+
+    report = audit_candidate_pool_coverage(candidates, db, [run])
+
+    assert report["status"] == "BLOCKED_POOL_AUDIT"
+    assert {item["code"] for item in report["blockers"]} == {
+        "POOL_RUN_UNKNOWN_EVIDENCE"
+    }
+
+
+def test_pool_audit_blocks_wrong_cas_evidence(tmp_path: Path) -> None:
+    db, candidates = _generate(tmp_path)
+    with sqlite3.connect(db) as connection:
+        connection.execute(
+            "INSERT INTO substance VALUES (?, ?, ?)",
+            ("7732-18-5", "물", 1),
+        )
+        connection.execute(
+            "INSERT INTO evidence VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                "KOSHA:WATER-1",
+                "KOSHA",
+                "7732-18-5",
+                "물 MSDS 1장 시험 항목",
+                "물 1장 공식 시험 본문",
+                "https://example.test/msds/water/1",
+                "2026-01-01",
+            ),
+        )
+    candidates.unlink()
+    generate_qrel_candidate_pool(
+        db,
+        tmp_path / "retriever.joblib",
+        candidates,
+        max_substances=1,
+        retriever_artifact={},
+        searcher=_searcher,
+    )
+    run = tmp_path / "system.json"
+    _pool_run(run, db, candidates, evidence_id="KOSHA:WATER-1")
+
+    report = audit_candidate_pool_coverage(candidates, db, [run])
+
+    assert report["status"] == "BLOCKED_POOL_AUDIT"
+    assert {item["code"] for item in report["blockers"]} == {
+        "POOL_RUN_WRONG_CAS_EVIDENCE"
+    }
+
+
+def test_pool_audit_blocks_changed_query(tmp_path: Path) -> None:
+    db, candidates = _generate(tmp_path)
+    run = tmp_path / "system.json"
+    _pool_run(run, db, candidates)
+    payload = json.loads(run.read_text(encoding="utf-8"))
+    payload["results"][0]["query_sha256"] = "2" * 64
+    run.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+    report = audit_candidate_pool_coverage(candidates, db, [run])
+
+    assert report["status"] == "BLOCKED_POOL_AUDIT"
+    assert {item["code"] for item in report["blockers"]} == {"POOL_RUN_QUERY_MISMATCH"}
 
 
 def test_unanswerable_no_result_uses_explicit_negative_control_pool(
@@ -354,7 +511,20 @@ def test_cli_exposes_retriever_review_actions() -> None:
             "LABELER",
         ]
     )
+    pool_audit = parser.parse_args(
+        [
+            "retriever-review",
+            "pool-audit",
+            "--candidates",
+            "candidates.jsonl",
+            "--db",
+            "db.sqlite",
+            "--system-run",
+            "bm25.json",
+        ]
+    )
 
     assert generate.handler.__name__ == "_retriever_review"
     assert export.retriever_review_action == "export"
     assert status.retriever_review_action == "status"
+    assert pool_audit.retriever_review_action == "pool-audit"

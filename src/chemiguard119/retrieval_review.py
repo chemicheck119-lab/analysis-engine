@@ -32,6 +32,8 @@ CANDIDATE_SCHEMA_VERSION = "chemicheck119-retriever-qrel-candidate-v1"
 REVIEW_SHEET_SCHEMA_VERSION = "chemicheck119-retriever-qrel-review-sheet-v1"
 MERGE_SCHEMA_VERSION = "chemicheck119-retriever-qrel-review-merge-v1"
 REVIEW_AUDIT_SCHEMA_VERSION = "chemicheck119-retriever-qrel-review-audit-v1"
+POOL_RUN_SCHEMA_VERSION = "chemicheck119-retriever-pool-run-v1"
+POOL_AUDIT_SCHEMA_VERSION = "chemicheck119-retriever-pool-audit-v1"
 REVIEW_ROLES = frozenset({"LABELER", "REVIEWER"})
 ACTOR_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.:@-]{2,64}$")
 KOSHA_API_REFERENCE = "https://www.data.go.kr/data/15157612/openapi.do"
@@ -863,6 +865,228 @@ def audit_review_sheet(
     return report
 
 
+def _query_sha256(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _load_pool_run(path: Path) -> dict[str, Any]:
+    path = Path(path)
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        raise ValueError(f"{path}: 유효한 JSON이 아닙니다.") from error
+    if not isinstance(payload, Mapping):
+        raise ValueError(f"{path}: pool run은 JSON 객체여야 합니다.")
+    run = dict(payload)
+    if run.get("schema_version") != POOL_RUN_SCHEMA_VERSION:
+        raise ValueError(f"{path}: 지원하지 않는 pool run schema입니다.")
+    system_id = str(run.get("system_id") or "").strip()
+    if not ACTOR_ID_PATTERN.fullmatch(system_id):
+        raise ValueError(f"{path}: system_id 형식이 올바르지 않습니다.")
+    if not str(run.get("system_version") or "").strip():
+        raise ValueError(f"{path}: system_version이 필요합니다.")
+    for field in ("system_artifact_sha256", "database_sha256"):
+        if not re.fullmatch(r"[0-9a-f]{64}", str(run.get(field) or "")):
+            raise ValueError(f"{path}: {field} 형식이 올바르지 않습니다.")
+    top_k = run.get("top_k")
+    if not isinstance(top_k, int) or isinstance(top_k, bool) or not 1 <= top_k <= 50:
+        raise ValueError(f"{path}: top_k는 1~50 정수여야 합니다.")
+    results = run.get("results")
+    if not isinstance(results, list) or not results:
+        raise ValueError(f"{path}: results 배열이 필요합니다.")
+    seen_cases: set[str] = set()
+    for result in results:
+        if not isinstance(result, Mapping):
+            raise ValueError(f"{path}: result는 JSON 객체여야 합니다.")
+        case_id = str(result.get("case_id") or "").strip()
+        if not case_id or case_id in seen_cases:
+            raise ValueError(f"{path}: 비어 있거나 중복된 case_id={case_id!r}")
+        seen_cases.add(case_id)
+        if not re.fullmatch(r"[0-9a-f]{64}", str(result.get("query_sha256") or "")):
+            raise ValueError(
+                f"{path}:{case_id}: query_sha256 형식이 올바르지 않습니다."
+            )
+        returned_ids = result.get("returned_evidence_ids")
+        if not isinstance(returned_ids, list) or any(
+            not isinstance(value, str) or not value.strip() for value in returned_ids
+        ):
+            raise ValueError(
+                f"{path}:{case_id}: returned_evidence_ids는 문자열 배열이어야 합니다."
+            )
+        normalized_ids = [value.strip() for value in returned_ids]
+        if len(normalized_ids) > top_k or len(normalized_ids) != len(
+            set(normalized_ids)
+        ):
+            raise ValueError(
+                f"{path}:{case_id}: 반환 ID가 top_k를 넘거나 중복됐습니다."
+            )
+    return run
+
+
+def audit_candidate_pool_coverage(
+    candidate_path: Path,
+    db_path: Path,
+    system_run_paths: list[Path],
+    *,
+    report_path: Path | None = None,
+) -> dict[str, Any]:
+    """선언한 검색 시스템의 Top-K가 사람 검수 pool에 모두 포함됐는지 검사한다."""
+
+    if not system_run_paths:
+        raise ValueError("최소 1개의 system run이 필요합니다.")
+    candidate_path = Path(candidate_path)
+    db_path = Path(db_path)
+    candidates = load_candidate_rows(candidate_path)
+    candidate_by_case = {str(row["case_id"]): row for row in candidates}
+    expected_case_ids = set(candidate_by_case)
+    candidate_db_hashes = {str(row["database_sha256"]) for row in candidates}
+    actual_db_hash = sha256_file(db_path)
+    blockers: list[dict[str, Any]] = []
+    if candidate_db_hashes != {actual_db_hash}:
+        blockers.append(
+            {
+                "code": "DATABASE_ARTIFACT_CHANGED",
+                "candidate_database_sha256": sorted(candidate_db_hashes),
+                "actual_database_sha256": actual_db_hash,
+            }
+        )
+
+    evidence_by_cas = _load_official_evidence_by_cas(db_path)
+    evidence_index = {
+        str(evidence["evidence_id"]): (cas_number, evidence)
+        for cas_number, evidence_rows in evidence_by_cas.items()
+        for evidence in evidence_rows
+    }
+    runs: list[tuple[Path, dict[str, Any]]] = []
+    system_ids: set[str] = set()
+    for raw_path in system_run_paths:
+        path = Path(raw_path)
+        run = _load_pool_run(path)
+        system_id = str(run["system_id"])
+        if system_id in system_ids:
+            blockers.append({"code": "DUPLICATE_SYSTEM_ID", "system_id": system_id})
+        system_ids.add(system_id)
+        if str(run["database_sha256"]) != actual_db_hash:
+            blockers.append(
+                {
+                    "code": "POOL_RUN_DATABASE_MISMATCH",
+                    "system_id": system_id,
+                }
+            )
+        result_case_ids = {str(row["case_id"]) for row in run["results"]}
+        if result_case_ids != expected_case_ids:
+            blockers.append(
+                {
+                    "code": "POOL_RUN_CASE_SET_MISMATCH",
+                    "system_id": system_id,
+                    "missing_count": len(expected_case_ids - result_case_ids),
+                    "unexpected_count": len(result_case_ids - expected_case_ids),
+                }
+            )
+        runs.append((path, run))
+
+    missing_pairs: set[tuple[str, str]] = set()
+    affected_cases: set[str] = set()
+    system_summaries: list[dict[str, Any]] = []
+    if not blockers:
+        for path, run in runs:
+            system_id = str(run["system_id"])
+            returned_count = 0
+            missing_count = 0
+            abstained_case_count = 0
+            for result in run["results"]:
+                case_id = str(result["case_id"])
+                candidate = candidate_by_case[case_id]
+                if str(result["query_sha256"]) != _query_sha256(
+                    str(candidate["query"])
+                ):
+                    blockers.append(
+                        {
+                            "code": "POOL_RUN_QUERY_MISMATCH",
+                            "system_id": system_id,
+                            "case_id": case_id,
+                        }
+                    )
+                    continue
+                cas_number = str(candidate["cas_number"])
+                pool_ids = {
+                    str(evidence["evidence_id"])
+                    for evidence in candidate["evidence_candidates"]
+                }
+                returned_ids = [
+                    str(value).strip() for value in result["returned_evidence_ids"]
+                ]
+                returned_count += len(returned_ids)
+                abstained_case_count += int(not returned_ids)
+                for evidence_id in returned_ids:
+                    indexed = evidence_index.get(evidence_id)
+                    if indexed is None:
+                        blockers.append(
+                            {
+                                "code": "POOL_RUN_UNKNOWN_EVIDENCE",
+                                "system_id": system_id,
+                                "case_id": case_id,
+                                "evidence_id": evidence_id,
+                            }
+                        )
+                        continue
+                    evidence_cas, _evidence = indexed
+                    if evidence_cas != cas_number:
+                        blockers.append(
+                            {
+                                "code": "POOL_RUN_WRONG_CAS_EVIDENCE",
+                                "system_id": system_id,
+                                "case_id": case_id,
+                                "evidence_id": evidence_id,
+                            }
+                        )
+                        continue
+                    if evidence_id not in pool_ids:
+                        missing_pairs.add((case_id, evidence_id))
+                        affected_cases.add(case_id)
+                        missing_count += 1
+            system_summaries.append(
+                {
+                    "system_id": system_id,
+                    "system_version": run["system_version"],
+                    "system_artifact_sha256": run["system_artifact_sha256"],
+                    "top_k": run["top_k"],
+                    "returned_occurrence_count": returned_count,
+                    "abstained_case_count": abstained_case_count,
+                    "missing_pool_occurrence_count": missing_count,
+                    "run_sha256": sha256_file(path),
+                }
+            )
+
+    if blockers:
+        status = "BLOCKED_POOL_AUDIT"
+    elif missing_pairs:
+        status = "POOL_EXPANSION_REQUIRED"
+    else:
+        status = "COMPLETE_FOR_DECLARED_SYSTEMS"
+    report = {
+        "schema_version": POOL_AUDIT_SCHEMA_VERSION,
+        "status": status,
+        "action": "AUDIT_QREL_POOL_COVERAGE",
+        "candidate_count": len(candidates),
+        "declared_system_count": len(runs),
+        "systems": system_summaries,
+        "missing_unique_case_evidence_pair_count": len(missing_pairs),
+        "affected_case_count": len(affected_cases),
+        "blockers": blockers,
+        "candidate_sha256": sha256_file(candidate_path),
+        "database_sha256": actual_db_hash,
+        "is_performance_result": False,
+        "claim_limit": (
+            "선언한 검색 시스템의 Top-K가 검수 pool에 포함됐는지만 확인합니다. "
+            "pool 완전성, 문서 관련성, Retriever 정확도를 증명하지 않습니다."
+        ),
+    }
+    if report_path is not None:
+        write_json(Path(report_path), report)
+    return report
+
+
 def merge_review_sheets(
     candidate_path: Path,
     labeler_sheet_path: Path,
@@ -1060,7 +1284,10 @@ def merge_review_sheets(
 
 __all__ = [
     "CANDIDATE_SCHEMA_VERSION",
+    "POOL_AUDIT_SCHEMA_VERSION",
+    "POOL_RUN_SCHEMA_VERSION",
     "QUERY_TEMPLATES",
+    "audit_candidate_pool_coverage",
     "audit_review_sheet",
     "export_review_sheet",
     "generate_qrel_candidate_pool",

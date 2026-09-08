@@ -858,6 +858,7 @@ def _e2e_review(args: argparse.Namespace) -> dict[str, Any]:
 
 def _retriever_review(args: argparse.Namespace) -> dict[str, Any]:
     from chemiguard119.retrieval_review import (
+        audit_candidate_pool_coverage,
         audit_review_sheet,
         export_review_sheet,
         generate_qrel_candidate_pool,
@@ -884,6 +885,13 @@ def _retriever_review(args: argparse.Namespace) -> dict[str, Any]:
             args.candidates,
             args.review_sheet,
             actor_role=args.actor_role,
+            report_path=args.report,
+        )
+    if args.retriever_review_action == "pool-audit":
+        return audit_candidate_pool_coverage(
+            args.candidates,
+            args.db,
+            args.system_run,
             report_path=args.report,
         )
     if args.retriever_review_action == "merge":
@@ -1864,6 +1872,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     retriever_review_status.add_argument("--report", type=_path)
     _add_json_option(retriever_review_status)
+
+    retriever_review_pool_audit = retriever_review_actions.add_parser(
+        "pool-audit",
+        help="선언한 검색 시스템 Top-K의 qrel 검수 pool 포함 여부 감사",
+    )
+    retriever_review_pool_audit.add_argument("--candidates", type=_path, required=True)
+    retriever_review_pool_audit.add_argument("--db", type=_path, required=True)
+    retriever_review_pool_audit.add_argument(
+        "--system-run", type=_path, action="append", required=True
+    )
+    retriever_review_pool_audit.add_argument("--report", type=_path)
+    _add_json_option(retriever_review_pool_audit)
 
     retriever_review_merge = retriever_review_actions.add_parser(
         "merge",

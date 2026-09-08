@@ -20,6 +20,7 @@ KOSHA 상세가 있는 물질
 | 질문·evidence pool 생성기 | 구현 완료 |
 | 독립 검수 CSV export·병합 Gate | 구현 완료 |
 | 검수 진행률·원문 무결성 감사 | 구현 완료 |
+| 선언된 검색기 Top-K pool coverage 감사 | 구현 완료 |
 | 배포 artifact 기반 171질의 후보 | 부분 구현 또는 개발용 데모 |
 | 171질의 사람 이중 검수 | 설계 완료·구현 전 |
 | BM25·Dense·Hybrid·RRF·Reranker 비교 | 설계 완료·구현 전 |
@@ -116,6 +117,31 @@ chemiguard119 retriever-review status \
 `NOT_STARTED`, `IN_PROGRESS`, `NEEDS_CORRECTION`,
 `READY_FOR_INDEPENDENT_MERGE`, `BLOCKED_REVIEW_GATE` 중 하나를 반환한다. 이 결과는 한
 사람의 작업 상태일 뿐 Retriever 성능이나 이중 검수 완료를 뜻하지 않는다.
+
+## 2.1 신규 검색 시스템의 pool coverage 감사
+
+BM25·Dense·Hybrid·Reranker를 비교하기 전에 각 시스템은 다음 필드를 가진
+`chemicheck119-retriever-pool-run-v1` JSON을 만든다.
+
+- `system_id`, `system_version`, `system_artifact_sha256`
+- 후보와 같은 `database_sha256`, 실행 `top_k`
+- 모든 `case_id`별 `query_sha256`, `returned_evidence_ids`
+
+```bash
+chemiguard119 retriever-review pool-audit \
+  --candidates /approved/private/retriever_qrel_candidates.jsonl \
+  --db /approved/private/chemiguard119.sqlite \
+  --system-run /approved/private/bm25_pool_run.json \
+  --system-run /approved/private/dense_pool_run.json \
+  --report /approved/private/retriever_pool_audit.json \
+  --json
+```
+
+모든 Top-K가 후보에 있으면 `COMPLETE_FOR_DECLARED_SYSTEMS`, 같은 CAS의 누락 문서가 있으면
+`POOL_EXPANSION_REQUIRED`, DB·질의·CAS·문서 ID가 맞지 않으면
+`BLOCKED_POOL_AUDIT`이다. 전자는 **선언한 시스템에 한정된 포함 검사**일 뿐 관련성이나 전체
+pool 완전성을 증명하지 않는다. 새 문서가 발견되면 검수 시작 전에 후보와 빈 시트를 다시
+생성해야 한다.
 
 ## 3. 합의 병합
 
