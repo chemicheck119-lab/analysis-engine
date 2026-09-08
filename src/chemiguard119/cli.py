@@ -727,6 +727,7 @@ def _aggregate_e2e_evidence(args: argparse.Namespace) -> dict[str, Any]:
         analysis_report_path=args.analysis_report,
         backend_report_path=args.backend_report,
         backend_cancellation_report_path=args.backend_cancellation_report,
+        cross_service_report_path=args.cross_service_report,
         seoul_speech_report_path=args.seoul_speech_report,
         incheon_speech_report_path=args.incheon_speech_report,
         report_path=args.report,
@@ -1564,6 +1565,7 @@ def build_parser() -> argparse.ArgumentParser:
     aggregate_e2e.add_argument(
         "--backend-cancellation-report", type=_path, required=True
     )
+    aggregate_e2e.add_argument("--cross-service-report", type=_path, required=True)
     aggregate_e2e.add_argument("--seoul-speech-report", type=_path, required=True)
     aggregate_e2e.add_argument("--incheon-speech-report", type=_path, required=True)
     aggregate_e2e.add_argument(
