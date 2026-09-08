@@ -176,9 +176,25 @@ chemiguard119 retriever-review status \
 BM25·Dense·Hybrid·Reranker를 비교하기 전에 각 시스템은 다음 필드를 가진
 `chemicheck119-retriever-pool-run-v1` JSON을 만든다.
 
-- `system_id`, `system_version`, `system_artifact_sha256`
+- `system_id`, `system_version`, `candidate_sha256`, `system_artifact_sha256`
 - 후보와 같은 `database_sha256`, 실행 `top_k`
 - 모든 `case_id`별 `query_sha256`, `returned_evidence_ids`
+
+현재 배포 artifact의 lexical hybrid 기준선은 원문 질의나 문서 본문을 복제하지 않고 다음
+명령으로 실행 기록을 만든다. `system-version`에는 평가 코드 revision과 artifact schema를
+함께 고정한다.
+
+```bash
+chemiguard119 retriever-review pool-run \
+  --candidates /approved/private/retriever_qrel_candidates.jsonl \
+  --db /approved/private/chemiguard119.sqlite \
+  --retriever-model /approved/private/retriever.joblib \
+  --system-id baseline-lexical-hybrid \
+  --system-version evidence-hybrid-tfidf-v2@GIT_COMMIT \
+  --top-k 5 \
+  --output /approved/private/baseline_pool_run.json \
+  --json
+```
 
 ```bash
 chemiguard119 retriever-review pool-audit \
