@@ -31,6 +31,7 @@ from chemiguard119.utils import sha256_file, valid_cas_checksum, write_json
 CANDIDATE_SCHEMA_VERSION = "chemicheck119-retriever-qrel-candidate-v1"
 REVIEW_SHEET_SCHEMA_VERSION = "chemicheck119-retriever-qrel-review-sheet-v1"
 MERGE_SCHEMA_VERSION = "chemicheck119-retriever-qrel-review-merge-v1"
+REVIEW_AUDIT_SCHEMA_VERSION = "chemicheck119-retriever-qrel-review-audit-v1"
 REVIEW_ROLES = frozenset({"LABELER", "REVIEWER"})
 ACTOR_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.:@-]{2,64}$")
 KOSHA_API_REFERENCE = "https://www.data.go.kr/data/15157612/openapi.do"
@@ -176,6 +177,17 @@ REVIEW_COLUMNS = (
     "answerable",
     "relevance_grade",
     "required_fact_ids_json",
+    "supporting_sentence",
+    "review_notes",
+)
+
+REQUIRED_REVIEW_INPUT_COLUMNS = (
+    "review_decision",
+    "answerable",
+    "relevance_grade",
+    "required_fact_ids_json",
+)
+REVIEW_JUDGMENT_COLUMNS = REQUIRED_REVIEW_INPUT_COLUMNS + (
     "supporting_sentence",
     "review_notes",
 )
@@ -701,6 +713,156 @@ def _parse_review_case(
     }
 
 
+def audit_review_sheet(
+    candidate_path: Path,
+    review_sheet_path: Path,
+    *,
+    actor_role: str,
+    report_path: Path | None = None,
+) -> dict[str, Any]:
+    """정답을 추론하지 않고 한 사람의 검수 진행률과 무결성만 감사한다."""
+
+    role = str(actor_role).strip().upper()
+    if role not in REVIEW_ROLES:
+        raise ValueError(f"actor_role은 {sorted(REVIEW_ROLES)} 중 하나여야 합니다.")
+
+    candidate_path = Path(candidate_path)
+    review_sheet_path = Path(review_sheet_path)
+    candidates = load_candidate_rows(candidate_path)
+    expected_keys = {
+        (str(candidate["case_id"]), str(evidence["evidence_id"]))
+        for candidate in candidates
+        for evidence in candidate["evidence_candidates"]
+    }
+    blockers: list[dict[str, Any]] = []
+    try:
+        actor_id, review_rows = _read_review_sheet(review_sheet_path, role)
+    except ValueError as error:
+        actor_id = None
+        review_rows = {}
+        blockers.append({"code": "REVIEW_SHEET_INVALID", "message": str(error)})
+
+    if review_rows and set(review_rows) != expected_keys:
+        blockers.append(
+            {
+                "code": "REVIEW_CASE_SET_MISMATCH",
+                "missing_count": len(expected_keys - set(review_rows)),
+                "unexpected_count": len(set(review_rows) - expected_keys),
+            }
+        )
+
+    changed_context_count = 0
+    if review_rows:
+        for candidate in candidates:
+            for evidence in candidate["evidence_candidates"]:
+                key = (str(candidate["case_id"]), str(evidence["evidence_id"]))
+                sheet_row = review_rows.get(key)
+                if sheet_row is None:
+                    continue
+                context = _candidate_context(candidate, evidence)
+                changed = [
+                    field
+                    for field, expected in context.items()
+                    if str(sheet_row.get(field) or "") != expected
+                ]
+                if changed:
+                    changed_context_count += 1
+        if changed_context_count:
+            blockers.append(
+                {
+                    "code": "CANDIDATE_CONTEXT_CHANGED",
+                    "evidence_row_count": changed_context_count,
+                }
+            )
+
+    started_row_count = sum(
+        any(str(row.get(field) or "").strip() for field in REVIEW_JUDGMENT_COLUMNS)
+        for row in review_rows.values()
+    )
+    approved_row_count = sum(
+        str(row.get("review_decision") or "").strip().upper() == "APPROVE"
+        for row in review_rows.values()
+    )
+    untouched_case_count = 0
+    in_progress_case_count = 0
+    valid_case_count = 0
+    invalid_cases: list[dict[str, str]] = []
+
+    if review_rows and not blockers:
+        for candidate in candidates:
+            case_id = str(candidate["case_id"])
+            case_rows = [
+                review_rows[(case_id, str(evidence["evidence_id"]))]
+                for evidence in candidate["evidence_candidates"]
+            ]
+            started = any(
+                str(row.get(field) or "").strip()
+                for row in case_rows
+                for field in REVIEW_JUDGMENT_COLUMNS
+            )
+            if not started:
+                untouched_case_count += 1
+                continue
+            complete = all(
+                str(row.get(field) or "").strip()
+                for row in case_rows
+                for field in REQUIRED_REVIEW_INPUT_COLUMNS
+            )
+            if not complete:
+                in_progress_case_count += 1
+                continue
+            try:
+                _parse_review_case(candidate, case_rows)
+            except ValueError as error:
+                invalid_cases.append({"case_id": case_id, "message": str(error)})
+            else:
+                valid_case_count += 1
+
+    candidate_count = len(candidates)
+    if blockers:
+        status = "BLOCKED_REVIEW_GATE"
+    elif invalid_cases:
+        status = "NEEDS_CORRECTION"
+    elif valid_case_count == candidate_count:
+        status = "READY_FOR_INDEPENDENT_MERGE"
+    elif started_row_count:
+        status = "IN_PROGRESS"
+    else:
+        status = "NOT_STARTED"
+
+    report = {
+        "schema_version": REVIEW_AUDIT_SCHEMA_VERSION,
+        "status": status,
+        "action": "AUDIT_QREL_REVIEW_PROGRESS",
+        "actor_role": role,
+        "actor_id": actor_id,
+        "candidate_count": candidate_count,
+        "evidence_judgment_count": len(expected_keys),
+        "progress": {
+            "started_evidence_row_count": started_row_count,
+            "approved_evidence_row_count": approved_row_count,
+            "valid_completed_case_count": valid_case_count,
+            "in_progress_case_count": in_progress_case_count,
+            "invalid_case_count": len(invalid_cases),
+            "untouched_case_count": untouched_case_count,
+            "valid_case_completion_ratio": round(valid_case_count / candidate_count, 6),
+        },
+        "invalid_cases": invalid_cases,
+        "blockers": blockers,
+        "candidate_sha256": sha256_file(candidate_path),
+        "review_sheet_sha256": sha256_file(review_sheet_path),
+        "ready_for_independent_merge": (status == "READY_FOR_INDEPENDENT_MERGE"),
+        "is_performance_result": False,
+        "claim_limit": (
+            "한 사람의 검수 진행률과 파일 무결성 감사이며 Retriever 정확도나 "
+            "독립 이중 검수 완료를 뜻하지 않습니다."
+        ),
+    }
+    if report_path is not None:
+        write_json(Path(report_path), report)
+    return report
+
+
 def merge_review_sheets(
     candidate_path: Path,
     labeler_sheet_path: Path,
@@ -899,6 +1061,7 @@ def merge_review_sheets(
 __all__ = [
     "CANDIDATE_SCHEMA_VERSION",
     "QUERY_TEMPLATES",
+    "audit_review_sheet",
     "export_review_sheet",
     "generate_qrel_candidate_pool",
     "load_candidate_rows",

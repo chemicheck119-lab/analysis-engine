@@ -858,6 +858,7 @@ def _e2e_review(args: argparse.Namespace) -> dict[str, Any]:
 
 def _retriever_review(args: argparse.Namespace) -> dict[str, Any]:
     from chemiguard119.retrieval_review import (
+        audit_review_sheet,
         export_review_sheet,
         generate_qrel_candidate_pool,
         merge_review_sheets,
@@ -877,6 +878,13 @@ def _retriever_review(args: argparse.Namespace) -> dict[str, Any]:
             args.output,
             actor_role=args.actor_role,
             actor_id=args.actor_id,
+        )
+    if args.retriever_review_action == "status":
+        return audit_review_sheet(
+            args.candidates,
+            args.review_sheet,
+            actor_role=args.actor_role,
+            report_path=args.report,
         )
     if args.retriever_review_action == "merge":
         return merge_review_sheets(
@@ -1842,6 +1850,20 @@ def build_parser() -> argparse.ArgumentParser:
     retriever_review_export.add_argument("--actor-id", required=True)
     retriever_review_export.add_argument("--output", type=_path, required=True)
     _add_json_option(retriever_review_export)
+
+    retriever_review_status = retriever_review_actions.add_parser(
+        "status",
+        help="정답을 추론하지 않고 한 사람의 검수 진행률·무결성 감사",
+    )
+    retriever_review_status.add_argument("--candidates", type=_path, required=True)
+    retriever_review_status.add_argument("--review-sheet", type=_path, required=True)
+    retriever_review_status.add_argument(
+        "--actor-role",
+        choices=("LABELER", "REVIEWER"),
+        required=True,
+    )
+    retriever_review_status.add_argument("--report", type=_path)
+    _add_json_option(retriever_review_status)
 
     retriever_review_merge = retriever_review_actions.add_parser(
         "merge",

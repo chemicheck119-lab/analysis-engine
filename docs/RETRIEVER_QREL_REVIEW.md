@@ -19,6 +19,7 @@ KOSHA 상세가 있는 물질
 |---|---|
 | 질문·evidence pool 생성기 | 구현 완료 |
 | 독립 검수 CSV export·병합 Gate | 구현 완료 |
+| 검수 진행률·원문 무결성 감사 | 구현 완료 |
 | 배포 artifact 기반 171질의 후보 | 부분 구현 또는 개발용 데모 |
 | 171질의 사람 이중 검수 | 설계 완료·구현 전 |
 | BM25·Dense·Hybrid·RRF·Reranker 비교 | 설계 완료·구현 전 |
@@ -100,6 +101,21 @@ chemiguard119 retriever-review export \
 관련 근거에는 fact ID와 원문 안에 실제 존재하는 근거 문장이 필요하다. 답변 가능한 질문은
 grade 2 이상의 핵심 근거가 하나 이상 있어야 한다. 답변 불가 질문은 모든 pool 문서가
 grade 0이어야 한다.
+
+검수 도중에는 다음 명령으로 정답을 추론하지 않고 진행률과 후보 원문 변조 여부만 확인한다.
+
+```bash
+chemiguard119 retriever-review status \
+  --candidates /approved/private/retriever_qrel_candidates.jsonl \
+  --review-sheet /approved/private/retriever_qrel_labeler.csv \
+  --actor-role LABELER \
+  --report /approved/private/retriever_qrel_labeler_status.json \
+  --json
+```
+
+`NOT_STARTED`, `IN_PROGRESS`, `NEEDS_CORRECTION`,
+`READY_FOR_INDEPENDENT_MERGE`, `BLOCKED_REVIEW_GATE` 중 하나를 반환한다. 이 결과는 한
+사람의 작업 상태일 뿐 Retriever 성능이나 이중 검수 완료를 뜻하지 않는다.
 
 ## 3. 합의 병합
 
