@@ -33,6 +33,7 @@ class FakeVoiceFlowClient:
         transcript: str = TRANSCRIPT,
         incident_surface: str = "차아염소산 나트륨",
         incident_cas: str = "7681-52-9",
+        confirmation_type: str = "SYNTHETIC_DEMO_CONFIRMATION",
         speech_runtime_overrides: Mapping[str, Any] | None = None,
     ) -> None:
         self.unsafe_before_confirmation = unsafe_before_confirmation
@@ -40,6 +41,7 @@ class FakeVoiceFlowClient:
         self.transcript = transcript
         self.incident_surface = incident_surface
         self.incident_cas = incident_cas
+        self.confirmation_type = confirmation_type
         self.speech_runtime_overrides = dict(speech_runtime_overrides or {})
         self.confirmed: set[str] = set()
         self.transcribe_call_count = 0
@@ -174,7 +176,7 @@ class FakeVoiceFlowClient:
         return {
             "requestId": request_id,
             "confirmationId": f"CNF-{role}",
-            "confirmationType": "SYNTHETIC_DEMO_CONFIRMATION",
+            "confirmationType": self.confirmation_type,
         }
 
     def cancel(
@@ -321,6 +323,27 @@ def test_failed_asr_surface_is_not_reported_as_successful_claim(tmp_path: Path) 
     )
 
 
+def test_wrong_confirmation_type_cannot_allow_cameo_success_claim(
+    tmp_path: Path,
+) -> None:
+    manifest, audio = _fixture(tmp_path)
+
+    report = _evaluate(
+        FakeVoiceFlowClient(confirmation_type="UNVERIFIED_CONFIRMATION"),
+        manifest,
+        audio,
+    )
+
+    assert report["status"] == "FAILED"
+    failed = {row["name"] for row in report["checks"] if row.get("passed") is False}
+    assert "incident_confirmation_type" in failed
+    assert "facility_confirmation_type" in failed
+    assert not any(
+        "합성 2-CAS 확인 뒤 제한된 CAMEO 결과" in claim
+        for claim in report["claims_allowed"]
+    )
+
+
 def test_unverified_speech_model_provenance_fails_the_gate(tmp_path: Path) -> None:
     manifest, audio = _fixture(tmp_path)
     client = FakeVoiceFlowClient(
@@ -344,6 +367,23 @@ def test_unverified_speech_model_provenance_fails_the_gate(tmp_path: Path) -> No
         "Speech model artifact와 commit이 API에서 검증됐다고 표현"
         in report["claims_not_allowed"]
     )
+
+
+def test_integer_artifact_verification_cannot_pass_boolean_gate(tmp_path: Path) -> None:
+    manifest, audio = _fixture(tmp_path)
+    client = FakeVoiceFlowClient(speech_runtime_overrides={"modelArtifactVerified": 1})
+
+    report = _evaluate(client, manifest, audio)
+
+    assert report["status"] == "FAILED"
+    check = next(
+        row
+        for row in report["checks"]
+        if row["name"] == "speech_model_artifact_verified"
+    )
+    assert check["actual"] == 1
+    assert check["passed"] is False
+    assert report["runtime"]["speech_model_artifact_verified"] is False
 
 
 def test_voice_flow_rejects_tampered_audio_before_http(tmp_path: Path) -> None:

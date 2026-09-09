@@ -163,6 +163,18 @@ def _count_or_zero(value: object) -> int:
     return value if _is_count(value) else 0
 
 
+def _matches_expected(actual: object, expected: object) -> bool:
+    """JSON boolean을 숫자 0/1과 구분해 안전 계약을 비교한다."""
+
+    if isinstance(actual, bool) or isinstance(expected, bool):
+        return (
+            isinstance(actual, bool)
+            and isinstance(expected, bool)
+            and actual is expected
+        )
+    return actual == expected
+
+
 def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
     errors: list[str] = []
     _append_if(
@@ -297,7 +309,7 @@ def _validate_analysis(report: Mapping[str, Any]) -> list[str]:
     for field, expected in expected_metrics.items():
         _append_if(
             errors,
-            metric_payload.get(field) != expected,
+            not _matches_expected(metric_payload.get(field), expected),
             f"ANALYSIS_METRIC_FAILED:{field}",
         )
     return errors
@@ -371,8 +383,8 @@ def _validate_backend(report: Mapping[str, Any]) -> list[str]:
         row = check_map.get(name)
         if (
             row is None
-            or row.get("expected") != expected
-            or row.get("actual") != expected
+            or not _matches_expected(row.get("expected"), expected)
+            or not _matches_expected(row.get("actual"), expected)
             or row.get("passed") is not True
         ):
             errors.append(f"BACKEND_REQUIRED_CHECK_FAILED:{name}")
@@ -454,8 +466,8 @@ def _validate_backend_cancellation(report: Mapping[str, Any]) -> list[str]:
         row = check_map.get(name)
         if (
             row is None
-            or row.get("expected") != expected
-            or row.get("actual") != expected
+            or not _matches_expected(row.get("expected"), expected)
+            or not _matches_expected(row.get("actual"), expected)
             or row.get("passed") is not True
         ):
             errors.append(f"BACKEND_CANCELLATION_REQUIRED_CHECK_FAILED:{name}")
@@ -490,7 +502,7 @@ def _validate_cross_service(report: Mapping[str, Any]) -> list[str]:
     for field, expected in expected_top_level.items():
         _append_if(
             errors,
-            report.get(field) != expected,
+            not _matches_expected(report.get(field), expected),
             f"CROSS_SERVICE_SCOPE_FAILED:{field}",
         )
 
@@ -539,8 +551,8 @@ def _validate_cross_service(report: Mapping[str, Any]) -> list[str]:
         row = check_map.get(name)
         if (
             row is None
-            or row.get("expected") != expected
-            or row.get("actual") != expected
+            or not _matches_expected(row.get("expected"), expected)
+            or not _matches_expected(row.get("actual"), expected)
             or row.get("passed") is not True
         ):
             errors.append(f"CROSS_SERVICE_REQUIRED_CHECK_FAILED:{name}")
@@ -603,7 +615,7 @@ def _validate_voice_flow(
     for field, expected in expected_top_level.items():
         _append_if(
             errors,
-            report.get(field) != expected,
+            not _matches_expected(report.get(field), expected),
             f"VOICE_FLOW_SCOPE_FAILED:{field}",
         )
 
@@ -652,8 +664,8 @@ def _validate_voice_flow(
         row = check_map.get(name)
         if (
             row is None
-            or row.get("expected") != expected
-            or row.get("actual") != expected
+            or not _matches_expected(row.get("expected"), expected)
+            or not _matches_expected(row.get("actual"), expected)
             or row.get("passed") is not True
         ):
             errors.append(f"VOICE_FLOW_REQUIRED_CHECK_FAILED:{name}")
@@ -693,7 +705,7 @@ def _validate_voice_flow(
     for field, expected in required_disclosure.items():
         _append_if(
             errors,
-            disclosure_payload.get(field) != expected,
+            not _matches_expected(disclosure_payload.get(field), expected),
             f"VOICE_FLOW_SELECTION_DISCLOSURE_FAILED:{field}",
         )
 
@@ -710,7 +722,7 @@ def _validate_voice_flow(
     for field, expected in expected_runtime.items():
         _append_if(
             errors,
-            runtime_payload.get(field) != expected,
+            not _matches_expected(runtime_payload.get(field), expected),
             f"VOICE_FLOW_RUNTIME_FAILED:{field}",
         )
     correlation = report.get("request_correlation")
@@ -726,7 +738,7 @@ def _validate_voice_flow(
     for field, expected in expected_correlation.items():
         _append_if(
             errors,
-            correlation_payload.get(field) != expected,
+            not _matches_expected(correlation_payload.get(field), expected),
             f"VOICE_FLOW_CORRELATION_FAILED:{field}",
         )
 
@@ -800,8 +812,8 @@ def _validate_voice_flow(
         row = check_map.get(name)
         if (
             row is None
-            or row.get("expected") != expected
-            or row.get("actual") != expected
+            or not _matches_expected(row.get("expected"), expected)
+            or not _matches_expected(row.get("actual"), expected)
             or row.get("passed") is not True
         ):
             errors.append(f"VOICE_FLOW_PROVENANCE_CHECK_FAILED:{name}")

@@ -703,6 +703,37 @@ def test_aggregate_rejects_voice_runtime_provenance_drift_when_relocked(
     )
 
 
+def test_aggregate_rejects_integer_as_boolean_even_when_relocked(
+    tmp_path: Path,
+) -> None:
+    paths = _fixture(tmp_path)
+    voice = json.loads(
+        paths["cross_service_voice_to_record"].read_text(encoding="utf-8")
+    )
+    target = next(
+        check
+        for check in voice["checks"]
+        if check["name"] == "speech_model_artifact_verified"
+    )
+    target["actual"] = 1
+    _write(paths["cross_service_voice_to_record"], voice)
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    manifest["sources"]["cross_service_voice_to_record"]["expected_sha256"] = (
+        sha256_file(paths["cross_service_voice_to_record"])
+    )
+    _write(paths["manifest"], manifest)
+
+    report = _aggregate(paths)
+
+    assert report["status"] == "FAILED"
+    assert (
+        "VOICE_FLOW_REQUIRED_CHECK_FAILED:speech_model_artifact_verified"
+        in report["evidence_integrity_gate"]["errors_by_source"][
+            "cross_service_voice_to_record"
+        ]
+    )
+
+
 def test_aggregate_accepts_pinned_revision_as_local_speech_model_identifier(
     tmp_path: Path,
 ) -> None:

@@ -99,7 +99,7 @@ Resolver Top-1이 다른 CAS `7775-09-9`를 반환했습니다. 이는 실제 �
 | 구간 | 관측값 | 판정 |
 |---|---:|---|
 | 전체 결정적 검사 | 69/69 | 통과 |
-| Speech service commit | `7e936e25d0b3ea7c50a1390029d39b9649cc9fb3` | 기대값과 일치 |
+| Speech service commit | `f9225121989aa100f578c7cdc8b01b31e64af93a` | 기대값과 일치 |
 | Speech model repository | `Systran/faster-whisper-small` | 기대값과 일치 |
 | Speech model revision | `536b0662742c02347bc0e980a01041f333bce120` | 기대값과 일치 |
 | `model.bin` SHA-256 | `3e305921...170d671` | 기대값과 일치 |
@@ -113,40 +113,50 @@ Speech API는 로컬 모델 경로의 basename을 `runtime.model`로 내보내�
 `small` 별칭 또는 provenance에 기록된 정확한 revision만 허용하며, repository·revision·
 `model.bin` SHA-256은 각각 독립적으로 다시 비교합니다.
 
+제한된 CAMEO 성공 주장은 두 confirmation 응답의 `confirmationType`이 모두
+`SYNTHETIC_DEMO_CONFIRMATION`으로 검증된 경우에만 허용합니다. 둘 중 하나라도 누락되거나
+다르면 전체 보고서를 실패 처리하고, Rule 결과가 우연히 반환됐더라도 성공 주장에는 넣지
+않습니다.
+
+안전 계약의 boolean은 JSON `true`·`false`만 허용합니다. 숫자 `1`·`0`은 Python의 동등 비교상
+boolean과 같아 보일 수 있지만 계약 위반으로 실패 처리하며, 결합 집계기에서도 같은 검사를
+독립적으로 반복합니다.
+
 - Report SHA-256:
   `ef116d33b8d0f46e04a2477dbe4b69d23481565fec4da154b18abd09e1e6f7ab`
 - Provenance 고정 local report SHA-256:
-  `9927e3e83b382809769f3f7c6a070ffe577aa721f20c2faa00f7dc8b0657b5be`
+  `db0b860c5ca0903f9d14fd91e076f065af1eea6f9f5637867f7c32e053a9efab`
 - Evaluator source SHA-256:
-  `3fdd60348292406b12f4472ae8c215adee5d041a89e1bffada11757fd73aa396`
+  `4c6b4a7b40f6e829caf83896844b7dd716fa17489e66b4cf15522e755d2361cc`
 - Model runtime manifest SHA-256:
   `637074a44fbc969baf292435f570800937ef75a72b42a6970034bc0416990b2e`
-- Cross-repo bundle v7 report SHA-256:
-  `760de97c133e7513a852d57bb37776598e7a6ac0fb27f7188dd9275cf03c1034`
+- Cross-repo bundle v10 report SHA-256:
+  `bec768d67f49cc83f57808a11ed10654ce34602f360e1a0b33c7be01622cefd5`
 - Cross-repo manifest file SHA-256:
-  `757591cc0f96ab9eaa3a607321b87fe70891d4af73b80dd85438f5f883556d1a`
+  `27f357690015edf6de22ea41a71918825c44f20b9d0498369b4d232d28605268`
 
 ## 재현 절차
 
 잠긴 Model API artifact, provenance 지원 Speech API와 Backend를 각각 실행한 뒤 다음 명령을
 사용합니다. WAV와 결과 보고서는 개인정보나 대용량 원본을 Git에 넣지 않기 위해
 `private-data`에 둡니다. `<...>` 값은 실제 실행 revision으로 바꾸며, 특히 Backend PR #44가
-merge·배포되기 전에는 Cloud 검증 명령으로 사용하지 않습니다.
+병합됐더라도 실제 Cloud revision과 Cloud SQL을 사용하지 않은 아래 실행을 Cloud 검증으로
+표현하지 않습니다.
 
 ```bash
 chemiguard119 evaluate-cross-service-voice-flow \
   --voice-manifest data/evaluation/synthetic_voice_e2e_manifest.json \
   --audio <private-data>/experiments/e2e/synthetic-voice-v1/input-spaced.wav \
-  --backend-git-commit 903b36bfdce81faa7d37d08dd8c65e13a287dd11 \
+  --backend-git-commit b982674ed74fd57aad59d1c53a43a73f074d3fa3 \
   --model-git-commit 68beeb48e2c48a8fc3ae9adb8aa8afef10988035 \
-  --speech-git-commit 7e936e25d0b3ea7c50a1390029d39b9649cc9fb3 \
+  --speech-git-commit f9225121989aa100f578c7cdc8b01b31e64af93a \
   --speech-model-repository Systran/faster-whisper-small \
   --speech-model-revision 536b0662742c02347bc0e980a01041f333bce120 \
   --speech-model-bin-sha256 3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671 \
   --runtime-manifest <private-data>/analysis-runtime/model-api-preview-68beeb4-prod/artifacts/runtime_manifest.json \
   --runtime-manifest-sha256 637074a44fbc969baf292435f570800937ef75a72b42a6970034bc0416990b2e \
   --database-runtime H2_POSTGRESQL_COMPATIBILITY_MODE \
-  --report <private-data>/experiments/e2e/cross-service-voice-to-record-v1-r1.json
+  --report <private-data>/experiments/e2e/cross-service-voice-to-record-local-provenance-v4-r1.json
 ```
 
 기본값은 loopback URL만 허용합니다. 원격 서비스 호출은 명시적 `--allow-non-loopback` 없이는
@@ -178,7 +188,7 @@ chemiguard119 evaluate-cross-service-voice-flow \
 - “H2 결과로 Cloud SQL 고가용성을 증명했다.”
 - “모델 artifact가 같으므로 STT 정확도나 현장 안전성까지 검증됐다.”
 
-최신 provenance 고정 보고서는 Cross-repo bundle v7에 일곱 번째 독립 입력으로 포함됐습니다. Bundle 통과는
+최신 provenance 고정 보고서는 Cross-repo bundle v10에 일곱 번째 독립 입력으로 포함됐습니다. Bundle 통과는
 각 보고서의 무결성과 제한된 Gate를 함께 확인한다는 뜻이며, 서로 다른 평가 건수를 합쳐
 현장 표본 수나 정확도로 주장한다는 뜻이 아닙니다.
 

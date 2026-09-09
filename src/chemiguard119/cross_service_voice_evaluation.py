@@ -53,12 +53,16 @@ def _object(value: object) -> Mapping[str, Any]:
 def _add_check(
     checks: list[dict[str, Any]], name: str, expected: Any, actual: Any
 ) -> None:
+    if isinstance(expected, bool):
+        passed = isinstance(actual, bool) and actual is expected
+    else:
+        passed = actual == expected
     checks.append(
         {
             "name": name,
             "expected": expected,
             "actual": actual,
-            "passed": actual == expected,
+            "passed": passed,
         }
     )
 
@@ -598,6 +602,8 @@ def evaluate_cross_service_voice_flow(
     ):
         claims_allowed.append("음성 후보만 있는 상태에서 Rule·위험 표시가 차단됨")
     if all_passed(
+        "incident_confirmation_type",
+        "facility_confirmation_type",
         "two_all_required_confirmed",
         "two_rule_execution_allowed",
         "two_conflict_executed",

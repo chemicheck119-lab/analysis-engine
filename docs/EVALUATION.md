@@ -224,13 +224,14 @@ full_voice_to_operational_handoff_validated=false
 이 v6 bundle의 64개 음성 검사는 Speech runtime provenance 필드 도입 전의 역사적 결과입니다.
 2026-09-09 평가기는 service commit·model repository·revision·`model.bin` SHA-256·artifact
 검증 상태 5개를 추가해 새 음성 보고서에 69개 검사를 요구합니다. 따라서 기존 v6 결과를
-provenance 통과 근거로 사용하지 않으며, 아래 v7 로컬 재실행을 별도 결과로 유지합니다.
+provenance 통과 근거로 사용하지 않으며, 아래 v10 로컬 재실행을 별도 결과로 유지합니다.
 
-### 2026-09-09 Cross-repo 안전 증거 bundle v7
+### 2026-09-09 Cross-repo 안전 증거 bundle v10
 
-provenance 지원 Speech Service `7e936e2`, Backend PR #44 commit `903b36b`, 잠긴 Model API
+provenance 지원 Speech Service `f922512`, Backend `develop` merge commit `b982674`, 잠긴 Model API
 artifact를 실제 로컬 HTTP로 실행한 새 69-check 음성 보고서를 v6의 역사적 64-check 보고서와
-교체했습니다. GCP 배포는 실행하지 않았고, 로컬 H2 PostgreSQL 호환 모드 결과입니다.
+교체했습니다. boolean 안전 계약은 숫자 `0`·`1`을 거부하고 JSON `false`·`true`만 허용합니다.
+GCP 배포는 실행하지 않았고, 로컬 H2 PostgreSQL 호환 모드 결과입니다.
 
 ```bash
 chemiguard119 aggregate-e2e-evidence \
@@ -239,10 +240,10 @@ chemiguard119 aggregate-e2e-evidence \
   --backend-report <private-data>/experiments/back/backend-safety-state-v2-r1/report.json \
   --backend-cancellation-report <private-data>/experiments/e2e/confirmation-cancellation-state-v1.json \
   --cross-service-report <private-data>/experiments/e2e/cross-service-confirmation-flow-v1-r1.json \
-  --voice-flow-report <private-data>/experiments/e2e/cross-service-voice-to-record-local-provenance-v1-r1.json \
+  --voice-flow-report <private-data>/experiments/e2e/cross-service-voice-to-record-local-provenance-v4-r1.json \
   --seoul-speech-report <private-data>/experiments/speech/robustness/seoul/radio-sim-v1/20260906T050926Z/downstream-silver-119ce11-p68beeb4/report.json \
   --incheon-speech-report <private-data>/experiments/speech/robustness/incheon/radio-sim-v1/20260906T022037Z/downstream-silver-119ce11-p68beeb4/report.json \
-  --report <private-data>/experiments/analysis/cross-repo-safety-evidence-v7-r1/report.json
+  --report <private-data>/experiments/analysis/cross-repo-safety-evidence-v10-r1/report.json
 ```
 
 ```text
@@ -250,6 +251,7 @@ chemiguard119 aggregate-e2e-evidence \
 잠긴 독립 보고서 7개
 선택 합성 음성→record 실제 HTTP 69/69
 Speech service commit·model repository·revision·model.bin SHA-256 일치
+두 confirmationType이 SYNTHETIC_DEMO_CONFIRMATION으로 일치
 0개·1개 확인 Rule 실행 false / 위험 표시 false
 2개 확인 뒤 Rule 실행 true / 위험 표시 true
 decision=CONDITIONALLY_ADOPT_FOR_INTERNAL_REGRESSION
@@ -257,9 +259,9 @@ field_validated=false
 full_voice_to_operational_handoff_validated=false
 ```
 
-- 결합 report SHA-256: `760de97c133e7513a852d57bb37776598e7a6ac0fb27f7188dd9275cf03c1034`
-- 잠금 manifest SHA-256: `757591cc0f96ab9eaa3a607321b87fe70891d4af73b80dd85438f5f883556d1a`
-- 음성→record report SHA-256: `9927e3e83b382809769f3f7c6a070ffe577aa721f20c2faa00f7dc8b0657b5be`
+- 결합 report SHA-256: `bec768d67f49cc83f57808a11ed10654ce34602f360e1a0b33c7be01622cefd5`
+- 잠금 manifest SHA-256: `27f357690015edf6de22ea41a71918825c44f20b9d0498369b4d232d28605268`
+- 음성→record report SHA-256: `db0b860c5ca0903f9d14fd91e076f065af1eea6f9f5637867f7c32e053a9efab`
 - 음성 모델 revision: `536b0662742c02347bc0e980a01041f333bce120`
 - 음성 `model.bin` SHA-256: `3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671`
 - r1·r2: byte-identical
