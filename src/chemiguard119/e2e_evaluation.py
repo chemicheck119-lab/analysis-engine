@@ -31,7 +31,7 @@ from chemiguard119.rag import GroundedRagService, RagConfig
 from chemiguard119.resolver import load_resolver
 from chemiguard119.retrieval import load_retriever
 from chemiguard119.rules import PUBLIC_SOURCE_PILOT_POLICY
-from chemiguard119.utils import sha256_file, write_json
+from chemiguard119.utils import sha256_file, valid_cas_checksum, write_json
 
 
 E2E_METRICS_VERSION = "incident-e2e-evaluation-v4"
@@ -50,6 +50,7 @@ SUPPORTED_CAPABILITIES = frozenset(
         "RETRIEVER_TIMEOUT_ABSTENTION",
         "LLM_TIMEOUT_EXTRACTIVE_FALLBACK",
         "FACILITY_HISTORY_ABSENCE",
+        "ASR_INTERNAL_WHITESPACE_RECOVERY",
     }
 )
 SUPPORTED_FAULTS = frozenset({"RETRIEVER_TIMEOUT", "LLM_TIMEOUT"})
@@ -157,6 +158,32 @@ def _validate_rows(rows: list[Mapping[str, Any]]) -> None:
                 )
         if not isinstance(expected["evidence_bases"], Mapping):
             raise ValueError(f"{case_id}: expected.evidence_bases는 객체여야 합니다.")
+        expected_candidate_top_cas = expected.get("candidate_top_cas")
+        if expected_candidate_top_cas is not None and (
+            not isinstance(expected_candidate_top_cas, list)
+            or any(
+                item is not None and not isinstance(item, str)
+                for item in expected_candidate_top_cas
+            )
+        ):
+            raise ValueError(
+                f"{case_id}: expected.candidate_top_cas는 문자열 또는 null 배열이어야 합니다."
+            )
+        if isinstance(expected_candidate_top_cas, list):
+            if len(expected_candidate_top_cas) != expected["candidate_count"]:
+                raise ValueError(
+                    f"{case_id}: expected.candidate_top_cas 길이는 "
+                    "expected.candidate_count와 같아야 합니다."
+                )
+            invalid_cas = [
+                item
+                for item in expected_candidate_top_cas
+                if item is not None and not valid_cas_checksum(item)
+            ]
+            if invalid_cas:
+                raise ValueError(
+                    f"{case_id}: expected.candidate_top_cas에 checksum 오류가 있습니다."
+                )
         if not isinstance(expected["expect_abstention"], bool):
             raise ValueError(
                 f"{case_id}: expected.expect_abstention은 boolean이어야 합니다."
@@ -332,6 +359,35 @@ def _compare(expected: Mapping[str, Any], actual: Mapping[str, Any]) -> list[str
                 f"{field}: expected={expected.get(field)!r}, actual={actual.get(field)!r}"
             )
     return failures
+
+
+def _compare_candidate_top_cas(
+    expected: Mapping[str, Any],
+    output: Mapping[str, Any],
+) -> list[str]:
+    expected_values = expected.get("candidate_top_cas")
+    if expected_values is None:
+        return []
+    candidates = output.get("substance_candidates")
+    candidate_rows = candidates if isinstance(candidates, list) else []
+    actual_values: list[str | None] = []
+    for candidate in candidate_rows:
+        candidate_payload = candidate if isinstance(candidate, Mapping) else {}
+        resolver_candidates = candidate_payload.get("candidates")
+        resolver_rows = (
+            resolver_candidates if isinstance(resolver_candidates, list) else []
+        )
+        first = resolver_rows[0] if resolver_rows else None
+        actual_values.append(
+            str(first.get("cas_number"))
+            if isinstance(first, Mapping) and first.get("cas_number")
+            else None
+        )
+    if actual_values == expected_values:
+        return []
+    return [
+        f"candidate_top_cas: expected={expected_values!r}, actual={actual_values!r}"
+    ]
 
 
 def _compare_grounded_rag(
@@ -513,7 +569,11 @@ def evaluate_incident_scenarios(
         if unconfirmed_risk:
             unconfirmed_risk_exposure_count += 1
 
-        failures = [*_compare(expected, actual), *facility_history_failures]
+        failures = [
+            *_compare(expected, actual),
+            *_compare_candidate_top_cas(expected, output),
+            *facility_history_failures,
+        ]
         grounded_rag_actual: dict[str, Any] | None = None
         grounded_rag_contract_passed: bool | None = None
         if "LLM_TIMEOUT" in faults:
