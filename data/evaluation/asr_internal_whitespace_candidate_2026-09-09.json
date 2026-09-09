@@ -60,6 +60,32 @@
     "baseline_private_report_sha256": "80a88d9e851c1a65b2c6f4b7a44eba63b6dcb615b3907cc",
     "candidate_private_report_sha256": "160c94ca98d8e520d88ce96a4bbb75e1e2837f374c7c3cc5c2397805eb689628"
   },
+  "development_human_review_queue": {
+    "schema_version": "chemicheck119-asr-whitespace-human-review-queue-v1",
+    "split": "development_2014_2020",
+    "development_case_count": 584,
+    "changed_case_count": 30,
+    "official_label_metric_effect_case_counts": {
+      "exact_improved": 4,
+      "exact_regressed": 16,
+      "containment_improved": 2,
+      "containment_regressed": 0
+    },
+    "baseline_unsafe_rule_eligible_mention_count": 0,
+    "candidate_unsafe_rule_eligible_mention_count": 0,
+    "review_status": "NOT_STARTED",
+    "reviewed_case_count": 0,
+    "machine_generated_human_labels": false,
+    "runtime_default_change_allowed": false,
+    "private_report_path": "<private-data>/experiments/analysis/asr-whitespace-review-development-2014-2020.json",
+    "private_report_sha256": "ccea91950a126f946a6d7c1456e19333014796ba951b4842cf51e601d08c5b37",
+    "source_code_sha256": {
+      "review_queue": "b8493bd4d5fdf05b2c59931444fb526a96d423382b14a7430ececb2fe93a951e",
+      "incident_parser": "54363a117344f6a113e3b84c13b84f88cf56f80c97fd61939713edc01b1c831e",
+      "resolver": "eab33f42f17c20ebd101162d101ad466333639cbb171fe45d08f5999a274d8e3"
+    },
+    "claim_scope": "OFFICIAL_DEVELOPMENT_DIFF_REVIEW_NOT_FIELD_ACCURACY"
+  },
   "decision": "CONDITIONALLY_ADOPT_FOR_HUMAN_REVIEW_NOT_RUNTIME",
   "decision_reason": [
     "관측된 합성 실패 문장에서는 기대 CAS 후보를 회복했다.",
@@ -67,7 +93,7 @@
     "정확 표면형 Recall이 하락했고 새로 선택된 긴 span의 정답 여부를 자동 판정할 수 없다."
   ],
   "runtime_default_change_allowed": false,
-  "next_gate": "2014~2020 개발 구간에서 변경된 span을 사람 검수한 뒤 오탐 증가가 없을 때만 재검토",
+  "next_gate": "2014~2020 개발 구간 변경 사례 30건을 사람이 검수한 뒤 오탐 증가가 없을 때만 재검토",
   "claims_allowed": [
     "동일 모델과 추론 설정에서도 CPU 아키텍처에 따라 합성 음성의 띄어쓰기 결과가 달라진 1건을 관측했다.",
     "후보 규칙은 관측된 합성 실패 문장에서 기대 CAS 후보를 로컬로 회복했다.",

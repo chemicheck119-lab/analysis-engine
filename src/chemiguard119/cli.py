@@ -107,6 +107,7 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
         "evaluate-cross-service-voice-flow": "합성 음성→record 실제 HTTP 평가",
         "evaluate-agent-trajectories": "Agent trajectory 안전 평가",
         "evaluate-official-incidents": "전국 공식 화학사고 외부 기준선 평가",
+        "prepare-asr-whitespace-review": "ASR 내부 공백 후보 인간 검수 큐 생성",
         "e2e-review": "E2E 독립 검수팩",
         "resolve": "물질 후보 검색",
         "search": "공식 근거 검색",
@@ -389,6 +390,26 @@ def _print_human(command: str, payload: dict[str, Any]) -> None:
         print(f"주장 범위: {_short(payload.get('claim_scope'))}")
         print(
             "주의: 합성 정책 회귀이며 LLM 추론·현장 정확도·실제 안전성 평가가 아닙니다."
+        )
+    elif command == "prepare-asr-whitespace-review":
+        effects = payload.get("official_label_metric_effect_case_counts") or {}
+        print(f"개발 사례: {payload.get('development_case_count', 0)}건")
+        print(f"변경 사례: {payload.get('changed_case_count', 0)}건")
+        print(
+            "공식 라벨 기준 변화 사례: "
+            f"exact 개선 {effects.get('exact_improved', 0)}건 / "
+            f"악화 {effects.get('exact_regressed', 0)}건, "
+            f"containment 개선 {effects.get('containment_improved', 0)}건 / "
+            f"악화 {effects.get('containment_regressed', 0)}건"
+        )
+        print(
+            "Rule 입력 가능 언급: "
+            f"기준선 {payload.get('baseline_unsafe_rule_eligible_mention_count', 0)}건 / "
+            f"후보 {payload.get('candidate_unsafe_rule_eligible_mention_count', 0)}건"
+        )
+        print(f"검수 상태: {_short(payload.get('review_status'))}")
+        print(
+            "주의: 원문 큐는 비공개이며 사람 검수 전에는 런타임 채택 근거가 아닙니다."
         )
     elif command == "e2e-review":
         print(f"작업: {_short(payload.get('action'))}")
@@ -1061,6 +1082,18 @@ def _evaluate_official_incidents(args: argparse.Namespace) -> dict[str, Any]:
         args.source,
         args.resolver_model,
         split=args.split,
+        report_path=args.report,
+    )
+
+
+def _prepare_asr_whitespace_review(args: argparse.Namespace) -> dict[str, Any]:
+    from chemiguard119.asr_whitespace_review import (
+        build_asr_whitespace_review_queue,
+    )
+
+    return build_asr_whitespace_review_queue(
+        args.source,
+        args.resolver_model,
         report_path=args.report,
     )
 
@@ -2027,6 +2060,29 @@ def build_parser() -> argparse.ArgumentParser:
     official_incidents.add_argument("--report", type=_path)
     _add_json_option(official_incidents)
     official_incidents.set_defaults(handler=_evaluate_official_incidents)
+
+    asr_whitespace_review = subparsers.add_parser(
+        "prepare-asr-whitespace-review",
+        help="2014~2020 개발 구간에서 ASR 내부 공백 규칙 변경 사례의 비공개 인간 검수 큐를 생성",
+    )
+    asr_whitespace_review.add_argument(
+        "--source",
+        type=_path,
+        default=FINAL_DATA_DIR / "09_CSI_전국_화학사고정보_20250430.csv",
+    )
+    asr_whitespace_review.add_argument(
+        "--resolver-model",
+        type=_path,
+        default=DEFAULT_RESOLVER_MODEL,
+    )
+    asr_whitespace_review.add_argument(
+        "--report",
+        type=_path,
+        required=True,
+        help="원문을 포함하므로 Git 밖 private-data 아래의 출력 경로만 사용",
+    )
+    _add_json_option(asr_whitespace_review)
+    asr_whitespace_review.set_defaults(handler=_prepare_asr_whitespace_review)
 
     pipeline = subparsers.add_parser(
         "pipeline",

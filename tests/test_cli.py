@@ -80,6 +80,10 @@ from chemiguard119 import cli
             ["evaluate-official-incidents", "--split", "development"],
             "evaluate-official-incidents",
         ),
+        (
+            ["prepare-asr-whitespace-review", "--report", "review.json"],
+            "prepare-asr-whitespace-review",
+        ),
         (["resolve", "염산"], "resolve"),
         (["discover", "무색 휘발성 액체"], "discover"),
         (["search", "염산 누출"], "search"),

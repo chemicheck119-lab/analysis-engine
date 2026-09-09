@@ -119,6 +119,11 @@ def test_parser_preserves_long_hangul_alias_with_asr_internal_spacing(
     )
 
     parsed = deterministic_parse(source, resolver_artifact)
+    baseline = deterministic_parse(
+        source,
+        resolver_artifact,
+        allow_internal_asr_whitespace=False,
+    )
     mentions = _mentions_by_surface(parsed)
 
     assert "차아 염소산 나트륨" in mentions
@@ -133,6 +138,7 @@ def test_parser_preserves_long_hangul_alias_with_asr_internal_spacing(
     assert "나트륨" not in mentions
     assert mentions["염산"]["role"] == "FACILITY"
     assert validate_parser_output(parsed, source) == []
+    assert "차아 염소산 나트륨" not in _mentions_by_surface(baseline)
 
 
 def test_parser_does_not_join_short_alias_across_whitespace(

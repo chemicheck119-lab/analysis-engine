@@ -57,13 +57,16 @@ def _incident_types(text: str) -> list[str]:
     return found or ["UNKNOWN"]
 
 
-def _incident_alias_spans(text: str, alias: str) -> list[tuple[int, int, str]]:
+def _incident_alias_spans(
+    text: str, alias: str, *, allow_internal_asr_whitespace: bool = True
+) -> list[tuple[int, int, str]]:
     """정확 별칭과 제한된 ``물질명+설비/물성`` 원문 span을 찾는다."""
 
     return find_exact_alias_spans(
         text,
         alias,
         allowed_context_suffixes=INCIDENT_ALIAS_CONTEXT_SUFFIXES,
+        allow_internal_asr_whitespace=allow_internal_asr_whitespace,
     )
 
 
@@ -118,7 +121,12 @@ def _role(text: str, surface: str) -> str:
     return "UNKNOWN"
 
 
-def deterministic_parse(text: str, resolver_artifact: dict[str, Any]) -> dict[str, Any]:
+def deterministic_parse(
+    text: str,
+    resolver_artifact: dict[str, Any],
+    *,
+    allow_internal_asr_whitespace: bool = True,
+) -> dict[str, Any]:
     incident_types = _incident_types(text)
     fire_negative = "FIRE" not in incident_types and bool(
         INCIDENT_EVENT_PATTERNS["FIRE"].search(text)
@@ -138,7 +146,11 @@ def deterministic_parse(text: str, resolver_artifact: dict[str, Any]) -> dict[st
             continue
         # Resolver와 같은 문장 내 exact matcher를 사용해 ``염산염`` 안의
         # ``염산``처럼 다른 표현에 포함된 부분 문자열을 물질명으로 승격하지 않는다.
-        for start, end, surface in _incident_alias_spans(text, alias):
+        for start, end, surface in _incident_alias_spans(
+            text,
+            alias,
+            allow_internal_asr_whitespace=allow_internal_asr_whitespace,
+        ):
             matches.append((start, end, row, surface))
 
     found_by_cas: dict[str, dict[str, Any]] = {}

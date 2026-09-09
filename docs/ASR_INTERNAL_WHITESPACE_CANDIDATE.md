@@ -53,6 +53,35 @@ Speech API는 첫 물질명을 내부 공백이 추가된 형태로 전사했고
 2014~2020 개발 구간에서 후보 규칙 때문에 달라진 span만 별도 검수하는 것입니다. 사람이
 오탐 여부를 결정하기 전에는 Cloud Run 재배포와 성공 주장 모두 금지합니다.
 
+## 개발 구간 인간 검수 Gate
+
+2014~2020 공식 사고문 개발 구간 584건을 같은 코드에서 기준선 옵션과 후보 옵션으로 다시
+파싱했습니다. 변경된 30건만 비공개 검수 큐로 만들었고, 사람 판단은 한 건도 자동 입력하지
+않았습니다.
+
+| 항목 | 결과 |
+|---|---:|
+| 개발 사례 | 584건 |
+| Parser 결과가 달라진 사례 | 30건 |
+| 공식 라벨 exact 일치 개선 사례 | 4건 |
+| 공식 라벨 exact 일치 악화 사례 | 16건 |
+| 공식 라벨 containment 개선 사례 | 2건 |
+| 공식 라벨 containment 악화 사례 | 0건 |
+| 기준선·후보의 미확인 Rule 입력 승인 | 각각 0건 |
+| 인간 검수 완료 | 0/30건 |
+
+exact 일치 악화 16건을 곧바로 오탐 16건으로 해석할 수는 없습니다. 후보가 더 긴 실제 물질
+span을 잡아도 기존 공식 라벨과 문자열이 완전히 같지 않으면 exact 지표는 내려갈 수 있기
+때문입니다. 반대로 containment 유지만으로 새 span이 모두 옳다고 볼 수도 없습니다. 따라서
+검수자는 각 사례에서 “새로 선택된 span이 실제 물질 언급인가?”를 `ACCEPT`, `REJECT`,
+`AMBIGUOUS` 중 하나로 판단해야 합니다.
+
+원문이 포함된 큐는 Git 밖
+`<private-data>/experiments/analysis/asr-whitespace-review-development-2014-2020.json`에만 있으며,
+SHA-256은 `ccea91950a126f946a6d7c1456e19333014796ba951b4842cf51e601d08c5b37`입니다.
+생성기는 저장 경로가 Git 저장소 내부이면 실행을 거부합니다. 검수가 끝날 때까지
+`runtime_default_change_allowed=false`입니다.
+
 집계 근거와 private report hash는
 [`asr_internal_whitespace_candidate_2026-09-09.json`](../data/evaluation/asr_internal_whitespace_candidate_2026-09-09.json)에
 기록했습니다.

@@ -72,7 +72,9 @@ AUTHORITY_PRIORITY = {
 }
 
 
-def _compile_alias_surface_pattern(alias: str) -> re.Pattern[str]:
+def _compile_alias_surface_pattern(
+    alias: str, *, allow_internal_asr_whitespace: bool = True
+) -> re.Pattern[str]:
     """명시된 공백과 긴 한글 별칭의 ASR 내부 공백만 허용한다.
 
     ``차아염소산 나트륨``이 x86 CPU int8 전사에서 ``차아 염소산 나트륨``으로
@@ -82,8 +84,10 @@ def _compile_alias_surface_pattern(alias: str) -> re.Pattern[str]:
     """
 
     compact_alias = compact_text(alias)
-    if len(compact_alias) >= MIN_ASR_WHITESPACE_TOLERANT_HANGUL_LENGTH and all(
-        "가" <= character <= "힣" for character in compact_alias
+    if (
+        allow_internal_asr_whitespace
+        and len(compact_alias) >= MIN_ASR_WHITESPACE_TOLERANT_HANGUL_LENGTH
+        and all("가" <= character <= "힣" for character in compact_alias)
     ):
         parts = list(compact_alias)
     else:
@@ -446,6 +450,7 @@ def find_exact_alias_spans(
     alias: str,
     *,
     allowed_context_suffixes: tuple[str, ...] = (),
+    allow_internal_asr_whitespace: bool = True,
 ) -> list[tuple[int, int, str]]:
     """문장 안에서 독립된 정확 별칭의 원문 span만 반환한다.
 
@@ -459,12 +464,16 @@ def find_exact_alias_spans(
         return []
     candidates: list[tuple[int, int]]
     if any(character.isspace() for character in value) or (
-        len(compact_text(value)) >= MIN_ASR_WHITESPACE_TOLERANT_HANGUL_LENGTH
+        allow_internal_asr_whitespace
+        and len(compact_text(value)) >= MIN_ASR_WHITESPACE_TOLERANT_HANGUL_LENGTH
         and all("가" <= character <= "힣" for character in compact_text(value))
     ):
         # 원천에 공백이 있거나 긴 한글 별칭이 ASR에서 내부 분리된 경우에만
         # 제한적으로 정규식을 사용한다.
-        alias_pattern = _compile_alias_surface_pattern(value)
+        alias_pattern = _compile_alias_surface_pattern(
+            value,
+            allow_internal_asr_whitespace=allow_internal_asr_whitespace,
+        )
         candidates = [
             (match.start(), match.end()) for match in alias_pattern.finditer(text)
         ]
