@@ -4,8 +4,10 @@
 
 2026-09-08, SHA-256으로 잠근 공개 합성 WAV 1건을 실제 로컬 Speech API, Backend,
 Model API 사이로 전달했습니다. 전사 결과에서 두 물질 표현이 보존된 선택 clip은 후보 조회,
-합성 2-CAS 확인, 제한된 CAMEO Rule 실행, Backend 기록 저장까지 이어졌고 64/64 검사가
-통과했습니다. 같은 입력으로 두 번 실행한 JSON 보고서는 바이트 단위로 동일했습니다.
+합성 2-CAS 확인, 제한된 CAMEO Rule 실행, Backend 기록 저장까지 이어졌고 당시 64/64 검사가
+통과했습니다. 2026-09-09에는 Speech service commit과 모델 repository·revision·`model.bin`
+SHA-256·artifact 검증 상태를 추가로 고정한 실제 로컬 3-service 재실행에서 69/69가
+통과했습니다. 각 실행의 r1·r2 JSON은 각각 바이트 단위로 동일했습니다.
 
 이 결과의 사실 상태는 **부분 구현 또는 개발용 데모**입니다. 실제 신고·현장 무전, 사람의
 전사 검토와 CAS 확인, Cloud Run·Cloud SQL, 실제 인계나 대응 조치는 검증하지 않았습니다.
@@ -89,20 +91,40 @@ Resolver Top-1이 다른 CAS `7775-09-9`를 반환했습니다. 이는 실제 �
 
 위 64/64는 Speech provenance 필드가 도입되기 전인 2026-09-08 로컬 실행 결과입니다.
 2026-09-09에는 service commit과 model artifact identity를 비교하는 5개 검사를 평가기에
-추가했습니다. 새 Gate의 실제 3-service 재실행은 아직 수행하지 않았으므로 64/64에 새 검사를
-소급해 더하거나 통과했다고 표현하지 않습니다. GCP 결제 계정의 delinquent 상태가 해소되고
-Speech Service `7e936e2`, Backend PR #44가 배포된 뒤 별도 보고서로 재측정해야 합니다.
+추가하고 실제 로컬 3-service를 다시 실행했습니다. 새 결과는 기존 64개 검사에 소급한 값이
+아니라 별도 69-check 실행입니다.
+
+## 2026-09-09 provenance 고정 재실행
+
+| 구간 | 관측값 | 판정 |
+|---|---:|---|
+| 전체 결정적 검사 | 69/69 | 통과 |
+| Speech service commit | `7e936e25d0b3ea7c50a1390029d39b9649cc9fb3` | 기대값과 일치 |
+| Speech model repository | `Systran/faster-whisper-small` | 기대값과 일치 |
+| Speech model revision | `536b0662742c02347bc0e980a01041f333bce120` | 기대값과 일치 |
+| `model.bin` SHA-256 | `3e305921...170d671` | 기대값과 일치 |
+| 모델 artifact 검증 상태 | `true` | 통과 |
+| 0개·1개 확인 Rule 실행 | 0건 | 안전 Gate 통과 |
+| 합성 2-CAS 확인 뒤 Rule 실행 | 1건 | 제한 규칙 실행 |
+| 재실행 | r1·r2 byte-identical | 재현성 통과 |
+
+Speech API는 로컬 모델 경로의 basename을 `runtime.model`로 내보내므로, pinned snapshot
+경로에서는 그 값이 revision SHA가 됩니다. 집계기는 임의 문자열을 허용하지 않고 기존
+`small` 별칭 또는 provenance에 기록된 정확한 revision만 허용하며, repository·revision·
+`model.bin` SHA-256은 각각 독립적으로 다시 비교합니다.
 
 - Report SHA-256:
   `ef116d33b8d0f46e04a2477dbe4b69d23481565fec4da154b18abd09e1e6f7ab`
+- Provenance 고정 local report SHA-256:
+  `9927e3e83b382809769f3f7c6a070ffe577aa721f20c2faa00f7dc8b0657b5be`
 - Evaluator source SHA-256:
-  `5d8439371abcb5c5017bde8d4e31c1902f3c67962987665f78bdeed511adf0c1`
+  `3fdd60348292406b12f4472ae8c215adee5d041a89e1bffada11757fd73aa396`
 - Model runtime manifest SHA-256:
   `637074a44fbc969baf292435f570800937ef75a72b42a6970034bc0416990b2e`
-- Cross-repo bundle v6 report SHA-256:
-  `6625b4e87ea0586a8eb30fc5a637b128c7be2912404219fc8ecef531dc60899e`
-- Cross-repo manifest v4 SHA-256:
-  `299c9cd279a3eea94381ddac9b0be118f980ba149e0718623f4f51c27a3d57bc`
+- Cross-repo bundle v7 report SHA-256:
+  `760de97c133e7513a852d57bb37776598e7a6ac0fb27f7188dd9275cf03c1034`
+- Cross-repo manifest file SHA-256:
+  `757591cc0f96ab9eaa3a607321b87fe70891d4af73b80dd85438f5f883556d1a`
 
 ## 재현 절차
 
@@ -113,9 +135,9 @@ merge·배포되기 전에는 Cloud 검증 명령으로 사용하지 않습니�
 
 ```bash
 chemiguard119 evaluate-cross-service-voice-flow \
-  --manifest data/evaluation/synthetic_voice_e2e_manifest.json \
+  --voice-manifest data/evaluation/synthetic_voice_e2e_manifest.json \
   --audio <private-data>/experiments/e2e/synthetic-voice-v1/input-spaced.wav \
-  --backend-git-commit <back-PR-44-배포-commit> \
+  --backend-git-commit 903b36bfdce81faa7d37d08dd8c65e13a287dd11 \
   --model-git-commit 68beeb48e2c48a8fc3ae9adb8aa8afef10988035 \
   --speech-git-commit 7e936e25d0b3ea7c50a1390029d39b9649cc9fb3 \
   --speech-model-repository Systran/faster-whisper-small \
@@ -137,7 +159,7 @@ chemiguard119 evaluate-cross-service-voice-flow \
 |---|---|
 | 구현 완료 | SHA 잠금 입력, 실제 3-service HTTP 평가기, Speech provenance 비교, 2-CAS Gate·record 멱등성 검사 |
 | 부분 구현 또는 개발용 데모 | 선택한 합성 음성 1건, 합성 확인, H2 PostgreSQL 호환 모드 실행 |
-| 설계 완료·구현 전 | 새 provenance Gate의 실제 Cloud 재실행, 사람 전사 검토 UI를 포함한 실제 확인 workflow, Cloud SQL 동시성 평가 |
+| 설계 완료·구현 전 | provenance Gate의 실제 Cloud 재실행, 사람 전사 검토 UI를 포함한 실제 확인 workflow, Cloud SQL 동시성 평가 |
 | 검증되지 않은 가설 | 실제 신고·무전 정확도, 현장 안전성, 실제 인계 효율, 상용 가용성 |
 
 **말할 수 있는 것**
@@ -156,7 +178,7 @@ chemiguard119 evaluate-cross-service-voice-flow \
 - “H2 결과로 Cloud SQL 고가용성을 증명했다.”
 - “모델 artifact가 같으므로 STT 정확도나 현장 안전성까지 검증됐다.”
 
-이 보고서는 Cross-repo bundle v6에 일곱 번째 독립 입력으로 포함됐습니다. Bundle 통과는
+최신 provenance 고정 보고서는 Cross-repo bundle v7에 일곱 번째 독립 입력으로 포함됐습니다. Bundle 통과는
 각 보고서의 무결성과 제한된 Gate를 함께 확인한다는 뜻이며, 서로 다른 평가 건수를 합쳐
 현장 표본 수나 정확도로 주장한다는 뜻이 아닙니다.
 

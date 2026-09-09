@@ -1,0 +1,43 @@
+{
+  "schema_version": "chemicheck119-cross-repo-safety-evidence-manifest-v4",
+  "fact_status": "부분 구현 또는 개발용 데모",
+  "sources": {
+    "analysis_engine": {
+      "repository": "chemicheck119-lab/analysis-engine",
+      "expected_schema_version": "chemicheck119-e2e-evaluation-report-v4",
+      "expected_sha256": "398d581562781ce607f271cf5b7d63045e94ae01db0ebfb72e1e60ac9d1bf1d5"
+    },
+    "backend_state": {
+      "repository": "chemicheck119-lab/back",
+      "expected_schema_version": "chemicheck119-backend-safety-evaluation-v2",
+      "expected_sha256": "44afd74f32143afc7bc8604f9d89fcc66fa900a6ea0b020502de7b5f3799aec1"
+    },
+    "backend_cancellation": {
+      "repository": "chemicheck119-lab/back",
+      "expected_schema_version": "chemicheck119-confirmation-cancellation-evaluation-v1",
+      "expected_sha256": "bda9205e48d7d5901d6f18f272e36b4315194ff2016e88bf972da96ad400cb94"
+    },
+    "cross_service_confirmation_flow": {
+      "repository": "chemicheck119-lab/analysis-engine",
+      "expected_schema_version": "chemicheck119-cross-service-confirmation-flow-v1",
+      "expected_sha256": "3325e3d1da0c7e86d0e4b2299a839ae4018881fce4c15c5daf371e9d714c7331"
+    },
+    "cross_service_voice_to_record": {
+      "repository": "chemicheck119-lab/analysis-engine",
+      "expected_schema_version": "chemicheck119-cross-service-voice-to-record-v1",
+      "expected_sha256": "9927e3e83b382809769f3f7c6a070ffe577aa721f20c2faa00f7dc8b0657b5be",
+      "expected_input_manifest_sha256": "2dad97f53b6b1547c6d4aebf534f97ce1571efa032cbd263442929e5c26bccd5",
+      "expected_audio_sha256": "6b584709c1dda8c35f6a900282fc39fa398af84a57b7e5461f3d489684dfd257"
+    },
+    "speech_seoul_radio_sim": {
+      "repository": "chemicheck119-lab/speech-service",
+      "expected_schema_version": "stt-radio-sim-downstream-silver-eval-v1",
+      "expected_sha256": "88ff44ee77082ac04fa1db8d910dc4248237ecdc3048d6f8aa5fb37af5dbea42"
+    },
+    "speech_incheon_radio_sim": {
+      "repository": "chemicheck119-lab/speech-service",
+      "expected_schema_version": "stt-radio-sim-downstream-silver-eval-v1",
+      "expected_sha256": "f4c42101e370c0770e387dfc8b58f153dec407500bcaa775e649a30c2d36d6fa"
+    }
+  }
+}

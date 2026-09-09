@@ -700,7 +700,6 @@ def _validate_voice_flow(
     runtime = report.get("runtime")
     runtime_payload = runtime if isinstance(runtime, Mapping) else {}
     expected_runtime: dict[str, Any] = {
-        "speech_model": "small",
         "speech_device": "cpu",
         "speech_compute_type": "int8",
         "speech_hotwords_used": False,
@@ -779,6 +778,16 @@ def _validate_voice_flow(
         errors,
         not _is_sha256(model_bin_sha256),
         "VOICE_FLOW_PROVENANCE_INVALID:speech_model_bin_sha256",
+    )
+    speech_model = runtime_payload.get("speech_model")
+    allowed_speech_model_identifiers = {"small"}
+    if isinstance(model_revision, str):
+        allowed_speech_model_identifiers.add(model_revision)
+    _append_if(
+        errors,
+        not isinstance(speech_model, str)
+        or speech_model not in allowed_speech_model_identifiers,
+        "VOICE_FLOW_RUNTIME_PROVENANCE_MISMATCH:speech_model",
     )
     expected_speech_provenance: dict[str, Any] = {
         "speech_service_git_commit": provenance_payload.get("speech_git_commit"),
