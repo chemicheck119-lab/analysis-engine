@@ -19,6 +19,7 @@ KOSHA 상세가 있는 물질
 |---|---|
 | 질문·evidence pool 생성기 | 구현 완료 |
 | 독립 검수 CSV export·병합 Gate | 구현 완료 |
+| 질의 단위 검수 배치 분할·재조립 Gate | 구현 완료 |
 | 배포 artifact 기반 171질의 후보 | 부분 구현 또는 개발용 데모 |
 | 171질의 사람 이중 검수 | 설계 완료·구현 전 |
 | BM25·Dense·Hybrid·RRF·Reranker 비교 | 설계 완료·구현 전 |
@@ -100,6 +101,58 @@ chemiguard119 retriever-review export \
 관련 근거에는 fact ID와 원문 안에 실제 존재하는 근거 문장이 필요하다. 답변 가능한 질문은
 grade 2 이상의 핵심 근거가 하나 이상 있어야 한다. 답변 불가 질문은 모든 pool 문서가
 grade 0이어야 한다.
+
+### 2-1. 171질의를 작은 검수 배치로 나누기
+
+한 파일의 1,848개 evidence 행을 한 번에 검수하지 않아도 된다. `batch`는 한 질문에 속한
+모든 evidence 행을 같은 CSV에 유지하고, 질문 의도별 사례가 각 배치에 고르게 들어가도록
+결정적으로 분할한다. 기본값은 배치당 최대 15질의이므로 현재 171질의는 12개 배치가 된다.
+
+```bash
+chemiguard119 retriever-review batch \
+  --candidates /approved/private/retriever_qrel_candidates.jsonl \
+  --actor-role LABELER \
+  --actor-id labeler-01 \
+  --questions-per-batch 15 \
+  --output-dir /approved/private/labeler-batches \
+  --json
+
+chemiguard119 retriever-review batch \
+  --candidates /approved/private/retriever_qrel_candidates.jsonl \
+  --actor-role REVIEWER \
+  --actor-id reviewer-02 \
+  --questions-per-batch 15 \
+  --output-dir /approved/private/reviewer-batches \
+  --json
+```
+
+각 디렉터리는 owner 전용 권한의 CSV와 `batch_manifest.json`을 가진다. manifest의
+`template_sha256`은 라벨 입력 전 원본 시트의 해시다. 사람이 값을 입력하면 배치 파일의
+해시가 달라지는 것이 정상이며, 재조립 때 수정 가능한 라벨 열과 수정하면 안 되는 질문·근거
+컨텍스트를 구분해 검사한다. 재조립기는 candidate와 배치 크기로 공란 template를 다시
+렌더링해 `template_sha256`, batch·질의·evidence 수, intent 분포, case ID를 모두 재계산한다.
+manifest에 적힌 값을 그대로 provenance로 신뢰하지 않는다. 두 역할은 서로의 디렉터리를
+열어보지 않는다.
+
+모든 배치를 완료한 다음 각각 단일 CSV로 재조립한다.
+
+```bash
+chemiguard119 retriever-review assemble \
+  --candidates /approved/private/retriever_qrel_candidates.jsonl \
+  --batch-dir /approved/private/labeler-batches \
+  --output /approved/private/retriever_qrel_labeler.csv \
+  --json
+
+chemiguard119 retriever-review assemble \
+  --candidates /approved/private/retriever_qrel_candidates.jsonl \
+  --batch-dir /approved/private/reviewer-batches \
+  --output /approved/private/retriever_qrel_reviewer.csv \
+  --json
+```
+
+재조립은 누락·중복 질의, 누락·추가 evidence, actor 변경, 질문·CAS·원문·URL·버전 변경,
+미완료·모순 라벨을 차단한다. 성공해도 한 사람의 완료된 시트일 뿐이다. 두 시트의 독립성과
+완전 일치는 다음 `merge` Gate가 별도로 확인한다.
 
 ## 3. 합의 병합
 

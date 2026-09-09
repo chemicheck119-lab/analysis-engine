@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import io
 import json
 import re
 import sqlite3
@@ -30,12 +31,18 @@ from chemiguard119.utils import sha256_file, valid_cas_checksum, write_json
 
 CANDIDATE_SCHEMA_VERSION = "chemicheck119-retriever-qrel-candidate-v1"
 REVIEW_SHEET_SCHEMA_VERSION = "chemicheck119-retriever-qrel-review-sheet-v1"
+BATCH_MANIFEST_SCHEMA_VERSION = "chemicheck119-retriever-qrel-review-batches-v1"
 MERGE_SCHEMA_VERSION = "chemicheck119-retriever-qrel-review-merge-v1"
 REVIEW_ROLES = frozenset({"LABELER", "REVIEWER"})
 ACTOR_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.:@-]{2,64}$")
 KOSHA_API_REFERENCE = "https://www.data.go.kr/data/15157612/openapi.do"
 TARGET_CANDIDATE_COUNT_MIN = 100
 TARGET_CANDIDATE_COUNT_MAX = 200
+BATCH_CLAIM_SCOPE = "HUMAN_REVIEW_WORK_ALLOCATION_ONLY"
+BATCH_WARNING = (
+    "모든 사람 라벨은 비어 있습니다. 배치 생성은 relevance 정답이나 "
+    "Retriever 성능을 만들지 않습니다."
+)
 
 
 # target_sections는 gold label이 아니라 qrel 누락을 줄이기 위한 pool 확장 힌트다.
@@ -200,6 +207,85 @@ def _write_jsonl(path: Path, rows: list[Mapping[str, Any]]) -> None:
 
 def _body_sha256(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _normalize_reviewer(actor_role: str, actor_id: str) -> tuple[str, str]:
+    role = str(actor_role).strip().upper()
+    normalized_actor = str(actor_id).strip()
+    if role not in REVIEW_ROLES:
+        raise ValueError(f"actor_role은 {sorted(REVIEW_ROLES)} 중 하나여야 합니다.")
+    if not ACTOR_ID_PATTERN.fullmatch(normalized_actor):
+        raise ValueError("actor_id는 2~64자의 영문·숫자·_.:@-만 사용할 수 있습니다.")
+    return role, normalized_actor
+
+
+def _blank_review_row(
+    candidate: Mapping[str, Any],
+    evidence: Mapping[str, Any],
+    role: str,
+    actor_id: str,
+) -> dict[str, str]:
+    return {
+        "sheet_schema_version": REVIEW_SHEET_SCHEMA_VERSION,
+        "case_id": str(candidate["case_id"]),
+        "actor_role": role,
+        "actor_id": actor_id,
+        **_candidate_context(candidate, evidence),
+        "review_decision": "",
+        "answerable": "",
+        "relevance_grade": "",
+        "required_fact_ids_json": "",
+        "supporting_sentence": "",
+        "review_notes": "",
+    }
+
+
+def _render_blank_review_csv(
+    candidates: list[dict[str, Any]], role: str, actor_id: str
+) -> bytes:
+    output = io.StringIO(newline="")
+    writer = csv.DictWriter(output, fieldnames=REVIEW_COLUMNS)
+    writer.writeheader()
+    for candidate in candidates:
+        for evidence in candidate["evidence_candidates"]:
+            writer.writerow(_blank_review_row(candidate, evidence, role, actor_id))
+    return output.getvalue().encode("utf-8-sig")
+
+
+def _partition_review_candidates(
+    candidates: list[dict[str, Any]], questions_per_batch: int
+) -> list[list[dict[str, Any]]]:
+    batch_count = (len(candidates) + questions_per_batch - 1) // questions_per_batch
+    batches: list[list[dict[str, Any]]] = [[] for _ in range(batch_count)]
+    cursor = 0
+    for intent in sorted({str(row["intent"]) for row in candidates}):
+        intent_rows = sorted(
+            (row for row in candidates if str(row["intent"]) == intent),
+            key=lambda row: str(row["case_id"]),
+        )
+        for candidate in intent_rows:
+            batches[cursor % batch_count].append(candidate)
+            cursor += 1
+    return batches
+
+
+def _batch_manifest_entry(
+    batch: list[dict[str, Any]], index: int, role: str, actor_id: str
+) -> dict[str, Any]:
+    template = _render_blank_review_csv(batch, role, actor_id)
+    return {
+        "batch_id": f"BATCH-{index:03d}",
+        "filename": f"{role.lower()}_batch_{index:03d}.csv",
+        "case_count": len(batch),
+        "evidence_judgment_count": sum(
+            len(row["evidence_candidates"]) for row in batch
+        ),
+        "intent_counts": dict(
+            sorted(Counter(str(row["intent"]) for row in batch).items())
+        ),
+        "case_ids": [str(row["case_id"]) for row in batch],
+        "template_sha256": hashlib.sha256(template).hexdigest(),
+    }
 
 
 def _valid_http_url(value: object) -> bool:
@@ -520,12 +606,7 @@ def export_review_sheet(
     actor_role: str,
     actor_id: str,
 ) -> dict[str, Any]:
-    role = str(actor_role).strip().upper()
-    normalized_actor = str(actor_id).strip()
-    if role not in REVIEW_ROLES:
-        raise ValueError(f"actor_role은 {sorted(REVIEW_ROLES)} 중 하나여야 합니다.")
-    if not ACTOR_ID_PATTERN.fullmatch(normalized_actor):
-        raise ValueError("actor_id는 2~64자의 영문·숫자·_.:@-만 사용할 수 있습니다.")
+    role, normalized_actor = _normalize_reviewer(actor_role, actor_id)
     candidates = load_candidate_rows(Path(candidate_path))
     output_path = Path(output_path)
     if output_path.exists():
@@ -567,6 +648,75 @@ def export_review_sheet(
             "다른 검수자의 시트를 보지 말고 모든 행의 answerable·relevance·필수 사실·"
             "근거 문장을 작성하세요. pool 포함 여부는 relevance 정답이 아닙니다."
         ),
+    }
+
+
+def create_review_batches(
+    candidate_path: Path,
+    output_dir: Path,
+    *,
+    actor_role: str,
+    actor_id: str,
+    questions_per_batch: int = 15,
+) -> dict[str, Any]:
+    """질의의 evidence 행을 보존하며 독립 검수 CSV를 작은 배치로 나눈다."""
+
+    role, normalized_actor = _normalize_reviewer(actor_role, actor_id)
+    if not 1 <= questions_per_batch <= 50:
+        raise ValueError("questions_per_batch는 1~50이어야 합니다.")
+    candidates = load_candidate_rows(Path(candidate_path))
+    output_dir = Path(output_dir)
+    if output_dir.exists():
+        raise FileExistsError(f"기존 디렉터리를 덮어쓰지 않습니다: {output_dir}")
+    output_dir.parent.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(mode=0o700)
+
+    batches = _partition_review_candidates(candidates, questions_per_batch)
+    batch_count = len(batches)
+
+    batch_entries: list[dict[str, Any]] = []
+    total_judgments = 0
+    for index, batch in enumerate(batches, 1):
+        entry = _batch_manifest_entry(batch, index, role, normalized_actor)
+        batch_path = output_dir / str(entry["filename"])
+        batch_path.write_bytes(_render_blank_review_csv(batch, role, normalized_actor))
+        batch_path.chmod(0o600)
+        if sha256_file(batch_path) != entry["template_sha256"]:
+            raise ValueError(f"{batch_path}: 생성한 template hash가 일치하지 않습니다.")
+        total_judgments += int(entry["evidence_judgment_count"])
+        batch_entries.append(entry)
+
+    manifest_path = output_dir / "batch_manifest.json"
+    manifest = {
+        "batch_manifest_schema_version": BATCH_MANIFEST_SCHEMA_VERSION,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "actor_role": role,
+        "actor_id": normalized_actor,
+        "candidate_sha256": sha256_file(Path(candidate_path)),
+        "case_count": len(candidates),
+        "evidence_judgment_count": total_judgments,
+        "questions_per_batch": questions_per_batch,
+        "batch_count": batch_count,
+        "batches": batch_entries,
+        "claim_scope": BATCH_CLAIM_SCOPE,
+        "warning": BATCH_WARNING,
+    }
+    write_json(manifest_path, manifest)
+    manifest_path.chmod(0o600)
+    return {
+        "status": "COMPLETED",
+        "action": "CREATE_QREL_REVIEW_BATCHES",
+        "actor_role": role,
+        "actor_id": normalized_actor,
+        "case_count": len(candidates),
+        "evidence_judgment_count": total_judgments,
+        "batch_count": batch_count,
+        "questions_per_batch": questions_per_batch,
+        "candidate_sha256": manifest["candidate_sha256"],
+        "manifest_path": str(manifest_path),
+        "output_dir": str(output_dir),
+        "claim_scope": manifest["claim_scope"],
+        "warning": manifest["warning"],
     }
 
 
@@ -698,6 +848,225 @@ def _parse_review_case(
         "answerable": answerable,
         "qrels": qrels,
         "supporting_sentences": evidence_text,
+    }
+
+
+def assemble_review_batches(
+    candidate_path: Path,
+    batch_dir: Path,
+    output_path: Path,
+) -> dict[str, Any]:
+    """완료된 배치의 무결성과 전체 범위를 검사해 한 CSV로 재조립한다."""
+
+    candidate_path = Path(candidate_path)
+    candidates = load_candidate_rows(candidate_path)
+    candidate_by_case = {str(row["case_id"]): row for row in candidates}
+    batch_dir = Path(batch_dir)
+    manifest_path = batch_dir / "batch_manifest.json"
+    if not manifest_path.is_file():
+        raise FileNotFoundError(f"배치 manifest가 없습니다: {manifest_path}")
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        raise ValueError(
+            f"배치 manifest JSON이 올바르지 않습니다: {manifest_path}"
+        ) from error
+    if manifest.get("batch_manifest_schema_version") != BATCH_MANIFEST_SCHEMA_VERSION:
+        raise ValueError("지원하지 않는 batch manifest schema입니다.")
+    if manifest.get("candidate_sha256") != sha256_file(candidate_path):
+        raise ValueError("배치 생성 뒤 candidate artifact가 변경됐습니다.")
+    role, actor_id = _normalize_reviewer(
+        str(manifest.get("actor_role") or ""),
+        str(manifest.get("actor_id") or ""),
+    )
+    created_at = str(manifest.get("created_at") or "")
+    try:
+        created_timestamp = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+    except ValueError as error:
+        raise ValueError("batch manifest created_at이 올바르지 않습니다.") from error
+    if created_timestamp.tzinfo is None:
+        raise ValueError("batch manifest created_at에는 timezone이 필요합니다.")
+    questions_per_batch = manifest.get("questions_per_batch")
+    if (
+        isinstance(questions_per_batch, bool)
+        or not isinstance(questions_per_batch, int)
+        or not 1 <= questions_per_batch <= 50
+    ):
+        raise ValueError("batch manifest questions_per_batch가 올바르지 않습니다.")
+    entries = manifest.get("batches")
+    if not isinstance(entries, list) or not entries:
+        raise ValueError("batch manifest에 batches가 필요합니다.")
+    expected_batches = _partition_review_candidates(candidates, questions_per_batch)
+    expected_entries = [
+        _batch_manifest_entry(batch, index, role, actor_id)
+        for index, batch in enumerate(expected_batches, 1)
+    ]
+    expected_root_fields = {
+        "batch_manifest_schema_version",
+        "created_at",
+        "actor_role",
+        "actor_id",
+        "candidate_sha256",
+        "case_count",
+        "evidence_judgment_count",
+        "questions_per_batch",
+        "batch_count",
+        "batches",
+        "claim_scope",
+        "warning",
+    }
+    if set(manifest) != expected_root_fields:
+        raise ValueError(
+            "batch manifest root field 집합이 올바르지 않습니다: "
+            f"missing={sorted(expected_root_fields - set(manifest))}, "
+            f"unexpected={sorted(set(manifest) - expected_root_fields)}"
+        )
+    expected_root_values = {
+        "case_count": len(candidates),
+        "evidence_judgment_count": sum(
+            int(entry["evidence_judgment_count"]) for entry in expected_entries
+        ),
+        "batch_count": len(expected_entries),
+        "claim_scope": BATCH_CLAIM_SCOPE,
+        "warning": BATCH_WARNING,
+    }
+    changed_root_values = [
+        field
+        for field, expected in expected_root_values.items()
+        if manifest.get(field) != expected
+    ]
+    if changed_root_values:
+        raise ValueError(
+            "batch manifest aggregate provenance가 일치하지 않습니다: "
+            f"{changed_root_values}"
+        )
+    if len(entries) != len(expected_entries):
+        raise ValueError("batch manifest entry 수가 재계산 결과와 다릅니다.")
+    for index, (entry, expected) in enumerate(zip(entries, expected_entries), 1):
+        if not isinstance(entry, Mapping):
+            raise ValueError("batch manifest의 각 batch는 객체여야 합니다.")
+        changed_fields = sorted(
+            field
+            for field in set(entry) | set(expected)
+            if entry.get(field) != expected.get(field)
+        )
+        if changed_fields:
+            raise ValueError(
+                f"BATCH-{index:03d}: batch provenance가 일치하지 않습니다: "
+                f"{changed_fields}"
+            )
+
+    indexed: dict[tuple[str, str], dict[str, str]] = {}
+    reviewed_batch_hashes: list[dict[str, str]] = []
+    manifest_case_ids: list[str] = []
+    for entry in entries:
+        filename = str(entry.get("filename") or "")
+        if not filename or Path(filename).name != filename:
+            raise ValueError(f"안전하지 않은 batch filename={filename!r}")
+        batch_path = batch_dir / filename
+        if not batch_path.is_file():
+            raise FileNotFoundError(f"검수 배치가 없습니다: {batch_path}")
+        with batch_path.open(encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            missing = sorted(set(REVIEW_COLUMNS) - set(reader.fieldnames or []))
+            if missing:
+                raise ValueError(f"{batch_path}: 누락된 검수 열={missing}")
+            rows = [dict(row) for row in reader]
+        if not rows:
+            raise ValueError(f"{batch_path}: 검수 행이 없습니다.")
+        for row in rows:
+            case_id = str(row.get("case_id") or "").strip()
+            evidence_id = str(row.get("evidence_id") or "").strip()
+            key = (case_id, evidence_id)
+            if not case_id or not evidence_id or key in indexed:
+                raise ValueError(f"{batch_path}: 비어 있거나 중복된 검수 키={key!r}")
+            if row.get("sheet_schema_version") != REVIEW_SHEET_SCHEMA_VERSION:
+                raise ValueError(f"{batch_path}:{key}: 지원하지 않는 sheet schema")
+            if str(row.get("actor_role") or "").strip().upper() != role:
+                raise ValueError(
+                    f"{batch_path}:{key}: actor_role이 manifest와 다릅니다."
+                )
+            if str(row.get("actor_id") or "").strip() != actor_id:
+                raise ValueError(f"{batch_path}:{key}: actor_id가 manifest와 다릅니다.")
+            indexed[key] = row
+        case_ids = entry.get("case_ids")
+        if not isinstance(case_ids, list) or any(
+            not isinstance(case_id, str) or not case_id for case_id in case_ids
+        ):
+            raise ValueError(f"{batch_path}: manifest case_ids가 올바르지 않습니다.")
+        actual_case_ids = list(dict.fromkeys(str(row["case_id"]) for row in rows))
+        if actual_case_ids != case_ids:
+            raise ValueError(
+                f"{batch_path}: 질의 구성 또는 순서가 manifest와 다릅니다."
+            )
+        manifest_case_ids.extend(case_ids)
+        reviewed_batch_hashes.append(
+            {"filename": filename, "reviewed_sha256": sha256_file(batch_path)}
+        )
+
+    if len(manifest_case_ids) != len(set(manifest_case_ids)):
+        raise ValueError("여러 배치에 같은 질의가 중복됐습니다.")
+    if set(manifest_case_ids) != set(candidate_by_case):
+        raise ValueError("배치의 질의 집합이 candidate와 다릅니다.")
+    expected_keys = {
+        (str(candidate["case_id"]), str(evidence["evidence_id"]))
+        for candidate in candidates
+        for evidence in candidate["evidence_candidates"]
+    }
+    if set(indexed) != expected_keys:
+        raise ValueError(
+            "배치의 evidence 집합이 candidate와 다릅니다: "
+            f"missing={len(expected_keys - set(indexed))}, "
+            f"unexpected={len(set(indexed) - expected_keys)}"
+        )
+
+    ordered_rows: list[dict[str, str]] = []
+    for candidate in candidates:
+        case_id = str(candidate["case_id"])
+        case_rows: list[dict[str, str]] = []
+        for evidence in candidate["evidence_candidates"]:
+            row = indexed[(case_id, str(evidence["evidence_id"]))]
+            context = _candidate_context(candidate, evidence)
+            changed = [
+                field
+                for field, expected in context.items()
+                if str(row.get(field) or "") != expected
+            ]
+            if changed:
+                raise ValueError(
+                    f"{case_id}:{evidence['evidence_id']}: "
+                    f"candidate context가 변경됐습니다: {changed}"
+                )
+            case_rows.append(row)
+        _parse_review_case(candidate, case_rows)
+        ordered_rows.extend(case_rows)
+
+    output_path = Path(output_path)
+    if output_path.exists():
+        raise FileExistsError(f"기존 파일을 덮어쓰지 않습니다: {output_path}")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=REVIEW_COLUMNS)
+        writer.writeheader()
+        writer.writerows(ordered_rows)
+    output_path.chmod(0o600)
+    return {
+        "status": "COMPLETED",
+        "action": "ASSEMBLE_QREL_REVIEW_BATCHES",
+        "actor_role": role,
+        "actor_id": actor_id,
+        "case_count": len(candidates),
+        "evidence_judgment_count": len(ordered_rows),
+        "candidate_sha256": sha256_file(candidate_path),
+        "batch_manifest_sha256": sha256_file(manifest_path),
+        "reviewed_batch_hashes": reviewed_batch_hashes,
+        "output_sha256": sha256_file(output_path),
+        "output_path": str(output_path),
+        "claim_scope": "COMPLETED_SINGLE_REVIEW_SHEET_ONLY",
+        "warning": (
+            "한 사람의 검수 시트만 재조립했습니다. 서로 다른 두 역할의 완전 일치 "
+            "merge 전에는 qrel 평가셋이나 Retriever 성능이 아닙니다."
+        ),
     }
 
 

@@ -387,7 +387,8 @@ evidence 감사 결과는
 `retriever-review` 명령은 KOSHA 상세가 있는 물질마다 19개 질문 유형과 검수용 evidence
 pool을 만들고, 두 사람의 독립 CSV가 완전히 일치할 때만
 `DOUBLE_REVIEWED_NON_EXPERT` 평가 JSONL로 병합합니다. 9종 artifact 기준 후보는
-171질의(답변 불가 36질의)지만 아직 사람 정답이 없으므로 성능 수치가 아닙니다. 사용법과 남은 Gate는
+171질의(답변 불가 36질의)이며, 질의별 evidence를 유지한 채 기본 15질의 단위의 독립
+검수 배치로 나눌 수 있습니다. 아직 사람 정답이 없으므로 성능 수치가 아닙니다. 사용법과 남은 Gate는
 [`RETRIEVER_QREL_REVIEW.md`](RETRIEVER_QREL_REVIEW.md)에 기록했습니다.
 
 ## 공개 검증 CAMEO 물질쌍 회귀 평가
