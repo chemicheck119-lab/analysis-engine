@@ -386,6 +386,34 @@ def test_integer_artifact_verification_cannot_pass_boolean_gate(tmp_path: Path) 
     assert report["runtime"]["speech_model_artifact_verified"] is False
 
 
+@pytest.mark.parametrize(
+    ("field", "numeric_value"),
+    [
+        ("contains_personal_information", 0),
+        ("selected_for_connectivity_not_accuracy", 1),
+        ("performance_claim_allowed", 0),
+    ],
+)
+def test_manifest_numeric_boolean_cannot_pass_safety_contract(
+    tmp_path: Path,
+    field: str,
+    numeric_value: int,
+) -> None:
+    manifest_path, audio = _fixture(tmp_path)
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if field == "contains_personal_information":
+        manifest[field] = numeric_value
+    else:
+        manifest["selection_disclosure"][field] = numeric_value
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+    client = FakeVoiceFlowClient()
+
+    with pytest.raises(ValueError, match="manifest"):
+        _evaluate(client, manifest_path, audio)
+
+    assert client.transcribe_call_count == 0
+
+
 def test_voice_flow_rejects_tampered_audio_before_http(tmp_path: Path) -> None:
     manifest, audio = _fixture(tmp_path)
     audio.write_bytes(audio.read_bytes() + b"tampered")

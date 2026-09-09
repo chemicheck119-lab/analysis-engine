@@ -260,9 +260,9 @@ field_validated=false
 full_voice_to_operational_handoff_validated=false
 ```
 
-- 결합 report SHA-256: `5aacf04d05492823f95a89997bc6ee436e46aae309b9b5e552d1dc6dd359f36b`
-- 잠금 manifest SHA-256: `f03b850a6ca9f327fb7d87af3acf273e8ac9b30f4fce73b53e68106365c7b149`
-- 음성→record report SHA-256: `abc92b01a89e6a34ad092a1348d6ac43a94afb14288242a28a690ef3bf55561b`
+- 결합 report SHA-256: `fad57e80bc523f8f7a05ed399ca18ad006bf744c60fe30bbf26bd793ef2825f0`
+- 잠금 manifest SHA-256: `23e4419ba6c8b4121335fac8bf89d99558dae6135a856e805ac762609e1d86c5`
+- 음성→record report SHA-256: `5e92345406430493bb300426c0fe5d9f65cec2cb6976e9726add46d801a98ae4`
 - 음성 모델 revision: `536b0662742c02347bc0e980a01041f333bce120`
 - 음성 `model.bin` SHA-256: `3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671`
 - r1·r2: byte-identical

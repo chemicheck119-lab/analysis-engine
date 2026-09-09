@@ -50,13 +50,16 @@ def _object(value: object) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
+def _matches_expected(actual: object, expected: object) -> bool:
+    if isinstance(expected, bool):
+        return isinstance(actual, bool) and actual is expected
+    return actual == expected
+
+
 def _add_check(
     checks: list[dict[str, Any]], name: str, expected: Any, actual: Any
 ) -> None:
-    if isinstance(expected, bool):
-        passed = isinstance(actual, bool) and actual is expected
-    else:
-        passed = actual == expected
+    passed = _matches_expected(actual, expected)
     checks.append(
         {
             "name": name,
@@ -78,7 +81,7 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
         "contains_personal_information": False,
     }
     for field, value in expected.items():
-        if manifest.get(field) != value:
+        if not _matches_expected(manifest.get(field), value):
             errors.append(f"MANIFEST_FIELD_MISMATCH:{field}")
     audio = _object(manifest.get("audio"))
     if SHA256_PATTERN.fullmatch(str(audio.get("expected_sha256") or "")) is None:
@@ -97,7 +100,7 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
         "performance_claim_allowed": False,
     }
     for field, value in required_disclosure.items():
-        if disclosure.get(field) != value:
+        if not _matches_expected(disclosure.get(field), value):
             errors.append(f"MANIFEST_DISCLOSURE_MISMATCH:{field}")
     return errors
 
