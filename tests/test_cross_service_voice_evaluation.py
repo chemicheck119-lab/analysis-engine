@@ -35,6 +35,7 @@ class FakeVoiceFlowClient:
         incident_cas: str = "7681-52-9",
         confirmation_type: str = "SYNTHETIC_DEMO_CONFIRMATION",
         speech_runtime_overrides: Mapping[str, Any] | None = None,
+        record_incident_id: str = "INC-SYNTHETIC-001",
     ) -> None:
         self.unsafe_before_confirmation = unsafe_before_confirmation
         self.data_classification = data_classification
@@ -43,6 +44,7 @@ class FakeVoiceFlowClient:
         self.incident_cas = incident_cas
         self.confirmation_type = confirmation_type
         self.speech_runtime_overrides = dict(speech_runtime_overrides or {})
+        self.record_incident_id = record_incident_id
         self.confirmed: set[str] = set()
         self.transcribe_call_count = 0
         self.record_id = "REC-SYNTHETIC-001"
@@ -199,7 +201,7 @@ class FakeVoiceFlowClient:
         assert payload["confirmationIds"] == ["CNF-INCIDENT", "CNF-FACILITY"]
         return {
             "requestId": request_id,
-            "incidentId": incident_id,
+            "incidentId": self.record_incident_id,
             "recordId": self.record_id,
             "resetAllowed": True,
         }
@@ -320,6 +322,28 @@ def test_failed_asr_surface_is_not_reported_as_successful_claim(tmp_path: Path) 
     )
     assert (
         "음성 후보만 있는 상태에서 Rule·위험 표시가 차단됨" in report["claims_allowed"]
+    )
+
+
+def test_wrong_record_incident_is_not_reported_as_authoritative_storage(
+    tmp_path: Path,
+) -> None:
+    manifest, audio = _fixture(tmp_path)
+
+    report = _evaluate(
+        FakeVoiceFlowClient(record_incident_id="INC-WRONG"), manifest, audio
+    )
+
+    assert report["status"] == "FAILED"
+    failed = {row["name"] for row in report["checks"] if row.get("passed") is False}
+    assert "record_incident_correlated" in failed
+    assert not any(
+        "권위 snapshot과 함께 record로 저장함" in claim
+        for claim in report["claims_allowed"]
+    )
+    assert (
+        "사고 상관관계가 검증되지 않은 record를 권위 snapshot 저장으로 표현"
+        in report["claims_not_allowed"]
     )
 
 

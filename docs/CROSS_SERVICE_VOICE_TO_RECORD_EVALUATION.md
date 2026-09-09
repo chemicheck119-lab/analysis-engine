@@ -125,15 +125,15 @@ boolean과 같아 보일 수 있지만 계약 위반으로 실패 처리하며, 
 - Report SHA-256:
   `ef116d33b8d0f46e04a2477dbe4b69d23481565fec4da154b18abd09e1e6f7ab`
 - Provenance 고정 local report SHA-256:
-  `5e92345406430493bb300426c0fe5d9f65cec2cb6976e9726add46d801a98ae4`
+  `89179fa839bdeabd1f9b7899c1e58236c7dab8ba206368b4874e8b3e6402a4a0`
 - Evaluator source SHA-256:
-  `4f5ee7b823c87e292b6d0e6c1f1870f20d6def00104923607ea016d998521380`
+  `74e23a1a33535176edbd02245a655d764ce574691575007f9d3064ad1dcdc4b9`
 - Model runtime manifest SHA-256:
   `637074a44fbc969baf292435f570800937ef75a72b42a6970034bc0416990b2e`
 - Cross-repo bundle v11 report SHA-256:
-  `fad57e80bc523f8f7a05ed399ca18ad006bf744c60fe30bbf26bd793ef2825f0`
+  `26d9df91a489417c71fc034c2959d9ef0d3a7eda49bc37dbe3de31b8e7550497`
 - Cross-repo manifest file SHA-256:
-  `23e4419ba6c8b4121335fac8bf89d99558dae6135a856e805ac762609e1d86c5`
+  `0f4a021b2d35909a4123fc8f52a864e9d58dca85a1b838b60916a7d3d4883fc5`
 
 69-check 보고서는 `chemicheck119-cross-service-voice-to-record-v2`, 잠금 manifest는
 `chemicheck119-cross-repo-safety-evidence-manifest-v5`로 버전을 올렸습니다. 2026-09-08의

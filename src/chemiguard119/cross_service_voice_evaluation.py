@@ -613,7 +613,10 @@ def evaluate_cross_service_voice_flow(
         "two_rule_id",
         "two_rule_incident_cas",
         "two_rule_facility_cas",
+        "record_request_id",
+        "record_incident_correlated",
         "record_id_present",
+        "record_reset_allowed",
     ):
         claims_allowed.append(
             "합성 2-CAS 확인 뒤 제한된 CAMEO 결과를 권위 snapshot과 함께 record로 저장함"
@@ -653,6 +656,10 @@ def evaluate_cross_service_voice_flow(
     ):
         claims_not_allowed.append(
             "실패한 물질 표면형 또는 후보 CAS 보존을 성공한 것으로 표현"
+        )
+    if not all_passed("record_incident_correlated", "record_id_present"):
+        claims_not_allowed.append(
+            "사고 상관관계가 검증되지 않은 record를 권위 snapshot 저장으로 표현"
         )
 
     report = {
