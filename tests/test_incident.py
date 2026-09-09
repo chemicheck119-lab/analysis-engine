@@ -48,6 +48,14 @@ def resolver_artifact(tmp_path: Path) -> dict:
                 ("7647-01-0", "염산", "염산", "ALIAS", "TEST", "VERIFIED"),
                 ("7782-50-5", "염소", "염소", "CANONICAL_KO", "TEST", "VERIFIED"),
                 ("7697-37-2", "질산", "질산", "CANONICAL_KO", "TEST", "VERIFIED"),
+                (
+                    "67-64-1",
+                    "가상의 제품 명칭",
+                    "가상의제품명칭",
+                    "ALIAS",
+                    "TEST",
+                    "VERIFIED",
+                ),
             ],
         )
     model_path = tmp_path / "incident-resolver.joblib"
@@ -108,6 +116,46 @@ def test_parser_prefers_longest_exact_alias_despite_source_spacing(
     mention = parsed["substance_mentions"][0]
     assert mention["surface_text"] == "차아염소산나트륨"
     assert mention["resolver"]["candidates"][0]["cas_number"] == "7681-52-9"
+
+
+def test_parser_recovers_long_authoritative_alias_with_asr_internal_spacing(
+    resolver_artifact: dict,
+) -> None:
+    source = "차아 염소산 나트륨 탱크에서 누출 중이며, 옆 저장고에 염산이 있습니다."
+
+    parsed = deterministic_parse(source, resolver_artifact)
+
+    assert len(parsed["substance_mentions"]) == 2
+    mention = parsed["substance_mentions"][0]
+    assert mention["surface_text"] == "차아 염소산 나트륨"
+    assert mention["resolver"]["candidates"][0]["cas_number"] == "7681-52-9"
+    assert mention["resolver"]["requires_responder_confirmation"] is True
+    assert mention["resolver"]["rule_input_eligible"] is False
+    assert validate_parser_output(parsed, source) == []
+
+
+def test_parser_does_not_apply_internal_spacing_to_short_alias(
+    resolver_artifact: dict,
+) -> None:
+    parsed = deterministic_parse("나 트륨 누출 신고", resolver_artifact)
+
+    assert parsed["substance_mentions"] == []
+
+
+def test_parser_does_not_apply_internal_spacing_to_common_alias(
+    resolver_artifact: dict,
+) -> None:
+    parsed = deterministic_parse("가 상의 제품 명칭 누출 신고", resolver_artifact)
+
+    assert parsed["substance_mentions"] == []
+
+
+def test_parser_does_not_promote_spaced_alias_embedded_in_product_class(
+    resolver_artifact: dict,
+) -> None:
+    parsed = deterministic_parse("차아 염소산 나트륨성 세척제 누출", resolver_artifact)
+
+    assert parsed["substance_mentions"] == []
 
 
 @pytest.mark.parametrize(

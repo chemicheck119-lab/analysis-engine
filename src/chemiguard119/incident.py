@@ -5,7 +5,11 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from chemiguard119.resolver import find_exact_alias_spans, resolve_substance
+from chemiguard119.resolver import (
+    AUTHORITATIVE_ALIAS_TYPES,
+    find_exact_alias_spans,
+    resolve_substance,
+)
 from chemiguard119.utils import normalize_text
 
 
@@ -35,6 +39,8 @@ EVENT_NEGATION_PATTERN = re.compile(r"(?:안|없|아니|아닙|아님|아닌|미
 # 이 접미사는 화학 정체성을 바꾸지 않는 문맥만 허용한다. 예를 들어
 # ``염소가스``는 염소 후보로 찾되 ``염소소독제``나 ``차아염소산``은 찾지 않는다.
 INCIDENT_ALIAS_CONTEXT_SUFFIXES = ("저장탱크", "탱크", "용기", "가스", "통")
+INCIDENT_WHITESPACE_TOLERANT_ALIAS_MIN_LENGTH = 6
+KOREAN_ALIAS_PATTERN = re.compile(r"[가-힣\s]+")
 
 
 def _event_is_negated(text: str, start: int, end: int) -> bool:
@@ -57,13 +63,82 @@ def _incident_types(text: str) -> list[str]:
     return found or ["UNKNOWN"]
 
 
-def _incident_alias_spans(text: str, alias: str) -> list[tuple[int, int, str]]:
+def _allows_internal_whitespace(row: dict[str, Any], alias: str) -> bool:
+    """긴 한글 권위 별칭에만 ASR 내부 띄어쓰기 변형을 허용한다."""
+
+    # 이번 관측 실패는 원래 여러 단어인 권위 명칭 안에 ASR이 공백을 하나
+    # 더 삽입한 경우다. 단일 단어까지 임의 분할을 허용하면 탐색 범위와
+    # 오후보 가능성이 불필요하게 커지므로 관측된 범위만 복구한다.
+    if not any(character.isspace() for character in alias):
+        return False
+    alias_type = str(row.get("alias_type") or "").strip().lower()
+    if not (
+        alias_type in AUTHORITATIVE_ALIAS_TYPES or alias_type.startswith("canonical")
+    ):
+        return False
+    if not KOREAN_ALIAS_PATTERN.fullmatch(alias):
+        return False
+    compact_length = sum(1 for character in alias if not character.isspace())
+    return compact_length >= INCIDENT_WHITESPACE_TOLERANT_ALIAS_MIN_LENGTH
+
+
+def _compact_whitespace_view(text: str) -> tuple[str, tuple[int, ...]]:
+    positions = tuple(
+        index for index, character in enumerate(text) if not character.isspace()
+    )
+    return "".join(text[index] for index in positions).casefold(), positions
+
+
+def _spans_ignoring_internal_whitespace(
+    text: str,
+    alias: str,
+    compact_text: str,
+    compact_positions: tuple[int, ...],
+) -> list[tuple[int, int, str]]:
+    """공백을 제외한 일치를 원문의 안전한 span으로 다시 투영한다."""
+
+    compact_alias = "".join(
+        character for character in alias if not character.isspace()
+    ).casefold()
+    spans: list[tuple[int, int, str]] = []
+    compact_start = compact_text.find(compact_alias)
+    while compact_start >= 0:
+        compact_end = compact_start + len(compact_alias)
+        start = compact_positions[compact_start]
+        end = compact_positions[compact_end - 1] + 1
+        surface = text[start:end]
+        validated = find_exact_alias_spans(
+            text,
+            surface,
+            allowed_context_suffixes=INCIDENT_ALIAS_CONTEXT_SUFFIXES,
+        )
+        if (start, end, surface) in validated:
+            spans.append((start, end, surface))
+        compact_start = compact_text.find(compact_alias, compact_start + 1)
+    return spans
+
+
+def _incident_alias_spans(
+    text: str,
+    row: dict[str, Any],
+    compact_text: str,
+    compact_positions: tuple[int, ...],
+) -> list[tuple[int, int, str]]:
     """정확 별칭과 제한된 ``물질명+설비/물성`` 원문 span을 찾는다."""
 
-    return find_exact_alias_spans(
+    alias = str(row.get("alias_text") or "").strip()
+    exact_spans = find_exact_alias_spans(
         text,
         alias,
         allowed_context_suffixes=INCIDENT_ALIAS_CONTEXT_SUFFIXES,
+    )
+    if exact_spans or not _allows_internal_whitespace(row, alias):
+        return exact_spans
+    return _spans_ignoring_internal_whitespace(
+        text,
+        alias,
+        compact_text,
+        compact_positions,
     )
 
 
@@ -128,6 +203,7 @@ def deterministic_parse(text: str, resolver_artifact: dict[str, Any]) -> dict[st
     # 다른 물질명을 부분 문자열로 포함할 수 있으므로(예: 차아염소산나트륨 안의
     # 나트륨), 먼저 모든 위치를 모은 뒤 가장 긴 비중첩 표현만 선택한다.
     matches: list[tuple[int, int, dict[str, Any], str]] = []
+    compact_text, compact_positions = _compact_whitespace_view(text)
     for row in sorted(
         resolver_artifact["rows"],
         key=lambda item: len(item["alias_text"]),
@@ -138,7 +214,12 @@ def deterministic_parse(text: str, resolver_artifact: dict[str, Any]) -> dict[st
             continue
         # Resolver와 같은 문장 내 exact matcher를 사용해 ``염산염`` 안의
         # ``염산``처럼 다른 표현에 포함된 부분 문자열을 물질명으로 승격하지 않는다.
-        for start, end, surface in _incident_alias_spans(text, alias):
+        for start, end, surface in _incident_alias_spans(
+            text,
+            row,
+            compact_text,
+            compact_positions,
+        ):
             matches.append((start, end, row, surface))
 
     found_by_cas: dict[str, dict[str, Any]] = {}
