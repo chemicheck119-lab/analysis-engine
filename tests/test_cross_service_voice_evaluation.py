@@ -17,6 +17,9 @@ from chemiguard119.utils import sha256_file
 BACKEND_COMMIT = "1" * 40
 MODEL_COMMIT = "2" * 40
 SPEECH_COMMIT = "3" * 40
+SPEECH_MODEL_REPOSITORY = "Systran/faster-whisper-small"
+SPEECH_MODEL_REVISION = "5" * 40
+SPEECH_MODEL_SHA256 = "6" * 64
 RUNTIME_SHA256 = "4" * 64
 TRANSCRIPT = "차아염소산 나트륨 저장 탱크 누출 의심, 인접 저장고에는 염산 표기"
 
@@ -27,9 +30,21 @@ class FakeVoiceFlowClient:
         *,
         unsafe_before_confirmation: bool = False,
         data_classification: str = "PUBLIC_SYNTHETIC",
+        transcript: str = TRANSCRIPT,
+        incident_surface: str = "차아염소산 나트륨",
+        incident_cas: str = "7681-52-9",
+        confirmation_type: str = "SYNTHETIC_DEMO_CONFIRMATION",
+        speech_runtime_overrides: Mapping[str, Any] | None = None,
+        record_incident_id: str = "INC-SYNTHETIC-001",
     ) -> None:
         self.unsafe_before_confirmation = unsafe_before_confirmation
         self.data_classification = data_classification
+        self.transcript = transcript
+        self.incident_surface = incident_surface
+        self.incident_cas = incident_cas
+        self.confirmation_type = confirmation_type
+        self.speech_runtime_overrides = dict(speech_runtime_overrides or {})
+        self.record_incident_id = record_incident_id
         self.confirmed: set[str] = set()
         self.transcribe_call_count = 0
         self.record_id = "REC-SYNTHETIC-001"
@@ -81,13 +96,19 @@ class FakeVoiceFlowClient:
             "status": "TRANSCRIBED",
             "abstained": False,
             "requiresResponderReview": True,
-            "transcript": {"text": TRANSCRIPT},
+            "transcript": {"text": self.transcript},
             "input": {"audioRetained": False},
             "runtime": {
                 "model": "small",
                 "actualDevice": "cpu",
                 "actualComputeType": "int8",
                 "hotwordsUsed": False,
+                "serviceGitCommit": SPEECH_COMMIT,
+                "modelRepository": SPEECH_MODEL_REPOSITORY,
+                "modelRevision": SPEECH_MODEL_REVISION,
+                "modelBinSha256": SPEECH_MODEL_SHA256,
+                "modelArtifactVerified": True,
+                **self.speech_runtime_overrides,
             },
             "safetyBoundary": {
                 "uncertaintyPreserved": True,
@@ -101,7 +122,7 @@ class FakeVoiceFlowClient:
 
     def analyze(self, payload: Mapping[str, Any], request_id: str) -> Mapping[str, Any]:
         assert payload["incidentId"] == "INC-SYNTHETIC-001"
-        assert payload["text"] == TRANSCRIPT
+        assert payload["text"] == self.transcript
         assert payload["inputType"] == "VOICE_TRANSCRIPT"
         both = self.confirmed == {"INCIDENT", "FACILITY"}
         conflict_executed = both or self.unsafe_before_confirmation
@@ -133,10 +154,12 @@ class FakeVoiceFlowClient:
             "riskDisplayAllowed": conflict_executed,
             "substanceCandidates": [
                 {
-                    "surfaceText": "차아염소산 나트륨",
+                    "surfaceText": self.incident_surface,
                     "role": "INCIDENT",
                     "resolverStatus": "EXACT_ALIAS_CANDIDATE",
-                    "candidates": [{"casNumber": "7681-52-9", "ruleEligible": False}],
+                    "candidates": [
+                        {"casNumber": self.incident_cas, "ruleEligible": False}
+                    ],
                 },
                 {
                     "surfaceText": "염산",
@@ -155,7 +178,7 @@ class FakeVoiceFlowClient:
         return {
             "requestId": request_id,
             "confirmationId": f"CNF-{role}",
-            "confirmationType": "SYNTHETIC_DEMO_CONFIRMATION",
+            "confirmationType": self.confirmation_type,
         }
 
     def cancel(
@@ -178,7 +201,7 @@ class FakeVoiceFlowClient:
         assert payload["confirmationIds"] == ["CNF-INCIDENT", "CNF-FACILITY"]
         return {
             "requestId": request_id,
-            "incidentId": incident_id,
+            "incidentId": self.record_incident_id,
             "recordId": self.record_id,
             "resetAllowed": True,
         }
@@ -224,6 +247,9 @@ def _evaluate(
         backend_git_commit=BACKEND_COMMIT,
         model_git_commit=MODEL_COMMIT,
         speech_git_commit=SPEECH_COMMIT,
+        speech_model_repository=SPEECH_MODEL_REPOSITORY,
+        speech_model_revision=SPEECH_MODEL_REVISION,
+        speech_model_bin_sha256=SPEECH_MODEL_SHA256,
         runtime_manifest_sha256=RUNTIME_SHA256,
         runtime_manifest_actual_sha256=RUNTIME_SHA256,
         database_runtime="H2_POSTGRESQL_COMPATIBILITY_MODE",
@@ -250,6 +276,11 @@ def test_voice_flow_accepts_synthetic_audio_to_record_transition(
     assert "INC-SYNTHETIC-001" not in json.dumps(report, ensure_ascii=False)
     assert TRANSCRIPT not in json.dumps(report, ensure_ascii=False)
     assert json.loads(report_path.read_text(encoding="utf-8")) == report
+    assert report["runtime"]["speech_git_commit_verified_by_api"] is True
+    assert report["runtime"]["speech_model_artifact_verified"] is True
+    assert any(
+        "pinned model artifact identity" in claim for claim in report["claims_allowed"]
+    )
 
 
 def test_voice_flow_rejects_rule_execution_before_confirmation(tmp_path: Path) -> None:
@@ -265,6 +296,146 @@ def test_voice_flow_rejects_rule_execution_before_confirmation(tmp_path: Path) -
     assert "zero_risk_display_allowed" in failed
     assert "one_conflict_executed" in failed
     assert "one_risk_display_allowed" in failed
+
+
+def test_failed_asr_surface_is_not_reported_as_successful_claim(tmp_path: Path) -> None:
+    manifest, audio = _fixture(tmp_path)
+    client = FakeVoiceFlowClient(
+        transcript=(
+            "차아 염소산 나트륨 저장 탱크에서 노출이 의심됩니다. "
+            "인접 저장고에는 염산 표기가 있습니다."
+        ),
+        incident_surface="나트륨",
+        incident_cas="7440-23-5",
+    )
+
+    report = _evaluate(client, manifest, audio)
+
+    assert report["status"] == "FAILED"
+    assert not any(
+        "두 물질 표면형과 후보 CAS가 보존됨" in claim
+        for claim in report["claims_allowed"]
+    )
+    assert (
+        "실패한 물질 표면형 또는 후보 CAS 보존을 성공한 것으로 표현"
+        in report["claims_not_allowed"]
+    )
+    assert (
+        "음성 후보만 있는 상태에서 Rule·위험 표시가 차단됨" in report["claims_allowed"]
+    )
+
+
+def test_wrong_record_incident_is_not_reported_as_authoritative_storage(
+    tmp_path: Path,
+) -> None:
+    manifest, audio = _fixture(tmp_path)
+
+    report = _evaluate(
+        FakeVoiceFlowClient(record_incident_id="INC-WRONG"), manifest, audio
+    )
+
+    assert report["status"] == "FAILED"
+    failed = {row["name"] for row in report["checks"] if row.get("passed") is False}
+    assert "record_incident_correlated" in failed
+    assert not any(
+        "권위 snapshot과 함께 record로 저장함" in claim
+        for claim in report["claims_allowed"]
+    )
+    assert (
+        "사고 상관관계가 검증되지 않은 record를 권위 snapshot 저장으로 표현"
+        in report["claims_not_allowed"]
+    )
+
+
+def test_wrong_confirmation_type_cannot_allow_cameo_success_claim(
+    tmp_path: Path,
+) -> None:
+    manifest, audio = _fixture(tmp_path)
+
+    report = _evaluate(
+        FakeVoiceFlowClient(confirmation_type="UNVERIFIED_CONFIRMATION"),
+        manifest,
+        audio,
+    )
+
+    assert report["status"] == "FAILED"
+    failed = {row["name"] for row in report["checks"] if row.get("passed") is False}
+    assert "incident_confirmation_type" in failed
+    assert "facility_confirmation_type" in failed
+    assert not any(
+        "합성 2-CAS 확인 뒤 제한된 CAMEO 결과" in claim
+        for claim in report["claims_allowed"]
+    )
+
+
+def test_unverified_speech_model_provenance_fails_the_gate(tmp_path: Path) -> None:
+    manifest, audio = _fixture(tmp_path)
+    client = FakeVoiceFlowClient(
+        speech_runtime_overrides={
+            "modelBinSha256": None,
+            "modelArtifactVerified": False,
+        }
+    )
+
+    report = _evaluate(client, manifest, audio)
+
+    assert report["status"] == "FAILED"
+    failed = {row["name"] for row in report["checks"] if row.get("passed") is False}
+    assert "speech_model_bin_sha256" in failed
+    assert "speech_model_artifact_verified" in failed
+    assert report["runtime"]["speech_model_artifact_verified"] is False
+    assert not any(
+        "pinned model artifact identity" in claim for claim in report["claims_allowed"]
+    )
+    assert (
+        "Speech model artifact와 commit이 API에서 검증됐다고 표현"
+        in report["claims_not_allowed"]
+    )
+
+
+def test_integer_artifact_verification_cannot_pass_boolean_gate(tmp_path: Path) -> None:
+    manifest, audio = _fixture(tmp_path)
+    client = FakeVoiceFlowClient(speech_runtime_overrides={"modelArtifactVerified": 1})
+
+    report = _evaluate(client, manifest, audio)
+
+    assert report["status"] == "FAILED"
+    check = next(
+        row
+        for row in report["checks"]
+        if row["name"] == "speech_model_artifact_verified"
+    )
+    assert check["actual"] == 1
+    assert check["passed"] is False
+    assert report["runtime"]["speech_model_artifact_verified"] is False
+
+
+@pytest.mark.parametrize(
+    ("field", "numeric_value"),
+    [
+        ("contains_personal_information", 0),
+        ("selected_for_connectivity_not_accuracy", 1),
+        ("performance_claim_allowed", 0),
+    ],
+)
+def test_manifest_numeric_boolean_cannot_pass_safety_contract(
+    tmp_path: Path,
+    field: str,
+    numeric_value: int,
+) -> None:
+    manifest_path, audio = _fixture(tmp_path)
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if field == "contains_personal_information":
+        manifest[field] = numeric_value
+    else:
+        manifest["selection_disclosure"][field] = numeric_value
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+    client = FakeVoiceFlowClient()
+
+    with pytest.raises(ValueError, match="manifest"):
+        _evaluate(client, manifest_path, audio)
+
+    assert client.transcribe_call_count == 0
 
 
 def test_voice_flow_rejects_tampered_audio_before_http(tmp_path: Path) -> None:

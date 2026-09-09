@@ -800,6 +800,9 @@ def _evaluate_cross_service_voice_flow(args: argparse.Namespace) -> dict[str, An
         backend_git_commit=args.backend_git_commit,
         model_git_commit=args.model_git_commit,
         speech_git_commit=args.speech_git_commit,
+        speech_model_repository=args.speech_model_repository,
+        speech_model_revision=args.speech_model_revision,
+        speech_model_bin_sha256=args.speech_model_bin_sha256,
         runtime_manifest_sha256=args.runtime_manifest_sha256,
         runtime_manifest_actual_sha256=sha256_file(args.runtime_manifest),
         database_runtime=args.database_runtime,
@@ -1622,7 +1625,7 @@ def build_parser() -> argparse.ArgumentParser:
     aggregate_e2e.add_argument(
         "--manifest",
         type=_path,
-        default=EVALUATION_DIR / "cross_repo_safety_evidence_manifest.json",
+        default=EVALUATION_DIR / "cross_repo_safety_evidence_manifest_v5.json",
     )
     aggregate_e2e.add_argument("--analysis-report", type=_path, required=True)
     aggregate_e2e.add_argument("--backend-report", type=_path, required=True)
@@ -1691,6 +1694,9 @@ def build_parser() -> argparse.ArgumentParser:
     voice_flow.add_argument("--backend-git-commit", required=True)
     voice_flow.add_argument("--model-git-commit", required=True)
     voice_flow.add_argument("--speech-git-commit", required=True)
+    voice_flow.add_argument("--speech-model-repository", required=True)
+    voice_flow.add_argument("--speech-model-revision", required=True)
+    voice_flow.add_argument("--speech-model-bin-sha256", required=True)
     voice_flow.add_argument("--runtime-manifest-sha256", required=True)
     voice_flow.add_argument("--runtime-manifest", type=_path, required=True)
     voice_flow.add_argument(

@@ -221,6 +221,56 @@ full_voice_to_operational_handoff_validated=false
 않았습니다. 따라서 `voice_to_record_http_chain_executed=true`와
 `full_voice_to_operational_handoff_validated=false`를 동시에 보존합니다.
 
+이 v6 bundle의 64개 음성 검사는 Speech runtime provenance 필드 도입 전의 역사적 결과입니다.
+2026-09-09 평가기는 service commit·model repository·revision·`model.bin` SHA-256·artifact
+검증 상태 5개를 추가해 새 음성 보고서에 69개 검사를 요구합니다. 따라서 기존 v6 결과를
+provenance 통과 근거로 사용하지 않습니다. 다만 manifest v4와 음성 report v1의 64-check
+검증기는 역사적 재현을 위해 보존하고, 아래 v11은 manifest v5와 음성 report v2로 분리합니다.
+
+### 2026-09-09 Cross-repo 안전 증거 bundle v11
+
+provenance 지원 Speech Service `f922512`, Backend `develop` merge commit `b982674`, 잠긴 Model API
+artifact를 실제 로컬 HTTP로 실행한 새 69-check 음성 보고서를 v6의 역사적 64-check 보고서와
+교체했습니다. boolean 안전 계약은 숫자 `0`·`1`을 거부하고 JSON `false`·`true`만 허용합니다.
+GCP 배포는 실행하지 않았고, 로컬 H2 PostgreSQL 호환 모드 결과입니다.
+
+```bash
+chemiguard119 aggregate-e2e-evidence \
+  --manifest data/evaluation/cross_repo_safety_evidence_manifest_v5.json \
+  --analysis-report <private-data>/experiments/analysis/e2e-v4-facility-history-r1/report.json \
+  --backend-report <private-data>/experiments/back/backend-safety-state-v2-r1/report.json \
+  --backend-cancellation-report <private-data>/experiments/e2e/confirmation-cancellation-state-v1.json \
+  --cross-service-report <private-data>/experiments/e2e/cross-service-confirmation-flow-v1-r1.json \
+  --voice-flow-report <private-data>/experiments/e2e/cross-service-voice-to-record-schema-v2-r1.json \
+  --seoul-speech-report <private-data>/experiments/speech/robustness/seoul/radio-sim-v1/20260906T050926Z/downstream-silver-119ce11-p68beeb4/report.json \
+  --incheon-speech-report <private-data>/experiments/speech/robustness/incheon/radio-sim-v1/20260906T022037Z/downstream-silver-119ce11-p68beeb4/report.json \
+  --report <private-data>/experiments/analysis/cross-repo-safety-evidence-v11-r1/report.json
+```
+
+```text
+증거 무결성 Gate 통과, 오류 0건
+잠긴 독립 보고서 7개
+선택 합성 음성→record 실제 HTTP 69/69
+Speech service commit·model repository·revision·model.bin SHA-256 일치
+두 confirmationType이 SYNTHETIC_DEMO_CONFIRMATION으로 일치
+0개·1개 확인 Rule 실행 false / 위험 표시 false
+2개 확인 뒤 Rule 실행 true / 위험 표시 true
+decision=CONDITIONALLY_ADOPT_FOR_INTERNAL_REGRESSION
+field_validated=false
+full_voice_to_operational_handoff_validated=false
+```
+
+- 결합 report SHA-256: `26d9df91a489417c71fc034c2959d9ef0d3a7eda49bc37dbe3de31b8e7550497`
+- 잠금 manifest SHA-256: `0f4a021b2d35909a4123fc8f52a864e9d58dca85a1b838b60916a7d3d4883fc5`
+- 음성→record report SHA-256: `89179fa839bdeabd1f9b7899c1e58236c7dab8ba206368b4874e8b3e6402a4a0`
+- 음성 모델 revision: `536b0662742c02347bc0e980a01041f333bce120`
+- 음성 `model.bin` SHA-256: `3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671`
+- r1·r2: byte-identical
+
+이 결과는 모델 파일과 실행 코드가 기대한 artifact였다는 증거를 추가합니다. 합성 음성 1건의
+연결성 결과이므로 STT 정확도, 사람 검토, 실제 CAS 정답, 현장 무전, Cloud Run·Cloud SQL,
+상용 가용성 또는 실제 안전성을 증명하지 않습니다.
+
 ### 2026-09-08 Backend→Model API 실제 HTTP 상태 전이
 
 분리된 보고서 결합과 별도로, 공개 합성 replay 한 건을 실제 Backend HTTP와 실제 Model API

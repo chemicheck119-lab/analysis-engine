@@ -4,8 +4,11 @@ import json
 from pathlib import Path
 
 from chemiguard119.cross_repo_safety_evidence import (
+    LEGACY_MANIFEST_SCHEMA_VERSION,
+    LEGACY_VOICE_FLOW_SCHEMA_VERSION,
     MANIFEST_SCHEMA_VERSION,
     REPORT_SCHEMA_VERSION,
+    VOICE_FLOW_SCHEMA_VERSION,
     aggregate_cross_repo_safety_evidence,
 )
 from chemiguard119.utils import sha256_file
@@ -211,6 +214,11 @@ def _voice_flow_report() -> dict:
         "speech_requires_responder_review": True,
         "speech_audio_retained": False,
         "speech_hotwords_used": False,
+        "speech_service_git_commit": "c" * 40,
+        "speech_model_repository": "Systran/faster-whisper-small",
+        "speech_model_revision": "e" * 40,
+        "speech_model_bin_sha256": "f" * 64,
+        "speech_model_artifact_verified": True,
         "speech_safety_uncertaintyPreserved": True,
         "speech_safety_qualitySignalsAreCalibratedProbabilities": False,
         "speech_safety_chemicalIdentificationPerformed": False,
@@ -248,10 +256,10 @@ def _voice_flow_report() -> dict:
             "actual": True,
             "passed": True,
         }
-        for index in range(64 - len(checks))
+        for index in range(69 - len(checks))
     )
     return {
-        "schema_version": "chemicheck119-cross-service-voice-to-record-v1",
+        "schema_version": VOICE_FLOW_SCHEMA_VERSION,
         "status": "COMPLETED",
         "fact_status": "부분 구현 또는 개발용 데모",
         "claim_scope": "LOCAL_SYNTHETIC_VOICE_TO_RECORD_REGRESSION_ONLY",
@@ -286,8 +294,12 @@ def _voice_flow_report() -> dict:
             "speech_device": "cpu",
             "speech_compute_type": "int8",
             "speech_hotwords_used": False,
-            "speech_git_commit_verified_by_api": False,
-            "speech_model_artifact_verified": False,
+            "speech_service_git_commit": "c" * 40,
+            "speech_model_repository": "Systran/faster-whisper-small",
+            "speech_model_revision": "e" * 40,
+            "speech_model_bin_sha256": "f" * 64,
+            "speech_git_commit_verified_by_api": True,
+            "speech_model_artifact_verified": True,
             "model_runtime_integrity": "VERIFIED",
         },
         "request_correlation": {
@@ -307,10 +319,46 @@ def _voice_flow_report() -> dict:
             "backend_git_commit": "a" * 40,
             "model_git_commit": "b" * 40,
             "speech_git_commit": "c" * 40,
+            "speech_model_repository": "Systran/faster-whisper-small",
+            "speech_model_revision": "e" * 40,
+            "speech_model_bin_sha256": "f" * 64,
             "runtime_manifest_sha256": runtime_digest,
             "evaluator_source_sha256": "d" * 64,
         },
     }
+
+
+def _legacy_voice_flow_report() -> dict:
+    report = _voice_flow_report()
+    provenance_check_names = {
+        "speech_service_git_commit",
+        "speech_model_repository",
+        "speech_model_revision",
+        "speech_model_bin_sha256",
+        "speech_model_artifact_verified",
+    }
+    report["schema_version"] = LEGACY_VOICE_FLOW_SCHEMA_VERSION
+    report["checks"] = [
+        row for row in report["checks"] if row["name"] not in provenance_check_names
+    ]
+    report["check_count"] = 64
+    report["passed_check_count"] = 64
+    report["runtime"]["speech_git_commit_verified_by_api"] = False
+    report["runtime"]["speech_model_artifact_verified"] = False
+    for field in (
+        "speech_service_git_commit",
+        "speech_model_repository",
+        "speech_model_revision",
+        "speech_model_bin_sha256",
+    ):
+        report["runtime"].pop(field)
+    for field in (
+        "speech_model_repository",
+        "speech_model_revision",
+        "speech_model_bin_sha256",
+    ):
+        report["provenance"].pop(field)
+    return report
 
 
 def _speech_report(source_digest: str) -> dict:
@@ -372,9 +420,7 @@ def _fixture(tmp_path: Path) -> dict[str, Path]:
         "cross_service_confirmation_flow": (
             "chemicheck119-cross-service-confirmation-flow-v1"
         ),
-        "cross_service_voice_to_record": (
-            "chemicheck119-cross-service-voice-to-record-v1"
-        ),
+        "cross_service_voice_to_record": (VOICE_FLOW_SCHEMA_VERSION),
         "speech_seoul_radio_sim": "stt-radio-sim-downstream-silver-eval-v1",
         "speech_incheon_radio_sim": "stt-radio-sim-downstream-silver-eval-v1",
     }
@@ -501,6 +547,49 @@ def test_aggregate_accepts_locked_separate_internal_suites(tmp_path: Path) -> No
         == 0
     )
     assert output.is_file()
+
+
+def test_aggregate_preserves_legacy_64_check_voice_report_contract(
+    tmp_path: Path,
+) -> None:
+    paths = _fixture(tmp_path)
+    legacy_report = _legacy_voice_flow_report()
+    _write(paths["cross_service_voice_to_record"], legacy_report)
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    manifest["schema_version"] = LEGACY_MANIFEST_SCHEMA_VERSION
+    voice_source = manifest["sources"]["cross_service_voice_to_record"]
+    voice_source["expected_schema_version"] = LEGACY_VOICE_FLOW_SCHEMA_VERSION
+    voice_source["expected_sha256"] = sha256_file(
+        paths["cross_service_voice_to_record"]
+    )
+    _write(paths["manifest"], manifest)
+
+    report = _aggregate(paths)
+
+    assert report["status"] == "COMPLETED"
+    assert report["evidence_integrity_gate"]["passed"] is True
+    assert report["coverage"]["cross_service_voice_to_record"]["check_count"] == 64
+
+
+def test_current_manifest_rejects_legacy_voice_contract(tmp_path: Path) -> None:
+    paths = _fixture(tmp_path)
+    legacy_report = _legacy_voice_flow_report()
+    _write(paths["cross_service_voice_to_record"], legacy_report)
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    voice_source = manifest["sources"]["cross_service_voice_to_record"]
+    voice_source["expected_schema_version"] = LEGACY_VOICE_FLOW_SCHEMA_VERSION
+    voice_source["expected_sha256"] = sha256_file(
+        paths["cross_service_voice_to_record"]
+    )
+    _write(paths["manifest"], manifest)
+
+    report = _aggregate(paths)
+
+    assert report["status"] == "FAILED"
+    assert (
+        "cross_service_voice_to_record:MANIFEST_VOICE_SCHEMA_MISMATCH"
+        in report["evidence_integrity_gate"]["errors_by_source"]["manifest"]
+    )
 
 
 def test_aggregate_rejects_report_changed_after_manifest_lock(tmp_path: Path) -> None:
@@ -659,6 +748,110 @@ def test_aggregate_rejects_voice_flow_audio_hash_change_even_when_relocked(
     assert report["status"] == "FAILED"
     assert (
         "VOICE_FLOW_AUDIO_SHA256_MISMATCH"
+        in report["evidence_integrity_gate"]["errors_by_source"][
+            "cross_service_voice_to_record"
+        ]
+    )
+
+
+def test_aggregate_rejects_voice_runtime_provenance_drift_when_relocked(
+    tmp_path: Path,
+) -> None:
+    paths = _fixture(tmp_path)
+    voice = json.loads(
+        paths["cross_service_voice_to_record"].read_text(encoding="utf-8")
+    )
+    voice["runtime"]["speech_model_bin_sha256"] = "0" * 64
+    _write(paths["cross_service_voice_to_record"], voice)
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    manifest["sources"]["cross_service_voice_to_record"]["expected_sha256"] = (
+        sha256_file(paths["cross_service_voice_to_record"])
+    )
+    _write(paths["manifest"], manifest)
+
+    report = _aggregate(paths)
+
+    assert report["status"] == "FAILED"
+    assert (
+        "VOICE_FLOW_RUNTIME_PROVENANCE_MISMATCH:speech_model_bin_sha256"
+        in report["evidence_integrity_gate"]["errors_by_source"][
+            "cross_service_voice_to_record"
+        ]
+    )
+
+
+def test_aggregate_rejects_integer_as_boolean_even_when_relocked(
+    tmp_path: Path,
+) -> None:
+    paths = _fixture(tmp_path)
+    voice = json.loads(
+        paths["cross_service_voice_to_record"].read_text(encoding="utf-8")
+    )
+    target = next(
+        check
+        for check in voice["checks"]
+        if check["name"] == "speech_model_artifact_verified"
+    )
+    target["actual"] = 1
+    _write(paths["cross_service_voice_to_record"], voice)
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    manifest["sources"]["cross_service_voice_to_record"]["expected_sha256"] = (
+        sha256_file(paths["cross_service_voice_to_record"])
+    )
+    _write(paths["manifest"], manifest)
+
+    report = _aggregate(paths)
+
+    assert report["status"] == "FAILED"
+    assert (
+        "VOICE_FLOW_REQUIRED_CHECK_FAILED:speech_model_artifact_verified"
+        in report["evidence_integrity_gate"]["errors_by_source"][
+            "cross_service_voice_to_record"
+        ]
+    )
+
+
+def test_aggregate_accepts_pinned_revision_as_local_speech_model_identifier(
+    tmp_path: Path,
+) -> None:
+    paths = _fixture(tmp_path)
+    voice = json.loads(
+        paths["cross_service_voice_to_record"].read_text(encoding="utf-8")
+    )
+    voice["runtime"]["speech_model"] = voice["provenance"]["speech_model_revision"]
+    _write(paths["cross_service_voice_to_record"], voice)
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    manifest["sources"]["cross_service_voice_to_record"]["expected_sha256"] = (
+        sha256_file(paths["cross_service_voice_to_record"])
+    )
+    _write(paths["manifest"], manifest)
+
+    report = _aggregate(paths)
+
+    assert report["status"] == "COMPLETED"
+    assert report["evidence_integrity_gate"]["passed"] is True
+
+
+def test_aggregate_rejects_unrelated_speech_model_identifier_when_relocked(
+    tmp_path: Path,
+) -> None:
+    paths = _fixture(tmp_path)
+    voice = json.loads(
+        paths["cross_service_voice_to_record"].read_text(encoding="utf-8")
+    )
+    voice["runtime"]["speech_model"] = "unverified-local-model"
+    _write(paths["cross_service_voice_to_record"], voice)
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    manifest["sources"]["cross_service_voice_to_record"]["expected_sha256"] = (
+        sha256_file(paths["cross_service_voice_to_record"])
+    )
+    _write(paths["manifest"], manifest)
+
+    report = _aggregate(paths)
+
+    assert report["status"] == "FAILED"
+    assert (
+        "VOICE_FLOW_RUNTIME_PROVENANCE_MISMATCH:speech_model"
         in report["evidence_integrity_gate"]["errors_by_source"][
             "cross_service_voice_to_record"
         ]

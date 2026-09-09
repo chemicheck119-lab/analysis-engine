@@ -64,6 +64,12 @@ from chemiguard119 import cli
                 "2" * 40,
                 "--speech-git-commit",
                 "3" * 40,
+                "--speech-model-repository",
+                "Systran/faster-whisper-small",
+                "--speech-model-revision",
+                "5" * 40,
+                "--speech-model-bin-sha256",
+                "6" * 64,
                 "--runtime-manifest-sha256",
                 "4" * 64,
                 "--runtime-manifest",
@@ -98,6 +104,30 @@ def test_all_commands_have_callable_handlers(argv: list[str], command: str) -> N
 
     assert args.command == command
     assert callable(args.handler)
+
+
+def test_aggregate_e2e_uses_current_69_check_manifest_by_default() -> None:
+    args = cli.build_parser().parse_args(
+        [
+            "aggregate-e2e-evidence",
+            "--analysis-report",
+            "analysis.json",
+            "--backend-report",
+            "backend.json",
+            "--backend-cancellation-report",
+            "backend-cancellation.json",
+            "--cross-service-report",
+            "cross-service.json",
+            "--voice-flow-report",
+            "voice-to-record.json",
+            "--seoul-speech-report",
+            "seoul.json",
+            "--incheon-speech-report",
+            "incheon.json",
+        ]
+    )
+
+    assert args.manifest.name == "cross_repo_safety_evidence_manifest_v5.json"
 
 
 def test_pipeline_accepts_incident_source_adaptation_inputs(tmp_path: Path) -> None:

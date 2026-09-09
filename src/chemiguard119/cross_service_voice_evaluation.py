@@ -17,12 +17,15 @@ from chemiguard119.cross_service_confirmation_evaluation import (
 from chemiguard119.utils import sha256_file, write_json
 
 
-REPORT_SCHEMA_VERSION = "chemicheck119-cross-service-voice-to-record-v1"
+REPORT_SCHEMA_VERSION = "chemicheck119-cross-service-voice-to-record-v2"
 MANIFEST_SCHEMA_VERSION = "chemicheck119-synthetic-voice-e2e-manifest-v1"
 FACT_STATUS = "부분 구현 또는 개발용 데모"
 CLAIM_SCOPE = "LOCAL_SYNTHETIC_VOICE_TO_RECORD_REGRESSION_ONLY"
 GIT_COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+MODEL_REPOSITORY_PATTERN = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$"
+)
 MAX_AUDIO_BYTES = 16 * 1024 * 1024
 REQUEST_IDS = {
     "transcribe": "REQ-VOICE-E2E-TRANSCRIBE-001",
@@ -47,15 +50,22 @@ def _object(value: object) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
+def _matches_expected(actual: object, expected: object) -> bool:
+    if isinstance(expected, bool):
+        return isinstance(actual, bool) and actual is expected
+    return actual == expected
+
+
 def _add_check(
     checks: list[dict[str, Any]], name: str, expected: Any, actual: Any
 ) -> None:
+    passed = _matches_expected(actual, expected)
     checks.append(
         {
             "name": name,
             "expected": expected,
             "actual": actual,
-            "passed": actual == expected,
+            "passed": passed,
         }
     )
 
@@ -71,7 +81,7 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
         "contains_personal_information": False,
     }
     for field, value in expected.items():
-        if manifest.get(field) != value:
+        if not _matches_expected(manifest.get(field), value):
             errors.append(f"MANIFEST_FIELD_MISMATCH:{field}")
     audio = _object(manifest.get("audio"))
     if SHA256_PATTERN.fullmatch(str(audio.get("expected_sha256") or "")) is None:
@@ -90,7 +100,7 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
         "performance_claim_allowed": False,
     }
     for field, value in required_disclosure.items():
-        if disclosure.get(field) != value:
+        if not _matches_expected(disclosure.get(field), value):
             errors.append(f"MANIFEST_DISCLOSURE_MISMATCH:{field}")
     return errors
 
@@ -188,6 +198,9 @@ def evaluate_cross_service_voice_flow(
     backend_git_commit: str,
     model_git_commit: str,
     speech_git_commit: str,
+    speech_model_repository: str,
+    speech_model_revision: str,
+    speech_model_bin_sha256: str,
     runtime_manifest_sha256: str,
     runtime_manifest_actual_sha256: str,
     database_runtime: str,
@@ -203,7 +216,12 @@ def evaluate_cross_service_voice_flow(
     for field, value in commits.items():
         if GIT_COMMIT_PATTERN.fullmatch(value) is None:
             raise ValueError(f"{field}은 40자리 소문자 SHA여야 합니다.")
+    if MODEL_REPOSITORY_PATTERN.fullmatch(speech_model_repository) is None:
+        raise ValueError("speech_model_repository 형식이 올바르지 않습니다.")
+    if GIT_COMMIT_PATTERN.fullmatch(speech_model_revision) is None:
+        raise ValueError("speech_model_revision은 40자리 소문자 SHA여야 합니다.")
     for label, value in {
+        "Speech model.bin": speech_model_bin_sha256,
         "runtime manifest": runtime_manifest_sha256,
         "계산된 runtime manifest": runtime_manifest_actual_sha256,
     }.items():
@@ -352,6 +370,36 @@ def evaluate_cross_service_voice_flow(
     )
     _add_check(
         checks, "speech_hotwords_used", False, speech_runtime.get("hotwordsUsed")
+    )
+    _add_check(
+        checks,
+        "speech_service_git_commit",
+        speech_git_commit,
+        speech_runtime.get("serviceGitCommit"),
+    )
+    _add_check(
+        checks,
+        "speech_model_repository",
+        speech_model_repository,
+        speech_runtime.get("modelRepository"),
+    )
+    _add_check(
+        checks,
+        "speech_model_revision",
+        speech_model_revision,
+        speech_runtime.get("modelRevision"),
+    )
+    _add_check(
+        checks,
+        "speech_model_bin_sha256",
+        speech_model_bin_sha256,
+        speech_runtime.get("modelBinSha256"),
+    )
+    _add_check(
+        checks,
+        "speech_model_artifact_verified",
+        True,
+        speech_runtime.get("modelArtifactVerified"),
     )
     _add_check(
         checks, "speech_actual_device", "cpu", speech_runtime.get("actualDevice")
@@ -526,6 +574,94 @@ def evaluate_cross_service_voice_flow(
 
     passed_count = sum(check.get("passed") is True for check in checks)
     complete = passed_count == len(checks)
+    passed_by_name = {
+        str(check["name"]): check.get("passed") is True for check in checks
+    }
+
+    def all_passed(*names: str) -> bool:
+        return all(passed_by_name.get(name, False) for name in names)
+
+    claims_allowed = [
+        "잠긴 공개 합성 WAV 1건이 실제 Speech API·Backend·Model API HTTP를 통과함"
+    ]
+    if all_passed(
+        "speech_expected_surface_1_present",
+        "speech_expected_surface_2_present",
+        "incident_surface",
+        "facility_surface",
+        "incident_candidate_cas",
+        "facility_candidate_cas",
+    ):
+        claims_allowed.append(
+            "명료하게 띄어 읽은 선택 clip에서 두 물질 표면형과 후보 CAS가 보존됨"
+        )
+    if all_passed(
+        "zero_rule_execution_allowed",
+        "zero_conflict_executed",
+        "zero_risk_display_allowed",
+        "one_rule_execution_allowed",
+        "one_conflict_executed",
+        "one_risk_display_allowed",
+    ):
+        claims_allowed.append("음성 후보만 있는 상태에서 Rule·위험 표시가 차단됨")
+    if all_passed(
+        "incident_confirmation_type",
+        "facility_confirmation_type",
+        "two_all_required_confirmed",
+        "two_rule_execution_allowed",
+        "two_conflict_executed",
+        "two_rule_id",
+        "two_rule_incident_cas",
+        "two_rule_facility_cas",
+        "record_request_id",
+        "record_incident_correlated",
+        "record_id_present",
+        "record_reset_allowed",
+    ):
+        claims_allowed.append(
+            "합성 2-CAS 확인 뒤 제한된 CAMEO 결과를 권위 snapshot과 함께 record로 저장함"
+        )
+    if all_passed("record_exact_retry_same_id"):
+        claims_allowed.append("동일 record payload 재요청이 같은 record ID를 반환함")
+    speech_provenance_checks = (
+        "speech_service_git_commit",
+        "speech_model_repository",
+        "speech_model_revision",
+        "speech_model_bin_sha256",
+        "speech_model_artifact_verified",
+    )
+    if all_passed(*speech_provenance_checks):
+        claims_allowed.append(
+            "Speech API가 보고한 service commit과 pinned model artifact identity가 "
+            "기대값과 일치함"
+        )
+
+    claims_not_allowed = [
+        "합성 음성 1건을 신고음성·현장 무전 정확도로 표현",
+        "사람이 전사문과 두 CAS를 실제 확인했다고 표현",
+        "record 저장을 실제 현장 인계나 대응 조치 수행으로 표현",
+        "H2 실행을 Cloud SQL·상용 운영 검증으로 표현",
+    ]
+    if not all_passed(*speech_provenance_checks):
+        claims_not_allowed.append(
+            "Speech model artifact와 commit이 API에서 검증됐다고 표현"
+        )
+    if not all_passed(
+        "speech_expected_surface_1_present",
+        "speech_expected_surface_2_present",
+        "incident_surface",
+        "facility_surface",
+        "incident_candidate_cas",
+        "facility_candidate_cas",
+    ):
+        claims_not_allowed.append(
+            "실패한 물질 표면형 또는 후보 CAS 보존을 성공한 것으로 표현"
+        )
+    if not all_passed("record_incident_correlated", "record_id_present"):
+        claims_not_allowed.append(
+            "사고 상관관계가 검증되지 않은 record를 권위 snapshot 저장으로 표현"
+        )
+
     report = {
         "schema_version": REPORT_SCHEMA_VERSION,
         "status": "COMPLETED" if complete else "FAILED",
@@ -559,8 +695,19 @@ def evaluate_cross_service_voice_flow(
             "speech_device": speech_runtime.get("actualDevice"),
             "speech_compute_type": speech_runtime.get("actualComputeType"),
             "speech_hotwords_used": speech_runtime.get("hotwordsUsed"),
-            "speech_git_commit_verified_by_api": False,
-            "speech_model_artifact_verified": False,
+            "speech_service_git_commit": speech_runtime.get("serviceGitCommit"),
+            "speech_model_repository": speech_runtime.get("modelRepository"),
+            "speech_model_revision": speech_runtime.get("modelRevision"),
+            "speech_model_bin_sha256": speech_runtime.get("modelBinSha256"),
+            "speech_git_commit_verified_by_api": all_passed(
+                "speech_service_git_commit"
+            ),
+            "speech_model_artifact_verified": all_passed(
+                "speech_model_repository",
+                "speech_model_revision",
+                "speech_model_bin_sha256",
+                "speech_model_artifact_verified",
+            ),
             "model_runtime_integrity": integrity.get("status"),
         },
         "request_correlation": {
@@ -573,6 +720,9 @@ def evaluate_cross_service_voice_flow(
         },
         "provenance": {
             **commits,
+            "speech_model_repository": speech_model_repository,
+            "speech_model_revision": speech_model_revision,
+            "speech_model_bin_sha256": speech_model_bin_sha256,
             "runtime_manifest_sha256": runtime_manifest_sha256,
             "evaluator_source_sha256": sha256_file(Path(__file__)),
             "scenario_id": scenario_id,
@@ -587,20 +737,8 @@ def evaluate_cross_service_voice_flow(
             if complete
             else "REJECT_SYNTHETIC_VOICE_TO_RECORD_FLOW"
         ),
-        "claims_allowed": [
-            "잠긴 공개 합성 WAV 1건이 실제 Speech API·Backend·Model API HTTP를 통과함",
-            "명료하게 띄어 읽은 선택 clip에서 두 물질 표면형과 후보 CAS가 보존됨",
-            "음성 후보만 있는 상태에서 Rule·위험 표시가 차단됨",
-            "합성 2-CAS 확인 뒤 제한된 CAMEO 결과를 권위 snapshot과 함께 record로 저장함",
-            "동일 record payload 재요청이 같은 record ID를 반환함",
-        ],
-        "claims_not_allowed": [
-            "합성 음성 1건을 신고음성·현장 무전 정확도로 표현",
-            "사람이 전사문과 두 CAS를 실제 확인했다고 표현",
-            "record 저장을 실제 현장 인계나 대응 조치 수행으로 표현",
-            "H2 실행을 Cloud SQL·상용 운영 검증으로 표현",
-            "Speech model artifact와 commit이 API에서 검증됐다고 표현",
-        ],
+        "claims_allowed": claims_allowed,
+        "claims_not_allowed": claims_not_allowed,
         "safety_notice": (
             "공개 합성 음성의 로컬 연결성 회귀이며 현장 명령·정확도·안전성 증명이 아닙니다."
         ),

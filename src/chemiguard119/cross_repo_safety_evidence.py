@@ -14,9 +14,15 @@ from typing import Any, Mapping
 from chemiguard119.utils import sha256_file, write_json
 
 
-MANIFEST_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-manifest-v4"
+LEGACY_MANIFEST_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-manifest-v4"
+MANIFEST_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-manifest-v5"
 REPORT_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-report-v6"
-VOICE_FLOW_EXPECTED_CHECK_COUNT = 64
+LEGACY_VOICE_FLOW_SCHEMA_VERSION = "chemicheck119-cross-service-voice-to-record-v1"
+VOICE_FLOW_SCHEMA_VERSION = "chemicheck119-cross-service-voice-to-record-v2"
+VOICE_FLOW_EXPECTED_CHECK_COUNTS = {
+    LEGACY_VOICE_FLOW_SCHEMA_VERSION: 64,
+    VOICE_FLOW_SCHEMA_VERSION: 69,
+}
 SOURCE_IDS = (
     "analysis_engine",
     "backend_state",
@@ -108,6 +114,7 @@ REQUIRED_VOICE_FLOW_CHECKS: dict[str, Any] = {
     "speech_requires_responder_review": True,
     "speech_audio_retained": False,
     "speech_hotwords_used": False,
+    "speech_model_artifact_verified": True,
     "speech_safety_uncertaintyPreserved": True,
     "speech_safety_qualitySignalsAreCalibratedProbabilities": False,
     "speech_safety_chemicalIdentificationPerformed": False,
@@ -162,11 +169,25 @@ def _count_or_zero(value: object) -> int:
     return value if _is_count(value) else 0
 
 
+def _matches_expected(actual: object, expected: object) -> bool:
+    """JSON boolean을 숫자 0/1과 구분해 안전 계약을 비교한다."""
+
+    if isinstance(actual, bool) or isinstance(expected, bool):
+        return (
+            isinstance(actual, bool)
+            and isinstance(expected, bool)
+            and actual is expected
+        )
+    return actual == expected
+
+
 def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
     errors: list[str] = []
+    manifest_schema = manifest.get("schema_version")
     _append_if(
         errors,
-        manifest.get("schema_version") != MANIFEST_SCHEMA_VERSION,
+        manifest.get("schema_version")
+        not in {LEGACY_MANIFEST_SCHEMA_VERSION, MANIFEST_SCHEMA_VERSION},
         "MANIFEST_SCHEMA_MISMATCH",
     )
     _append_if(
@@ -202,6 +223,16 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
                 f"{source_id}:{field.upper()}_MISSING",
             )
         if source_id == "cross_service_voice_to_record":
+            expected_voice_schema = (
+                LEGACY_VOICE_FLOW_SCHEMA_VERSION
+                if manifest_schema == LEGACY_MANIFEST_SCHEMA_VERSION
+                else VOICE_FLOW_SCHEMA_VERSION
+            )
+            _append_if(
+                errors,
+                source.get("expected_schema_version") != expected_voice_schema,
+                f"{source_id}:MANIFEST_VOICE_SCHEMA_MISMATCH",
+            )
             for field in ("expected_input_manifest_sha256", "expected_audio_sha256"):
                 value = source.get(field)
                 _append_if(
@@ -296,7 +327,7 @@ def _validate_analysis(report: Mapping[str, Any]) -> list[str]:
     for field, expected in expected_metrics.items():
         _append_if(
             errors,
-            metric_payload.get(field) != expected,
+            not _matches_expected(metric_payload.get(field), expected),
             f"ANALYSIS_METRIC_FAILED:{field}",
         )
     return errors
@@ -370,8 +401,8 @@ def _validate_backend(report: Mapping[str, Any]) -> list[str]:
         row = check_map.get(name)
         if (
             row is None
-            or row.get("expected") != expected
-            or row.get("actual") != expected
+            or not _matches_expected(row.get("expected"), expected)
+            or not _matches_expected(row.get("actual"), expected)
             or row.get("passed") is not True
         ):
             errors.append(f"BACKEND_REQUIRED_CHECK_FAILED:{name}")
@@ -453,8 +484,8 @@ def _validate_backend_cancellation(report: Mapping[str, Any]) -> list[str]:
         row = check_map.get(name)
         if (
             row is None
-            or row.get("expected") != expected
-            or row.get("actual") != expected
+            or not _matches_expected(row.get("expected"), expected)
+            or not _matches_expected(row.get("actual"), expected)
             or row.get("passed") is not True
         ):
             errors.append(f"BACKEND_CANCELLATION_REQUIRED_CHECK_FAILED:{name}")
@@ -489,7 +520,7 @@ def _validate_cross_service(report: Mapping[str, Any]) -> list[str]:
     for field, expected in expected_top_level.items():
         _append_if(
             errors,
-            report.get(field) != expected,
+            not _matches_expected(report.get(field), expected),
             f"CROSS_SERVICE_SCOPE_FAILED:{field}",
         )
 
@@ -538,8 +569,8 @@ def _validate_cross_service(report: Mapping[str, Any]) -> list[str]:
         row = check_map.get(name)
         if (
             row is None
-            or row.get("expected") != expected
-            or row.get("actual") != expected
+            or not _matches_expected(row.get("expected"), expected)
+            or not _matches_expected(row.get("actual"), expected)
             or row.get("passed") is not True
         ):
             errors.append(f"CROSS_SERVICE_REQUIRED_CHECK_FAILED:{name}")
@@ -578,6 +609,8 @@ def _validate_voice_flow(
     report: Mapping[str, Any], source: Mapping[str, Any]
 ) -> list[str]:
     errors: list[str] = []
+    report_schema = report.get("schema_version")
+    expected_check_count = VOICE_FLOW_EXPECTED_CHECK_COUNTS.get(report_schema)
     expected_top_level: dict[str, Any] = {
         "status": "COMPLETED",
         "fact_status": "부분 구현 또는 개발용 데모",
@@ -602,7 +635,7 @@ def _validate_voice_flow(
     for field, expected in expected_top_level.items():
         _append_if(
             errors,
-            report.get(field) != expected,
+            not _matches_expected(report.get(field), expected),
             f"VOICE_FLOW_SCOPE_FAILED:{field}",
         )
 
@@ -631,7 +664,8 @@ def _validate_voice_flow(
         not _is_count(check_count)
         or not _is_count(passed_count)
         or not _is_count(failed_count)
-        or check_count != VOICE_FLOW_EXPECTED_CHECK_COUNT
+        or expected_check_count is None
+        or check_count != expected_check_count
         or passed_count != check_count
         or failed_count != 0,
         "VOICE_FLOW_STATE_GATE_FAILED",
@@ -647,12 +681,15 @@ def _validate_voice_flow(
         len(check_names) != len(set(check_names)),
         "VOICE_FLOW_DUPLICATE_CHECK_NAME",
     )
-    for name, expected in REQUIRED_VOICE_FLOW_CHECKS.items():
+    required_checks = dict(REQUIRED_VOICE_FLOW_CHECKS)
+    if report_schema == LEGACY_VOICE_FLOW_SCHEMA_VERSION:
+        required_checks.pop("speech_model_artifact_verified")
+    for name, expected in required_checks.items():
         row = check_map.get(name)
         if (
             row is None
-            or row.get("expected") != expected
-            or row.get("actual") != expected
+            or not _matches_expected(row.get("expected"), expected)
+            or not _matches_expected(row.get("actual"), expected)
             or row.get("passed") is not True
         ):
             errors.append(f"VOICE_FLOW_REQUIRED_CHECK_FAILED:{name}")
@@ -692,25 +729,26 @@ def _validate_voice_flow(
     for field, expected in required_disclosure.items():
         _append_if(
             errors,
-            disclosure_payload.get(field) != expected,
+            not _matches_expected(disclosure_payload.get(field), expected),
             f"VOICE_FLOW_SELECTION_DISCLOSURE_FAILED:{field}",
         )
 
     runtime = report.get("runtime")
     runtime_payload = runtime if isinstance(runtime, Mapping) else {}
     expected_runtime: dict[str, Any] = {
-        "speech_model": "small",
         "speech_device": "cpu",
         "speech_compute_type": "int8",
         "speech_hotwords_used": False,
-        "speech_git_commit_verified_by_api": False,
-        "speech_model_artifact_verified": False,
+        "speech_git_commit_verified_by_api": (
+            report_schema == VOICE_FLOW_SCHEMA_VERSION
+        ),
+        "speech_model_artifact_verified": report_schema == VOICE_FLOW_SCHEMA_VERSION,
         "model_runtime_integrity": "VERIFIED",
     }
     for field, expected in expected_runtime.items():
         _append_if(
             errors,
-            runtime_payload.get(field) != expected,
+            not _matches_expected(runtime_payload.get(field), expected),
             f"VOICE_FLOW_RUNTIME_FAILED:{field}",
         )
     correlation = report.get("request_correlation")
@@ -726,7 +764,7 @@ def _validate_voice_flow(
     for field, expected in expected_correlation.items():
         _append_if(
             errors,
-            correlation_payload.get(field) != expected,
+            not _matches_expected(correlation_payload.get(field), expected),
             f"VOICE_FLOW_CORRELATION_FAILED:{field}",
         )
 
@@ -756,6 +794,69 @@ def _validate_voice_flow(
             or len(value) != 40
             or any(char not in "0123456789abcdef" for char in value),
             f"VOICE_FLOW_PROVENANCE_INVALID:{field}",
+        )
+    if report_schema == LEGACY_VOICE_FLOW_SCHEMA_VERSION:
+        return errors
+
+    model_repository = provenance_payload.get("speech_model_repository")
+    model_revision = provenance_payload.get("speech_model_revision")
+    model_bin_sha256 = provenance_payload.get("speech_model_bin_sha256")
+    _append_if(
+        errors,
+        not isinstance(model_repository, str)
+        or model_repository.count("/") != 1
+        or any(not part for part in model_repository.split("/")),
+        "VOICE_FLOW_PROVENANCE_INVALID:speech_model_repository",
+    )
+    _append_if(
+        errors,
+        not isinstance(model_revision, str)
+        or len(model_revision) != 40
+        or any(char not in "0123456789abcdef" for char in model_revision),
+        "VOICE_FLOW_PROVENANCE_INVALID:speech_model_revision",
+    )
+    _append_if(
+        errors,
+        not _is_sha256(model_bin_sha256),
+        "VOICE_FLOW_PROVENANCE_INVALID:speech_model_bin_sha256",
+    )
+    speech_model = runtime_payload.get("speech_model")
+    allowed_speech_model_identifiers = {"small"}
+    if isinstance(model_revision, str):
+        allowed_speech_model_identifiers.add(model_revision)
+    _append_if(
+        errors,
+        not isinstance(speech_model, str)
+        or speech_model not in allowed_speech_model_identifiers,
+        "VOICE_FLOW_RUNTIME_PROVENANCE_MISMATCH:speech_model",
+    )
+    expected_speech_provenance: dict[str, Any] = {
+        "speech_service_git_commit": provenance_payload.get("speech_git_commit"),
+        "speech_model_repository": model_repository,
+        "speech_model_revision": model_revision,
+        "speech_model_bin_sha256": model_bin_sha256,
+        "speech_model_artifact_verified": True,
+    }
+    for name, expected in expected_speech_provenance.items():
+        row = check_map.get(name)
+        if (
+            row is None
+            or not _matches_expected(row.get("expected"), expected)
+            or not _matches_expected(row.get("actual"), expected)
+            or row.get("passed") is not True
+        ):
+            errors.append(f"VOICE_FLOW_PROVENANCE_CHECK_FAILED:{name}")
+    for runtime_field, provenance_field in {
+        "speech_service_git_commit": "speech_git_commit",
+        "speech_model_repository": "speech_model_repository",
+        "speech_model_revision": "speech_model_revision",
+        "speech_model_bin_sha256": "speech_model_bin_sha256",
+    }.items():
+        _append_if(
+            errors,
+            runtime_payload.get(runtime_field)
+            != provenance_payload.get(provenance_field),
+            f"VOICE_FLOW_RUNTIME_PROVENANCE_MISMATCH:{runtime_field}",
         )
     return errors
 
