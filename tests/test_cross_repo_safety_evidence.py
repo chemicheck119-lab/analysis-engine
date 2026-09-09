@@ -211,6 +211,11 @@ def _voice_flow_report() -> dict:
         "speech_requires_responder_review": True,
         "speech_audio_retained": False,
         "speech_hotwords_used": False,
+        "speech_service_git_commit": "c" * 40,
+        "speech_model_repository": "Systran/faster-whisper-small",
+        "speech_model_revision": "e" * 40,
+        "speech_model_bin_sha256": "f" * 64,
+        "speech_model_artifact_verified": True,
         "speech_safety_uncertaintyPreserved": True,
         "speech_safety_qualitySignalsAreCalibratedProbabilities": False,
         "speech_safety_chemicalIdentificationPerformed": False,
@@ -248,7 +253,7 @@ def _voice_flow_report() -> dict:
             "actual": True,
             "passed": True,
         }
-        for index in range(64 - len(checks))
+        for index in range(69 - len(checks))
     )
     return {
         "schema_version": "chemicheck119-cross-service-voice-to-record-v1",
@@ -286,8 +291,12 @@ def _voice_flow_report() -> dict:
             "speech_device": "cpu",
             "speech_compute_type": "int8",
             "speech_hotwords_used": False,
-            "speech_git_commit_verified_by_api": False,
-            "speech_model_artifact_verified": False,
+            "speech_service_git_commit": "c" * 40,
+            "speech_model_repository": "Systran/faster-whisper-small",
+            "speech_model_revision": "e" * 40,
+            "speech_model_bin_sha256": "f" * 64,
+            "speech_git_commit_verified_by_api": True,
+            "speech_model_artifact_verified": True,
             "model_runtime_integrity": "VERIFIED",
         },
         "request_correlation": {
@@ -307,6 +316,9 @@ def _voice_flow_report() -> dict:
             "backend_git_commit": "a" * 40,
             "model_git_commit": "b" * 40,
             "speech_git_commit": "c" * 40,
+            "speech_model_repository": "Systran/faster-whisper-small",
+            "speech_model_revision": "e" * 40,
+            "speech_model_bin_sha256": "f" * 64,
             "runtime_manifest_sha256": runtime_digest,
             "evaluator_source_sha256": "d" * 64,
         },
@@ -659,6 +671,32 @@ def test_aggregate_rejects_voice_flow_audio_hash_change_even_when_relocked(
     assert report["status"] == "FAILED"
     assert (
         "VOICE_FLOW_AUDIO_SHA256_MISMATCH"
+        in report["evidence_integrity_gate"]["errors_by_source"][
+            "cross_service_voice_to_record"
+        ]
+    )
+
+
+def test_aggregate_rejects_voice_runtime_provenance_drift_when_relocked(
+    tmp_path: Path,
+) -> None:
+    paths = _fixture(tmp_path)
+    voice = json.loads(
+        paths["cross_service_voice_to_record"].read_text(encoding="utf-8")
+    )
+    voice["runtime"]["speech_model_bin_sha256"] = "0" * 64
+    _write(paths["cross_service_voice_to_record"], voice)
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    manifest["sources"]["cross_service_voice_to_record"]["expected_sha256"] = (
+        sha256_file(paths["cross_service_voice_to_record"])
+    )
+    _write(paths["manifest"], manifest)
+
+    report = _aggregate(paths)
+
+    assert report["status"] == "FAILED"
+    assert (
+        "VOICE_FLOW_RUNTIME_PROVENANCE_MISMATCH:speech_model_bin_sha256"
         in report["evidence_integrity_gate"]["errors_by_source"][
             "cross_service_voice_to_record"
         ]

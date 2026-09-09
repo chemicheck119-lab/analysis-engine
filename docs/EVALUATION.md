@@ -221,6 +221,11 @@ full_voice_to_operational_handoff_validated=false
 않았습니다. 따라서 `voice_to_record_http_chain_executed=true`와
 `full_voice_to_operational_handoff_validated=false`를 동시에 보존합니다.
 
+이 v6 bundle의 64개 음성 검사는 Speech runtime provenance 필드 도입 전의 역사적 결과입니다.
+2026-09-09 평가기는 service commit·model repository·revision·`model.bin` SHA-256·artifact
+검증 상태 5개를 추가해 새 음성 보고서에 69개 검사를 요구합니다. 새 Speech·Backend 배포와
+실제 재실행 전까지 기존 v6 결과를 provenance 통과 근거로 사용하지 않습니다.
+
 ### 2026-09-08 Backend→Model API 실제 HTTP 상태 전이
 
 분리된 보고서 결합과 별도로, 공개 합성 replay 한 건을 실제 Backend HTTP와 실제 Model API

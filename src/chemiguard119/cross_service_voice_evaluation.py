@@ -23,6 +23,9 @@ FACT_STATUS = "부분 구현 또는 개발용 데모"
 CLAIM_SCOPE = "LOCAL_SYNTHETIC_VOICE_TO_RECORD_REGRESSION_ONLY"
 GIT_COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+MODEL_REPOSITORY_PATTERN = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$"
+)
 MAX_AUDIO_BYTES = 16 * 1024 * 1024
 REQUEST_IDS = {
     "transcribe": "REQ-VOICE-E2E-TRANSCRIBE-001",
@@ -188,6 +191,9 @@ def evaluate_cross_service_voice_flow(
     backend_git_commit: str,
     model_git_commit: str,
     speech_git_commit: str,
+    speech_model_repository: str,
+    speech_model_revision: str,
+    speech_model_bin_sha256: str,
     runtime_manifest_sha256: str,
     runtime_manifest_actual_sha256: str,
     database_runtime: str,
@@ -203,7 +209,12 @@ def evaluate_cross_service_voice_flow(
     for field, value in commits.items():
         if GIT_COMMIT_PATTERN.fullmatch(value) is None:
             raise ValueError(f"{field}은 40자리 소문자 SHA여야 합니다.")
+    if MODEL_REPOSITORY_PATTERN.fullmatch(speech_model_repository) is None:
+        raise ValueError("speech_model_repository 형식이 올바르지 않습니다.")
+    if GIT_COMMIT_PATTERN.fullmatch(speech_model_revision) is None:
+        raise ValueError("speech_model_revision은 40자리 소문자 SHA여야 합니다.")
     for label, value in {
+        "Speech model.bin": speech_model_bin_sha256,
         "runtime manifest": runtime_manifest_sha256,
         "계산된 runtime manifest": runtime_manifest_actual_sha256,
     }.items():
@@ -352,6 +363,36 @@ def evaluate_cross_service_voice_flow(
     )
     _add_check(
         checks, "speech_hotwords_used", False, speech_runtime.get("hotwordsUsed")
+    )
+    _add_check(
+        checks,
+        "speech_service_git_commit",
+        speech_git_commit,
+        speech_runtime.get("serviceGitCommit"),
+    )
+    _add_check(
+        checks,
+        "speech_model_repository",
+        speech_model_repository,
+        speech_runtime.get("modelRepository"),
+    )
+    _add_check(
+        checks,
+        "speech_model_revision",
+        speech_model_revision,
+        speech_runtime.get("modelRevision"),
+    )
+    _add_check(
+        checks,
+        "speech_model_bin_sha256",
+        speech_model_bin_sha256,
+        speech_runtime.get("modelBinSha256"),
+    )
+    _add_check(
+        checks,
+        "speech_model_artifact_verified",
+        True,
+        speech_runtime.get("modelArtifactVerified"),
     )
     _add_check(
         checks, "speech_actual_device", "cpu", speech_runtime.get("actualDevice")
@@ -570,14 +611,29 @@ def evaluate_cross_service_voice_flow(
         )
     if all_passed("record_exact_retry_same_id"):
         claims_allowed.append("동일 record payload 재요청이 같은 record ID를 반환함")
+    speech_provenance_checks = (
+        "speech_service_git_commit",
+        "speech_model_repository",
+        "speech_model_revision",
+        "speech_model_bin_sha256",
+        "speech_model_artifact_verified",
+    )
+    if all_passed(*speech_provenance_checks):
+        claims_allowed.append(
+            "Speech API가 보고한 service commit과 pinned model artifact identity가 "
+            "기대값과 일치함"
+        )
 
     claims_not_allowed = [
         "합성 음성 1건을 신고음성·현장 무전 정확도로 표현",
         "사람이 전사문과 두 CAS를 실제 확인했다고 표현",
         "record 저장을 실제 현장 인계나 대응 조치 수행으로 표현",
         "H2 실행을 Cloud SQL·상용 운영 검증으로 표현",
-        "Speech model artifact와 commit이 API에서 검증됐다고 표현",
     ]
+    if not all_passed(*speech_provenance_checks):
+        claims_not_allowed.append(
+            "Speech model artifact와 commit이 API에서 검증됐다고 표현"
+        )
     if not all_passed(
         "speech_expected_surface_1_present",
         "speech_expected_surface_2_present",
@@ -623,8 +679,19 @@ def evaluate_cross_service_voice_flow(
             "speech_device": speech_runtime.get("actualDevice"),
             "speech_compute_type": speech_runtime.get("actualComputeType"),
             "speech_hotwords_used": speech_runtime.get("hotwordsUsed"),
-            "speech_git_commit_verified_by_api": False,
-            "speech_model_artifact_verified": False,
+            "speech_service_git_commit": speech_runtime.get("serviceGitCommit"),
+            "speech_model_repository": speech_runtime.get("modelRepository"),
+            "speech_model_revision": speech_runtime.get("modelRevision"),
+            "speech_model_bin_sha256": speech_runtime.get("modelBinSha256"),
+            "speech_git_commit_verified_by_api": all_passed(
+                "speech_service_git_commit"
+            ),
+            "speech_model_artifact_verified": all_passed(
+                "speech_model_repository",
+                "speech_model_revision",
+                "speech_model_bin_sha256",
+                "speech_model_artifact_verified",
+            ),
             "model_runtime_integrity": integrity.get("status"),
         },
         "request_correlation": {
@@ -637,6 +704,9 @@ def evaluate_cross_service_voice_flow(
         },
         "provenance": {
             **commits,
+            "speech_model_repository": speech_model_repository,
+            "speech_model_revision": speech_model_revision,
+            "speech_model_bin_sha256": speech_model_bin_sha256,
             "runtime_manifest_sha256": runtime_manifest_sha256,
             "evaluator_source_sha256": sha256_file(Path(__file__)),
             "scenario_id": scenario_id,

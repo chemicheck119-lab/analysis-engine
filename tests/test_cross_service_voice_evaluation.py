@@ -17,6 +17,9 @@ from chemiguard119.utils import sha256_file
 BACKEND_COMMIT = "1" * 40
 MODEL_COMMIT = "2" * 40
 SPEECH_COMMIT = "3" * 40
+SPEECH_MODEL_REPOSITORY = "Systran/faster-whisper-small"
+SPEECH_MODEL_REVISION = "5" * 40
+SPEECH_MODEL_SHA256 = "6" * 64
 RUNTIME_SHA256 = "4" * 64
 TRANSCRIPT = "차아염소산 나트륨 저장 탱크 누출 의심, 인접 저장고에는 염산 표기"
 
@@ -30,12 +33,14 @@ class FakeVoiceFlowClient:
         transcript: str = TRANSCRIPT,
         incident_surface: str = "차아염소산 나트륨",
         incident_cas: str = "7681-52-9",
+        speech_runtime_overrides: Mapping[str, Any] | None = None,
     ) -> None:
         self.unsafe_before_confirmation = unsafe_before_confirmation
         self.data_classification = data_classification
         self.transcript = transcript
         self.incident_surface = incident_surface
         self.incident_cas = incident_cas
+        self.speech_runtime_overrides = dict(speech_runtime_overrides or {})
         self.confirmed: set[str] = set()
         self.transcribe_call_count = 0
         self.record_id = "REC-SYNTHETIC-001"
@@ -94,6 +99,12 @@ class FakeVoiceFlowClient:
                 "actualDevice": "cpu",
                 "actualComputeType": "int8",
                 "hotwordsUsed": False,
+                "serviceGitCommit": SPEECH_COMMIT,
+                "modelRepository": SPEECH_MODEL_REPOSITORY,
+                "modelRevision": SPEECH_MODEL_REVISION,
+                "modelBinSha256": SPEECH_MODEL_SHA256,
+                "modelArtifactVerified": True,
+                **self.speech_runtime_overrides,
             },
             "safetyBoundary": {
                 "uncertaintyPreserved": True,
@@ -232,6 +243,9 @@ def _evaluate(
         backend_git_commit=BACKEND_COMMIT,
         model_git_commit=MODEL_COMMIT,
         speech_git_commit=SPEECH_COMMIT,
+        speech_model_repository=SPEECH_MODEL_REPOSITORY,
+        speech_model_revision=SPEECH_MODEL_REVISION,
+        speech_model_bin_sha256=SPEECH_MODEL_SHA256,
         runtime_manifest_sha256=RUNTIME_SHA256,
         runtime_manifest_actual_sha256=RUNTIME_SHA256,
         database_runtime="H2_POSTGRESQL_COMPATIBILITY_MODE",
@@ -258,6 +272,11 @@ def test_voice_flow_accepts_synthetic_audio_to_record_transition(
     assert "INC-SYNTHETIC-001" not in json.dumps(report, ensure_ascii=False)
     assert TRANSCRIPT not in json.dumps(report, ensure_ascii=False)
     assert json.loads(report_path.read_text(encoding="utf-8")) == report
+    assert report["runtime"]["speech_git_commit_verified_by_api"] is True
+    assert report["runtime"]["speech_model_artifact_verified"] is True
+    assert any(
+        "pinned model artifact identity" in claim for claim in report["claims_allowed"]
+    )
 
 
 def test_voice_flow_rejects_rule_execution_before_confirmation(tmp_path: Path) -> None:
@@ -299,6 +318,31 @@ def test_failed_asr_surface_is_not_reported_as_successful_claim(tmp_path: Path) 
     )
     assert (
         "음성 후보만 있는 상태에서 Rule·위험 표시가 차단됨" in report["claims_allowed"]
+    )
+
+
+def test_unverified_speech_model_provenance_fails_the_gate(tmp_path: Path) -> None:
+    manifest, audio = _fixture(tmp_path)
+    client = FakeVoiceFlowClient(
+        speech_runtime_overrides={
+            "modelBinSha256": None,
+            "modelArtifactVerified": False,
+        }
+    )
+
+    report = _evaluate(client, manifest, audio)
+
+    assert report["status"] == "FAILED"
+    failed = {row["name"] for row in report["checks"] if row.get("passed") is False}
+    assert "speech_model_bin_sha256" in failed
+    assert "speech_model_artifact_verified" in failed
+    assert report["runtime"]["speech_model_artifact_verified"] is False
+    assert not any(
+        "pinned model artifact identity" in claim for claim in report["claims_allowed"]
+    )
+    assert (
+        "Speech model artifact와 commit이 API에서 검증됐다고 표현"
+        in report["claims_not_allowed"]
     )
 
 

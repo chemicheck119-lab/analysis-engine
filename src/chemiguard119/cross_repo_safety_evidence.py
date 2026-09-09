@@ -16,7 +16,7 @@ from chemiguard119.utils import sha256_file, write_json
 
 MANIFEST_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-manifest-v4"
 REPORT_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-report-v6"
-VOICE_FLOW_EXPECTED_CHECK_COUNT = 64
+VOICE_FLOW_EXPECTED_CHECK_COUNT = 69
 SOURCE_IDS = (
     "analysis_engine",
     "backend_state",
@@ -108,6 +108,7 @@ REQUIRED_VOICE_FLOW_CHECKS: dict[str, Any] = {
     "speech_requires_responder_review": True,
     "speech_audio_retained": False,
     "speech_hotwords_used": False,
+    "speech_model_artifact_verified": True,
     "speech_safety_uncertaintyPreserved": True,
     "speech_safety_qualitySignalsAreCalibratedProbabilities": False,
     "speech_safety_chemicalIdentificationPerformed": False,
@@ -703,8 +704,8 @@ def _validate_voice_flow(
         "speech_device": "cpu",
         "speech_compute_type": "int8",
         "speech_hotwords_used": False,
-        "speech_git_commit_verified_by_api": False,
-        "speech_model_artifact_verified": False,
+        "speech_git_commit_verified_by_api": True,
+        "speech_model_artifact_verified": True,
         "model_runtime_integrity": "VERIFIED",
     }
     for field, expected in expected_runtime.items():
@@ -756,6 +757,56 @@ def _validate_voice_flow(
             or len(value) != 40
             or any(char not in "0123456789abcdef" for char in value),
             f"VOICE_FLOW_PROVENANCE_INVALID:{field}",
+        )
+    model_repository = provenance_payload.get("speech_model_repository")
+    model_revision = provenance_payload.get("speech_model_revision")
+    model_bin_sha256 = provenance_payload.get("speech_model_bin_sha256")
+    _append_if(
+        errors,
+        not isinstance(model_repository, str)
+        or model_repository.count("/") != 1
+        or any(not part for part in model_repository.split("/")),
+        "VOICE_FLOW_PROVENANCE_INVALID:speech_model_repository",
+    )
+    _append_if(
+        errors,
+        not isinstance(model_revision, str)
+        or len(model_revision) != 40
+        or any(char not in "0123456789abcdef" for char in model_revision),
+        "VOICE_FLOW_PROVENANCE_INVALID:speech_model_revision",
+    )
+    _append_if(
+        errors,
+        not _is_sha256(model_bin_sha256),
+        "VOICE_FLOW_PROVENANCE_INVALID:speech_model_bin_sha256",
+    )
+    expected_speech_provenance: dict[str, Any] = {
+        "speech_service_git_commit": provenance_payload.get("speech_git_commit"),
+        "speech_model_repository": model_repository,
+        "speech_model_revision": model_revision,
+        "speech_model_bin_sha256": model_bin_sha256,
+        "speech_model_artifact_verified": True,
+    }
+    for name, expected in expected_speech_provenance.items():
+        row = check_map.get(name)
+        if (
+            row is None
+            or row.get("expected") != expected
+            or row.get("actual") != expected
+            or row.get("passed") is not True
+        ):
+            errors.append(f"VOICE_FLOW_PROVENANCE_CHECK_FAILED:{name}")
+    for runtime_field, provenance_field in {
+        "speech_service_git_commit": "speech_git_commit",
+        "speech_model_repository": "speech_model_repository",
+        "speech_model_revision": "speech_model_revision",
+        "speech_model_bin_sha256": "speech_model_bin_sha256",
+    }.items():
+        _append_if(
+            errors,
+            runtime_payload.get(runtime_field)
+            != provenance_payload.get(provenance_field),
+            f"VOICE_FLOW_RUNTIME_PROVENANCE_MISMATCH:{runtime_field}",
         )
     return errors
 
