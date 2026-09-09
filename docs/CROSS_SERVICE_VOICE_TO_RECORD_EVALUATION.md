@@ -136,6 +136,10 @@ boolean과 같아 보일 수 있지만 계약 위반으로 실패 처리하며, 
   `fb76e281d5519b80615a7f5bdd10f0647f6addc653f029b0aefbb024feefdbd8`
 - Cross-repo manifest file SHA-256:
   `4c7de6a76c802fae6db596bde219e4ffe53ff1d74ccd4f980822cf3689162f08`
+- 최신 Cross-repo bundle v12 report SHA-256:
+  `a536f4aba6af0c1d022b19283624ca2a0820fb0e7df566ace4aecf440ae58b47`
+- 최신 Cross-repo manifest v6 SHA-256:
+  `aec9eacc63ac0b6bc2e0c9a40b01328354120772ec433444da1d31f89023750a`
 
 70-check 보고서는 `chemicheck119-cross-service-voice-to-record-v2`, 잠금 manifest는
 `chemicheck119-cross-repo-safety-evidence-manifest-v5`로 버전을 올렸습니다. 2026-09-08의
@@ -195,9 +199,11 @@ chemiguard119 evaluate-cross-service-voice-flow \
 - “H2 결과로 Cloud SQL 고가용성을 증명했다.”
 - “모델 artifact가 같으므로 STT 정확도나 현장 안전성까지 검증됐다.”
 
-최신 provenance 고정 보고서는 Cross-repo bundle v11에 일곱 번째 독립 입력으로 포함됐습니다. Bundle 통과는
-각 보고서의 무결성과 제한된 Gate를 함께 확인한다는 뜻이며, 서로 다른 평가 건수를 합쳐
-현장 표본 수나 정확도로 주장한다는 뜻이 아닙니다.
+provenance 고정 음성 보고서는 Cross-repo bundle v11부터 일곱 번째 독립 입력으로
+포함됐습니다. 최신 bundle v12는 같은 음성 보고서를 유지하고 Analysis E2E만 ASR 내부
+띄어쓰기 회귀를 포함한 12/12 보고서로 교체했습니다. Bundle 통과는 각 보고서의 무결성과
+제한된 Gate를 함께 확인한다는 뜻이며, 서로 다른 평가 건수를 합쳐 현장 표본 수나 정확도로
+주장한다는 뜻이 아닙니다.
 
 ## GPU를 사용하지 않은 이유와 다음 Gate
 

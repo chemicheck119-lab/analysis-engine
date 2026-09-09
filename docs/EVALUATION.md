@@ -301,6 +301,47 @@ full_voice_to_operational_handoff_validated=false
 연결성 결과이므로 STT 정확도, 사람 검토, 실제 CAS 정답, 현장 무전, Cloud Run·Cloud SQL,
 상용 가용성 또는 실제 안전성을 증명하지 않습니다.
 
+### 2026-09-09 Cross-repo 안전 증거 bundle v12
+
+v11의 일곱 입력 가운데 Analysis E2E v4 11/11만 새 ASR 내부 띄어쓰기 E2E 12/12 보고서로
+교체했습니다. manifest v6는 `ASR_INTERNAL_WHITESPACE_RECOVERY` capability 1/1을 필수로
+검사합니다. 역사적 manifest v4·v5는 과거 Analysis capability 계약으로 계속 재현할 수 있어
+새 조건을 과거 보고서에 소급하지 않습니다.
+
+```bash
+chemiguard119 aggregate-e2e-evidence \
+  --manifest data/evaluation/cross_repo_safety_evidence_manifest_v6.json \
+  --analysis-report <private-data>/experiments/analysis/e2e-v5-asr-spacing-r4/report.json \
+  --backend-report <private-data>/experiments/back/backend-safety-state-v2-r1/report.json \
+  --backend-cancellation-report <private-data>/experiments/e2e/confirmation-cancellation-state-v1.json \
+  --cross-service-report <private-data>/experiments/e2e/cross-service-confirmation-flow-v1-r1.json \
+  --voice-flow-report <private-data>/experiments/e2e/cross-service-voice-to-record-schema-v2-r1.json \
+  --seoul-speech-report <private-data>/experiments/speech/robustness/seoul/radio-sim-v1/20260906T050926Z/downstream-silver-119ce11-p68beeb4/report.json \
+  --incheon-speech-report <private-data>/experiments/speech/robustness/incheon/radio-sim-v1/20260906T022037Z/downstream-silver-119ce11-p68beeb4/report.json \
+  --report <private-data>/experiments/analysis/cross-repo-safety-evidence-v12-r1/report.json
+```
+
+```text
+증거 무결성 Gate 통과, 오류 0건
+잠긴 독립 보고서 7개
+Analysis DRAFT 시나리오 12/12, ASR 내부 띄어쓰기 복구 1/1
+선택 합성 음성→record 실제 HTTP 70/70
+두 CAS 확인 전 Rule 실행·위험 노출 관측 0건
+decision=CONDITIONALLY_ADOPT_FOR_INTERNAL_REGRESSION
+field_validated=false
+full_voice_to_operational_handoff_validated=false
+```
+
+- 결합 report SHA-256: `a536f4aba6af0c1d022b19283624ca2a0820fb0e7df566ace4aecf440ae58b47`
+- 잠금 manifest SHA-256: `aec9eacc63ac0b6bc2e0c9a40b01328354120772ec433444da1d31f89023750a`
+- Analysis report SHA-256: `1dde9edfcabfd79d9079fa0f51612bde4e04cbdaa5bf2cb5277ab7425ab10a81`
+- r1·r2: byte-identical
+- manifest v5로 v11을 재실행한 SHA-256도 기존 `fb76e281...`와 동일
+
+이 bundle은 최신 **내부 회귀 근거 묶음**입니다. 일곱 보고서는 서로 다른 suite이며 입력 수를
+현장 표본 수나 정확도로 합산하지 않습니다. 사람 전사 검토·실제 CAS 확인·비선택 승인 음성·
+현장 무전·운영 인계·Cloud Run·Cloud SQL은 여전히 검증하지 않았습니다.
+
 ### 2026-09-08 Backend→Model API 실제 HTTP 상태 전이
 
 분리된 보고서 결합과 별도로, 공개 합성 replay 한 건을 실제 Backend HTTP와 실제 Model API

@@ -106,7 +106,7 @@ def test_all_commands_have_callable_handlers(argv: list[str], command: str) -> N
     assert callable(args.handler)
 
 
-def test_aggregate_e2e_uses_current_69_check_manifest_by_default() -> None:
+def test_aggregate_e2e_uses_current_evidence_manifest_by_default() -> None:
     args = cli.build_parser().parse_args(
         [
             "aggregate-e2e-evidence",
@@ -127,7 +127,8 @@ def test_aggregate_e2e_uses_current_69_check_manifest_by_default() -> None:
         ]
     )
 
-    assert args.manifest.name == "cross_repo_safety_evidence_manifest_v5.json"
+    assert args.manifest.name == "cross_repo_safety_evidence_manifest_v6.json"
+    assert args.manifest.is_file()
 
 
 def test_pipeline_accepts_incident_source_adaptation_inputs(tmp_path: Path) -> None:
