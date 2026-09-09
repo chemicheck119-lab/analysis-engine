@@ -226,10 +226,21 @@ def test_repository_e2e_scenarios_have_supported_schema(
             == kwargs.get("confirmed_facility_cas")
         )
         expected_retrieval_statuses = expected.get("retrieval_statuses")
+        expected_candidate_top_cas = expected.get("candidate_top_cas") or [
+            None for _role in expected["candidate_roles"]
+        ]
         return {
             "status": expected["status"],
             "substance_candidates": [
-                {"role": role} for role in expected["candidate_roles"]
+                {
+                    "role": role,
+                    "candidates": (
+                        [{"cas_number": expected_candidate_top_cas[index]}]
+                        if expected_candidate_top_cas[index]
+                        else []
+                    ),
+                }
+                for index, role in enumerate(expected["candidate_roles"])
             ],
             "evidence": [
                 {
@@ -283,7 +294,61 @@ def test_repository_e2e_scenarios_have_supported_schema(
             "results": [],
         },
     )
-    assert report["case_count"] == 11
+    assert report["case_count"] == 12
+
+
+def test_e2e_evaluator_rejects_unexpected_candidate_top_cas(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    row = _row(
+        capabilities=["ASR_INTERNAL_WHITESPACE_RECOVERY", "CONFIRMATION_GATE"],
+        expected={
+            **_row()["expected"],
+            "candidate_count": 1,
+            "candidate_roles": ["INCIDENT"],
+            "candidate_top_cas": ["7681-52-9"],
+            "evidence_bases": {"INCIDENT": "PARSER_CANDIDATE"},
+        },
+    )
+    output = _safe_output()
+    output["substance_candidates"] = [
+        {"role": "INCIDENT", "candidates": [{"cas_number": "7440-23-5"}]}
+    ]
+    output["evidence"] = [{"role": "INCIDENT", "cas_basis": "PARSER_CANDIDATE"}]
+
+    report = _evaluate(
+        tmp_path,
+        monkeypatch,
+        [row],
+        lambda *_args, **_kwargs: output,
+    )
+
+    assert report["status"] == "FAILED"
+    assert report["cases"][0]["failures"] == [
+        "candidate_top_cas: expected=['7681-52-9'], actual=['7440-23-5']"
+    ]
+
+
+def test_e2e_evaluator_rejects_invalid_expected_candidate_cas(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    row = _row(
+        expected={
+            **_row()["expected"],
+            "candidate_count": 1,
+            "candidate_top_cas": ["7681-52-0"],
+        }
+    )
+
+    with pytest.raises(ValueError, match="checksum 오류"):
+        _evaluate(
+            tmp_path,
+            monkeypatch,
+            [row],
+            lambda *_args, **_kwargs: _safe_output(),
+        )
 
 
 def test_e2e_facility_history_absence_stays_outside_rule_gate(

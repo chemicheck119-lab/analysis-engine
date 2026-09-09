@@ -121,6 +121,36 @@ claim_scope=INTERNAL_REGRESSION_ONLY
 물질이 없다는 뜻이 아닙니다. 모의 시설명 1건의 내부 회귀이므로 실제 시설 검색 recall이나
 현장 재고 정확도를 측정하지 않습니다.
 
+### 2026-09-09 ASR 내부 띄어쓰기 E2E 회귀 추가
+
+Parser 단위 수정만으로 끝내지 않고, Cloud 합성 음성에서 관측한
+`차아 염소산 나트륨` 표기 변형을 실제 `analyze_incident` 경로에 추가했습니다. 평가기는
+역할별 Resolver 1순위 CAS까지 비교하므로 `나트륨`의 CAS `7440-23-5`로 축소되는 회귀를
+통과로 처리하지 않습니다.
+
+```text
+DRAFT 시나리오 12/12 통과
+ASR 내부 띄어쓰기 복구 1/1 통과
+사고물질 후보 7681-52-9 / 시설물질 후보 7647-01-0
+두 CAS 확인 전 Rule 실행 0건 / 위험등급 노출 0건
+기권 필요 10/10 통과
+두 번 실행의 지연시간 제외 기능 결과 동일
+claim_scope=INTERNAL_REGRESSION_ONLY
+```
+
+- 채택 report: `private-data/experiments/analysis/e2e-v5-asr-spacing-r4/report.json`
+- report SHA-256: `1dde9edfcabfd79d9079fa0f51612bde4e04cbdaa5bf2cb5277ab7425ab10a81`
+- dataset SHA-256: `107354cedb143d07e0e89b605b342b6237267115bc835b9b6df43321e4be024e`
+- DB SHA-256: `ed81fe9aac45a38880920d967ce8f3954acabfedf7b2f6ea59464552e7958b91`
+- Resolver SHA-256: `2696fa7f067163055ff556e5e12ccfa15e7dc08c9ff803838f0db074aa002dff`
+- Retriever SHA-256: `2e93e066648890400b26f56b532d6ed608b828203f8668e4af3cf63de1bc544b`
+- evaluator source SHA-256: `b3bd4f4293250e52ecbac09e45764617d9f6c8c3594fa64c9950b470867071cf`
+
+두 번의 단일 로컬 CPU 실행에서 평균 지연시간은 128.861ms와 98.310ms로 달랐습니다. 이
+소규모 실행을 운영 SLO나 성능 개선 근거로 사용하지 않습니다. 입력은 실제 음성이 아니라
+관측된 합성 음성 전사문을 재현한 기계적 안전 회귀이며, Cloud 결제 차단 때문에 같은 WAV의
+Cloud Run 재검증은 아직 완료하지 못했습니다.
+
 ### 2026-09-08 Cross-repo 안전 증거 bundle v5
 
 Speech radio-sim 2개 지역, Analysis E2E v4, Backend 새 충돌 근거 확인·stale·duplicate,
