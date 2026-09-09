@@ -858,6 +858,8 @@ def _e2e_review(args: argparse.Namespace) -> dict[str, Any]:
 
 def _retriever_review(args: argparse.Namespace) -> dict[str, Any]:
     from chemiguard119.retrieval_review import (
+        assemble_review_batches,
+        create_review_batches,
         export_review_sheet,
         generate_qrel_candidate_pool,
         merge_review_sheets,
@@ -877,6 +879,20 @@ def _retriever_review(args: argparse.Namespace) -> dict[str, Any]:
             args.output,
             actor_role=args.actor_role,
             actor_id=args.actor_id,
+        )
+    if args.retriever_review_action == "batch":
+        return create_review_batches(
+            args.candidates,
+            args.output_dir,
+            actor_role=args.actor_role,
+            actor_id=args.actor_id,
+            questions_per_batch=args.questions_per_batch,
+        )
+    if args.retriever_review_action == "assemble":
+        return assemble_review_batches(
+            args.candidates,
+            args.batch_dir,
+            args.output,
         )
     if args.retriever_review_action == "merge":
         return merge_review_sheets(
@@ -1842,6 +1858,34 @@ def build_parser() -> argparse.ArgumentParser:
     retriever_review_export.add_argument("--actor-id", required=True)
     retriever_review_export.add_argument("--output", type=_path, required=True)
     _add_json_option(retriever_review_export)
+
+    retriever_review_batch = retriever_review_actions.add_parser(
+        "batch",
+        help="질의별 근거를 보존하며 독립 검수 시트를 작은 CSV로 분할",
+    )
+    retriever_review_batch.add_argument("--candidates", type=_path, required=True)
+    retriever_review_batch.add_argument(
+        "--actor-role",
+        choices=("LABELER", "REVIEWER"),
+        required=True,
+    )
+    retriever_review_batch.add_argument("--actor-id", required=True)
+    retriever_review_batch.add_argument(
+        "--questions-per-batch",
+        type=int,
+        default=15,
+    )
+    retriever_review_batch.add_argument("--output-dir", type=_path, required=True)
+    _add_json_option(retriever_review_batch)
+
+    retriever_review_assemble = retriever_review_actions.add_parser(
+        "assemble",
+        help="완료된 검수 배치의 무결성과 전체 범위를 검사해 단일 CSV로 재조립",
+    )
+    retriever_review_assemble.add_argument("--candidates", type=_path, required=True)
+    retriever_review_assemble.add_argument("--batch-dir", type=_path, required=True)
+    retriever_review_assemble.add_argument("--output", type=_path, required=True)
+    _add_json_option(retriever_review_assemble)
 
     retriever_review_merge = retriever_review_actions.add_parser(
         "merge",

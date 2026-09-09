@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import sqlite3
+import stat
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,8 @@ from chemiguard119.cli import build_parser
 from chemiguard119.retrieval_review import (
     CANDIDATE_SCHEMA_VERSION,
     QUERY_TEMPLATES,
+    assemble_review_batches,
+    create_review_batches,
     export_review_sheet,
     generate_qrel_candidate_pool,
     load_candidate_rows,
@@ -172,6 +175,139 @@ def test_export_has_blank_labels_and_hides_pool_hint(tmp_path: Path) -> None:
     assert "pool_sources" not in rows[0]
 
 
+def test_review_batches_are_deterministic_balanced_and_keep_cases_together(
+    tmp_path: Path,
+) -> None:
+    _db, candidates = _generate(tmp_path)
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+
+    first = create_review_batches(
+        candidates,
+        first_dir,
+        actor_role="LABELER",
+        actor_id="labeler-01",
+        questions_per_batch=4,
+    )
+    create_review_batches(
+        candidates,
+        second_dir,
+        actor_role="LABELER",
+        actor_id="labeler-01",
+        questions_per_batch=4,
+    )
+    first_manifest = json.loads(
+        (first_dir / "batch_manifest.json").read_text(encoding="utf-8")
+    )
+    second_manifest = json.loads(
+        (second_dir / "batch_manifest.json").read_text(encoding="utf-8")
+    )
+
+    assert first["batch_count"] == 5
+    assert [entry["case_ids"] for entry in first_manifest["batches"]] == [
+        entry["case_ids"] for entry in second_manifest["batches"]
+    ]
+    assert [entry["template_sha256"] for entry in first_manifest["batches"]] == [
+        entry["template_sha256"] for entry in second_manifest["batches"]
+    ]
+    assert max(entry["case_count"] for entry in first_manifest["batches"]) <= 4
+    all_case_ids: list[str] = []
+    for entry in first_manifest["batches"]:
+        batch_path = first_dir / entry["filename"]
+        with batch_path.open(encoding="utf-8-sig", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        assert {row["case_id"] for row in rows} == set(entry["case_ids"])
+        assert all(row["review_decision"] == "" for row in rows)
+        assert all(row["answerable"] == "" for row in rows)
+        assert all(row["relevance_grade"] == "" for row in rows)
+        all_case_ids.extend(entry["case_ids"])
+        assert stat.S_IMODE(batch_path.stat().st_mode) == 0o600
+    assert len(all_case_ids) == len(set(all_case_ids)) == len(QUERY_TEMPLATES)
+    assert stat.S_IMODE(first_dir.stat().st_mode) == 0o700
+    assert stat.S_IMODE((first_dir / "batch_manifest.json").stat().st_mode) == 0o600
+
+
+def test_review_batches_refuse_existing_directory(tmp_path: Path) -> None:
+    _db, candidates = _generate(tmp_path)
+    output_dir = tmp_path / "batches"
+    output_dir.mkdir()
+
+    with pytest.raises(FileExistsError, match="덮어쓰지 않습니다"):
+        create_review_batches(
+            candidates,
+            output_dir,
+            actor_role="LABELER",
+            actor_id="labeler-01",
+        )
+
+
+def test_assemble_completed_batches_restores_canonical_review_sheet(
+    tmp_path: Path,
+) -> None:
+    _db, candidates = _generate(tmp_path)
+    batch_dir = tmp_path / "batches"
+    output = tmp_path / "labeler.csv"
+    create_review_batches(
+        candidates,
+        batch_dir,
+        actor_role="LABELER",
+        actor_id="labeler-01",
+        questions_per_batch=4,
+    )
+    manifest = json.loads(
+        (batch_dir / "batch_manifest.json").read_text(encoding="utf-8")
+    )
+    for entry in manifest["batches"]:
+        _fill_sheet(batch_dir / entry["filename"])
+
+    report = assemble_review_batches(candidates, batch_dir, output)
+    with output.open(encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+
+    expected_rows = sum(
+        len(row["evidence_candidates"]) for row in load_candidate_rows(candidates)
+    )
+    assert report["status"] == "COMPLETED"
+    assert report["claim_scope"] == "COMPLETED_SINGLE_REVIEW_SHEET_ONLY"
+    assert len(rows) == expected_rows
+    assert list(dict.fromkeys(row["case_id"] for row in rows)) == [
+        row["case_id"] for row in load_candidate_rows(candidates)
+    ]
+    assert stat.S_IMODE(output.stat().st_mode) == 0o600
+
+
+def test_assemble_batches_rejects_modified_candidate_context(tmp_path: Path) -> None:
+    _db, candidates = _generate(tmp_path)
+    batch_dir = tmp_path / "batches"
+    output = tmp_path / "labeler.csv"
+    create_review_batches(
+        candidates,
+        batch_dir,
+        actor_role="LABELER",
+        actor_id="labeler-01",
+        questions_per_batch=4,
+    )
+    manifest = json.loads(
+        (batch_dir / "batch_manifest.json").read_text(encoding="utf-8")
+    )
+    for entry in manifest["batches"]:
+        batch_path = batch_dir / entry["filename"]
+        _fill_sheet(batch_path)
+    first_batch = batch_dir / manifest["batches"][0]["filename"]
+    with first_batch.open(encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        fieldnames = list(reader.fieldnames or [])
+        rows = [dict(row) for row in reader]
+    rows[0]["query"] = "변조된 질문"
+    with first_batch.open("w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+    with pytest.raises(ValueError, match="candidate context가 변경"):
+        assemble_review_batches(candidates, batch_dir, output)
+
+
 def test_unanswerable_no_result_uses_explicit_negative_control_pool(
     tmp_path: Path,
 ) -> None:
@@ -291,6 +427,34 @@ def test_cli_exposes_retriever_review_actions() -> None:
             "labeler.csv",
         ]
     )
+    batch = parser.parse_args(
+        [
+            "retriever-review",
+            "batch",
+            "--candidates",
+            "candidates.jsonl",
+            "--actor-role",
+            "REVIEWER",
+            "--actor-id",
+            "reviewer-02",
+            "--output-dir",
+            "reviewer-batches",
+        ]
+    )
+    assemble = parser.parse_args(
+        [
+            "retriever-review",
+            "assemble",
+            "--candidates",
+            "candidates.jsonl",
+            "--batch-dir",
+            "reviewer-batches",
+            "--output",
+            "reviewer.csv",
+        ]
+    )
 
     assert generate.handler.__name__ == "_retriever_review"
     assert export.retriever_review_action == "export"
+    assert batch.retriever_review_action == "batch"
+    assert assemble.retriever_review_action == "assemble"
