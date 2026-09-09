@@ -377,6 +377,15 @@ def evaluate_cross_service_voice_flow(
         speech_git_commit,
         speech_runtime.get("serviceGitCommit"),
     )
+    speech_model_identifier = speech_runtime.get("model")
+    allowed_speech_model_identifiers = {"small", speech_model_revision}
+    _add_check(
+        checks,
+        "speech_model_identifier",
+        True,
+        isinstance(speech_model_identifier, str)
+        and speech_model_identifier in allowed_speech_model_identifiers,
+    )
     _add_check(
         checks,
         "speech_model_repository",
@@ -625,6 +634,7 @@ def evaluate_cross_service_voice_flow(
         claims_allowed.append("동일 record payload 재요청이 같은 record ID를 반환함")
     speech_provenance_checks = (
         "speech_service_git_commit",
+        "speech_model_identifier",
         "speech_model_repository",
         "speech_model_revision",
         "speech_model_bin_sha256",
@@ -703,6 +713,7 @@ def evaluate_cross_service_voice_flow(
                 "speech_service_git_commit"
             ),
             "speech_model_artifact_verified": all_passed(
+                "speech_model_identifier",
                 "speech_model_repository",
                 "speech_model_revision",
                 "speech_model_bin_sha256",

@@ -25,7 +25,7 @@
     "cross_service_voice_to_record": {
       "repository": "chemicheck119-lab/analysis-engine",
       "expected_schema_version": "chemicheck119-cross-service-voice-to-record-v2",
-      "expected_sha256": "89179fa839bdeabd1f9b7899c1e58236c7dab8ba206368b4874e8b3e6402a4a0",
+      "expected_sha256": "2afaed9e2740a2094722a4f1e20dee0c3ff07c50614d9961efa2b9d8e36507e3",
       "expected_input_manifest_sha256": "2dad97f53b6b1547c6d4aebf534f97ce1571efa032cbd263442929e5c26bccd5",
       "expected_audio_sha256": "6b584709c1dda8c35f6a900282fc39fa398af84a57b7e5461f3d489684dfd257"
     },

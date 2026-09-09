@@ -393,6 +393,32 @@ def test_unverified_speech_model_provenance_fails_the_gate(tmp_path: Path) -> No
     )
 
 
+def test_unrelated_runtime_model_cannot_allow_pinned_artifact_claim(
+    tmp_path: Path,
+) -> None:
+    manifest, audio = _fixture(tmp_path)
+    client = FakeVoiceFlowClient(
+        speech_runtime_overrides={"model": "unverified-local-model"}
+    )
+
+    report = _evaluate(client, manifest, audio)
+
+    assert report["status"] == "FAILED"
+    check = next(
+        row for row in report["checks"] if row["name"] == "speech_model_identifier"
+    )
+    assert check["actual"] is False
+    assert check["passed"] is False
+    assert report["runtime"]["speech_model_artifact_verified"] is False
+    assert not any(
+        "pinned model artifact identity" in claim for claim in report["claims_allowed"]
+    )
+    assert (
+        "Speech model artifact와 commit이 API에서 검증됐다고 표현"
+        in report["claims_not_allowed"]
+    )
+
+
 def test_integer_artifact_verification_cannot_pass_boolean_gate(tmp_path: Path) -> None:
     manifest, audio = _fixture(tmp_path)
     client = FakeVoiceFlowClient(speech_runtime_overrides={"modelArtifactVerified": 1})
