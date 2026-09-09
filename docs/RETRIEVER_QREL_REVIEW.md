@@ -129,7 +129,10 @@ chemiguard119 retriever-review batch \
 각 디렉터리는 owner 전용 권한의 CSV와 `batch_manifest.json`을 가진다. manifest의
 `template_sha256`은 라벨 입력 전 원본 시트의 해시다. 사람이 값을 입력하면 배치 파일의
 해시가 달라지는 것이 정상이며, 재조립 때 수정 가능한 라벨 열과 수정하면 안 되는 질문·근거
-컨텍스트를 구분해 검사한다. 두 역할은 서로의 디렉터리를 열어보지 않는다.
+컨텍스트를 구분해 검사한다. 재조립기는 candidate와 배치 크기로 공란 template를 다시
+렌더링해 `template_sha256`, batch·질의·evidence 수, intent 분포, case ID를 모두 재계산한다.
+manifest에 적힌 값을 그대로 provenance로 신뢰하지 않는다. 두 역할은 서로의 디렉터리를
+열어보지 않는다.
 
 모든 배치를 완료한 다음 각각 단일 CSV로 재조립한다.
 

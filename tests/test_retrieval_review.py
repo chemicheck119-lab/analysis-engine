@@ -308,6 +308,54 @@ def test_assemble_batches_rejects_modified_candidate_context(tmp_path: Path) -> 
         assemble_review_batches(candidates, batch_dir, output)
 
 
+@pytest.mark.parametrize(
+    "tamper_target",
+    (
+        "root_case_count",
+        "root_judgment_count",
+        "root_batch_count",
+        "entry_case_count",
+        "entry_judgment_count",
+        "entry_intent_counts",
+        "entry_template_sha256",
+    ),
+)
+def test_assemble_batches_recomputes_manifest_provenance(
+    tmp_path: Path,
+    tamper_target: str,
+) -> None:
+    _db, candidates = _generate(tmp_path)
+    batch_dir = tmp_path / "batches"
+    output = tmp_path / "labeler.csv"
+    create_review_batches(
+        candidates,
+        batch_dir,
+        actor_role="LABELER",
+        actor_id="labeler-01",
+        questions_per_batch=4,
+    )
+    manifest_path = batch_dir / "batch_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if tamper_target == "root_case_count":
+        manifest["case_count"] += 1
+    elif tamper_target == "root_judgment_count":
+        manifest["evidence_judgment_count"] += 1
+    elif tamper_target == "root_batch_count":
+        manifest["batch_count"] += 1
+    elif tamper_target == "entry_case_count":
+        manifest["batches"][0]["case_count"] += 1
+    elif tamper_target == "entry_judgment_count":
+        manifest["batches"][0]["evidence_judgment_count"] += 1
+    elif tamper_target == "entry_intent_counts":
+        manifest["batches"][0]["intent_counts"] = {"UNANSWERABLE": 99}
+    elif tamper_target == "entry_template_sha256":
+        manifest["batches"][0]["template_sha256"] = "0" * 64
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="provenance"):
+        assemble_review_batches(candidates, batch_dir, output)
+
+
 def test_unanswerable_no_result_uses_explicit_negative_control_pool(
     tmp_path: Path,
 ) -> None:
