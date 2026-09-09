@@ -4,8 +4,11 @@ import json
 from pathlib import Path
 
 from chemiguard119.cross_repo_safety_evidence import (
+    LEGACY_MANIFEST_SCHEMA_VERSION,
+    LEGACY_VOICE_FLOW_SCHEMA_VERSION,
     MANIFEST_SCHEMA_VERSION,
     REPORT_SCHEMA_VERSION,
+    VOICE_FLOW_SCHEMA_VERSION,
     aggregate_cross_repo_safety_evidence,
 )
 from chemiguard119.utils import sha256_file
@@ -256,7 +259,7 @@ def _voice_flow_report() -> dict:
         for index in range(69 - len(checks))
     )
     return {
-        "schema_version": "chemicheck119-cross-service-voice-to-record-v1",
+        "schema_version": VOICE_FLOW_SCHEMA_VERSION,
         "status": "COMPLETED",
         "fact_status": "부분 구현 또는 개발용 데모",
         "claim_scope": "LOCAL_SYNTHETIC_VOICE_TO_RECORD_REGRESSION_ONLY",
@@ -325,6 +328,39 @@ def _voice_flow_report() -> dict:
     }
 
 
+def _legacy_voice_flow_report() -> dict:
+    report = _voice_flow_report()
+    provenance_check_names = {
+        "speech_service_git_commit",
+        "speech_model_repository",
+        "speech_model_revision",
+        "speech_model_bin_sha256",
+        "speech_model_artifact_verified",
+    }
+    report["schema_version"] = LEGACY_VOICE_FLOW_SCHEMA_VERSION
+    report["checks"] = [
+        row for row in report["checks"] if row["name"] not in provenance_check_names
+    ]
+    report["check_count"] = 64
+    report["passed_check_count"] = 64
+    report["runtime"]["speech_git_commit_verified_by_api"] = False
+    report["runtime"]["speech_model_artifact_verified"] = False
+    for field in (
+        "speech_service_git_commit",
+        "speech_model_repository",
+        "speech_model_revision",
+        "speech_model_bin_sha256",
+    ):
+        report["runtime"].pop(field)
+    for field in (
+        "speech_model_repository",
+        "speech_model_revision",
+        "speech_model_bin_sha256",
+    ):
+        report["provenance"].pop(field)
+    return report
+
+
 def _speech_report(source_digest: str) -> dict:
     return {
         "schema_version": "stt-radio-sim-downstream-silver-eval-v1",
@@ -384,9 +420,7 @@ def _fixture(tmp_path: Path) -> dict[str, Path]:
         "cross_service_confirmation_flow": (
             "chemicheck119-cross-service-confirmation-flow-v1"
         ),
-        "cross_service_voice_to_record": (
-            "chemicheck119-cross-service-voice-to-record-v1"
-        ),
+        "cross_service_voice_to_record": (VOICE_FLOW_SCHEMA_VERSION),
         "speech_seoul_radio_sim": "stt-radio-sim-downstream-silver-eval-v1",
         "speech_incheon_radio_sim": "stt-radio-sim-downstream-silver-eval-v1",
     }
@@ -513,6 +547,49 @@ def test_aggregate_accepts_locked_separate_internal_suites(tmp_path: Path) -> No
         == 0
     )
     assert output.is_file()
+
+
+def test_aggregate_preserves_legacy_64_check_voice_report_contract(
+    tmp_path: Path,
+) -> None:
+    paths = _fixture(tmp_path)
+    legacy_report = _legacy_voice_flow_report()
+    _write(paths["cross_service_voice_to_record"], legacy_report)
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    manifest["schema_version"] = LEGACY_MANIFEST_SCHEMA_VERSION
+    voice_source = manifest["sources"]["cross_service_voice_to_record"]
+    voice_source["expected_schema_version"] = LEGACY_VOICE_FLOW_SCHEMA_VERSION
+    voice_source["expected_sha256"] = sha256_file(
+        paths["cross_service_voice_to_record"]
+    )
+    _write(paths["manifest"], manifest)
+
+    report = _aggregate(paths)
+
+    assert report["status"] == "COMPLETED"
+    assert report["evidence_integrity_gate"]["passed"] is True
+    assert report["coverage"]["cross_service_voice_to_record"]["check_count"] == 64
+
+
+def test_current_manifest_rejects_legacy_voice_contract(tmp_path: Path) -> None:
+    paths = _fixture(tmp_path)
+    legacy_report = _legacy_voice_flow_report()
+    _write(paths["cross_service_voice_to_record"], legacy_report)
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    voice_source = manifest["sources"]["cross_service_voice_to_record"]
+    voice_source["expected_schema_version"] = LEGACY_VOICE_FLOW_SCHEMA_VERSION
+    voice_source["expected_sha256"] = sha256_file(
+        paths["cross_service_voice_to_record"]
+    )
+    _write(paths["manifest"], manifest)
+
+    report = _aggregate(paths)
+
+    assert report["status"] == "FAILED"
+    assert (
+        "cross_service_voice_to_record:MANIFEST_VOICE_SCHEMA_MISMATCH"
+        in report["evidence_integrity_gate"]["errors_by_source"]["manifest"]
+    )
 
 
 def test_aggregate_rejects_report_changed_after_manifest_lock(tmp_path: Path) -> None:

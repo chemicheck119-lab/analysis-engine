@@ -17,7 +17,7 @@ from chemiguard119.cross_service_confirmation_evaluation import (
 from chemiguard119.utils import sha256_file, write_json
 
 
-REPORT_SCHEMA_VERSION = "chemicheck119-cross-service-voice-to-record-v1"
+REPORT_SCHEMA_VERSION = "chemicheck119-cross-service-voice-to-record-v2"
 MANIFEST_SCHEMA_VERSION = "chemicheck119-synthetic-voice-e2e-manifest-v1"
 FACT_STATUS = "부분 구현 또는 개발용 데모"
 CLAIM_SCOPE = "LOCAL_SYNTHETIC_VOICE_TO_RECORD_REGRESSION_ONLY"

@@ -14,9 +14,15 @@ from typing import Any, Mapping
 from chemiguard119.utils import sha256_file, write_json
 
 
-MANIFEST_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-manifest-v4"
+LEGACY_MANIFEST_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-manifest-v4"
+MANIFEST_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-manifest-v5"
 REPORT_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-report-v6"
-VOICE_FLOW_EXPECTED_CHECK_COUNT = 69
+LEGACY_VOICE_FLOW_SCHEMA_VERSION = "chemicheck119-cross-service-voice-to-record-v1"
+VOICE_FLOW_SCHEMA_VERSION = "chemicheck119-cross-service-voice-to-record-v2"
+VOICE_FLOW_EXPECTED_CHECK_COUNTS = {
+    LEGACY_VOICE_FLOW_SCHEMA_VERSION: 64,
+    VOICE_FLOW_SCHEMA_VERSION: 69,
+}
 SOURCE_IDS = (
     "analysis_engine",
     "backend_state",
@@ -177,9 +183,11 @@ def _matches_expected(actual: object, expected: object) -> bool:
 
 def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
     errors: list[str] = []
+    manifest_schema = manifest.get("schema_version")
     _append_if(
         errors,
-        manifest.get("schema_version") != MANIFEST_SCHEMA_VERSION,
+        manifest.get("schema_version")
+        not in {LEGACY_MANIFEST_SCHEMA_VERSION, MANIFEST_SCHEMA_VERSION},
         "MANIFEST_SCHEMA_MISMATCH",
     )
     _append_if(
@@ -215,6 +223,16 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
                 f"{source_id}:{field.upper()}_MISSING",
             )
         if source_id == "cross_service_voice_to_record":
+            expected_voice_schema = (
+                LEGACY_VOICE_FLOW_SCHEMA_VERSION
+                if manifest_schema == LEGACY_MANIFEST_SCHEMA_VERSION
+                else VOICE_FLOW_SCHEMA_VERSION
+            )
+            _append_if(
+                errors,
+                source.get("expected_schema_version") != expected_voice_schema,
+                f"{source_id}:MANIFEST_VOICE_SCHEMA_MISMATCH",
+            )
             for field in ("expected_input_manifest_sha256", "expected_audio_sha256"):
                 value = source.get(field)
                 _append_if(
@@ -591,6 +609,8 @@ def _validate_voice_flow(
     report: Mapping[str, Any], source: Mapping[str, Any]
 ) -> list[str]:
     errors: list[str] = []
+    report_schema = report.get("schema_version")
+    expected_check_count = VOICE_FLOW_EXPECTED_CHECK_COUNTS.get(report_schema)
     expected_top_level: dict[str, Any] = {
         "status": "COMPLETED",
         "fact_status": "부분 구현 또는 개발용 데모",
@@ -644,7 +664,8 @@ def _validate_voice_flow(
         not _is_count(check_count)
         or not _is_count(passed_count)
         or not _is_count(failed_count)
-        or check_count != VOICE_FLOW_EXPECTED_CHECK_COUNT
+        or expected_check_count is None
+        or check_count != expected_check_count
         or passed_count != check_count
         or failed_count != 0,
         "VOICE_FLOW_STATE_GATE_FAILED",
@@ -660,7 +681,10 @@ def _validate_voice_flow(
         len(check_names) != len(set(check_names)),
         "VOICE_FLOW_DUPLICATE_CHECK_NAME",
     )
-    for name, expected in REQUIRED_VOICE_FLOW_CHECKS.items():
+    required_checks = dict(REQUIRED_VOICE_FLOW_CHECKS)
+    if report_schema == LEGACY_VOICE_FLOW_SCHEMA_VERSION:
+        required_checks.pop("speech_model_artifact_verified")
+    for name, expected in required_checks.items():
         row = check_map.get(name)
         if (
             row is None
@@ -715,8 +739,10 @@ def _validate_voice_flow(
         "speech_device": "cpu",
         "speech_compute_type": "int8",
         "speech_hotwords_used": False,
-        "speech_git_commit_verified_by_api": True,
-        "speech_model_artifact_verified": True,
+        "speech_git_commit_verified_by_api": (
+            report_schema == VOICE_FLOW_SCHEMA_VERSION
+        ),
+        "speech_model_artifact_verified": report_schema == VOICE_FLOW_SCHEMA_VERSION,
         "model_runtime_integrity": "VERIFIED",
     }
     for field, expected in expected_runtime.items():
@@ -769,6 +795,9 @@ def _validate_voice_flow(
             or any(char not in "0123456789abcdef" for char in value),
             f"VOICE_FLOW_PROVENANCE_INVALID:{field}",
         )
+    if report_schema == LEGACY_VOICE_FLOW_SCHEMA_VERSION:
+        return errors
+
     model_repository = provenance_payload.get("speech_model_repository")
     model_revision = provenance_payload.get("speech_model_revision")
     model_bin_sha256 = provenance_payload.get("speech_model_bin_sha256")

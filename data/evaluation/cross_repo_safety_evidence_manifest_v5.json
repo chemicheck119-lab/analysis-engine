@@ -1,5 +1,5 @@
 {
-  "schema_version": "chemicheck119-cross-repo-safety-evidence-manifest-v4",
+  "schema_version": "chemicheck119-cross-repo-safety-evidence-manifest-v5",
   "fact_status": "부분 구현 또는 개발용 데모",
   "sources": {
     "analysis_engine": {
@@ -24,8 +24,8 @@
     },
     "cross_service_voice_to_record": {
       "repository": "chemicheck119-lab/analysis-engine",
-      "expected_schema_version": "chemicheck119-cross-service-voice-to-record-v1",
-      "expected_sha256": "db0b860c5ca0903f9d14fd91e076f065af1eea6f9f5637867f7c32e053a9efab",
+      "expected_schema_version": "chemicheck119-cross-service-voice-to-record-v2",
+      "expected_sha256": "abc92b01a89e6a34ad092a1348d6ac43a94afb14288242a28a690ef3bf55561b",
       "expected_input_manifest_sha256": "2dad97f53b6b1547c6d4aebf534f97ce1571efa032cbd263442929e5c26bccd5",
       "expected_audio_sha256": "6b584709c1dda8c35f6a900282fc39fa398af84a57b7e5461f3d489684dfd257"
     },

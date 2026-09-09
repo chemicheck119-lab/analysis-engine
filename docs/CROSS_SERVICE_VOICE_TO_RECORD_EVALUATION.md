@@ -125,15 +125,20 @@ boolean과 같아 보일 수 있지만 계약 위반으로 실패 처리하며, 
 - Report SHA-256:
   `ef116d33b8d0f46e04a2477dbe4b69d23481565fec4da154b18abd09e1e6f7ab`
 - Provenance 고정 local report SHA-256:
-  `db0b860c5ca0903f9d14fd91e076f065af1eea6f9f5637867f7c32e053a9efab`
+  `abc92b01a89e6a34ad092a1348d6ac43a94afb14288242a28a690ef3bf55561b`
 - Evaluator source SHA-256:
-  `4c6b4a7b40f6e829caf83896844b7dd716fa17489e66b4cf15522e755d2361cc`
+  `d48792a13bc6411ef9c47c3236f40aca604e75511e880d76ffc0c33c7ed5c130`
 - Model runtime manifest SHA-256:
   `637074a44fbc969baf292435f570800937ef75a72b42a6970034bc0416990b2e`
-- Cross-repo bundle v10 report SHA-256:
-  `bec768d67f49cc83f57808a11ed10654ce34602f360e1a0b33c7be01622cefd5`
+- Cross-repo bundle v11 report SHA-256:
+  `5aacf04d05492823f95a89997bc6ee436e46aae309b9b5e552d1dc6dd359f36b`
 - Cross-repo manifest file SHA-256:
-  `27f357690015edf6de22ea41a71918825c44f20b9d0498369b4d232d28605268`
+  `f03b850a6ca9f327fb7d87af3acf273e8ac9b30f4fce73b53e68106365c7b149`
+
+69-check 보고서는 `chemicheck119-cross-service-voice-to-record-v2`, 잠금 manifest는
+`chemicheck119-cross-repo-safety-evidence-manifest-v5`로 버전을 올렸습니다. 2026-09-08의
+64-check 보고서와 manifest v4는 별도 legacy 계약으로 계속 재현되며 새 provenance 검사를
+과거 결과에 소급하지 않습니다.
 
 ## 재현 절차
 
@@ -156,7 +161,7 @@ chemiguard119 evaluate-cross-service-voice-flow \
   --runtime-manifest <private-data>/analysis-runtime/model-api-preview-68beeb4-prod/artifacts/runtime_manifest.json \
   --runtime-manifest-sha256 637074a44fbc969baf292435f570800937ef75a72b42a6970034bc0416990b2e \
   --database-runtime H2_POSTGRESQL_COMPATIBILITY_MODE \
-  --report <private-data>/experiments/e2e/cross-service-voice-to-record-local-provenance-v4-r1.json
+  --report <private-data>/experiments/e2e/cross-service-voice-to-record-schema-v2-r1.json
 ```
 
 기본값은 loopback URL만 허용합니다. 원격 서비스 호출은 명시적 `--allow-non-loopback` 없이는
@@ -188,7 +193,7 @@ chemiguard119 evaluate-cross-service-voice-flow \
 - “H2 결과로 Cloud SQL 고가용성을 증명했다.”
 - “모델 artifact가 같으므로 STT 정확도나 현장 안전성까지 검증됐다.”
 
-최신 provenance 고정 보고서는 Cross-repo bundle v10에 일곱 번째 독립 입력으로 포함됐습니다. Bundle 통과는
+최신 provenance 고정 보고서는 Cross-repo bundle v11에 일곱 번째 독립 입력으로 포함됐습니다. Bundle 통과는
 각 보고서의 무결성과 제한된 Gate를 함께 확인한다는 뜻이며, 서로 다른 평가 건수를 합쳐
 현장 표본 수나 정확도로 주장한다는 뜻이 아닙니다.
 
