@@ -6,7 +6,7 @@
 Model API 사이로 전달했습니다. 전사 결과에서 두 물질 표현이 보존된 선택 clip은 후보 조회,
 합성 2-CAS 확인, 제한된 CAMEO Rule 실행, Backend 기록 저장까지 이어졌고 당시 64/64 검사가
 통과했습니다. 2026-09-09에는 Speech service commit과 모델 repository·revision·`model.bin`
-SHA-256·artifact 검증 상태를 추가로 고정한 실제 로컬 3-service 재실행에서 69/69가
+SHA-256·artifact 검증 상태와 실행 모델 식별자를 추가로 고정한 실제 로컬 3-service 재실행에서 70/70이
 통과했습니다. 각 실행의 r1·r2 JSON은 각각 바이트 단위로 동일했습니다.
 
 이 결과의 사실 상태는 **부분 구현 또는 개발용 데모**입니다. 실제 신고·현장 무전, 사람의
@@ -23,7 +23,7 @@ SHA-256·artifact 검증 상태를 추가로 고정한 실제 로컬 3-service �
 **채택 조건**
 
 - Speech API가 음성을 보관하지 않고, 화학 식별·CAS 확인·위험 판단을 수행하지 않을 것
-- Speech API가 보고한 service commit·model repository·revision·`model.bin` SHA-256이
+- Speech API가 보고한 service commit·실행 model 식별자·model repository·revision·`model.bin` SHA-256이
   실행 전 고정한 기대값과 일치하고 `modelArtifactVerified=true`일 것
 - 0개 CAS 확인 상태에서 Rule 실행과 위험 표시가 모두 차단될 것
 - 합성으로 두 CAS를 각각 확인한 뒤에만 CAMEO Rule이 실행될 것
@@ -91,17 +91,19 @@ Resolver Top-1이 다른 CAS `7775-09-9`를 반환했습니다. 이는 실제 �
 
 위 64/64는 Speech provenance 필드가 도입되기 전인 2026-09-08 로컬 실행 결과입니다.
 2026-09-09에는 service commit과 model artifact identity를 비교하는 5개 검사를 평가기에
-추가하고 실제 로컬 3-service를 다시 실행했습니다. 새 결과는 기존 64개 검사에 소급한 값이
-아니라 별도 69-check 실행입니다.
+추가하고 실제 로컬 3-service를 다시 실행했습니다. 이후 실행 모델 식별자가 허용된 `small`
+별칭 또는 고정 revision인지 확인하는 검사를 더해, 새 결과는 기존 64개 검사에 소급한 값이
+아니라 별도 70-check 실행입니다.
 
 ## 2026-09-09 provenance 고정 재실행
 
 | 구간 | 관측값 | 판정 |
 |---|---:|---|
-| 전체 결정적 검사 | 69/69 | 통과 |
+| 전체 결정적 검사 | 70/70 | 통과 |
 | Speech service commit | `f9225121989aa100f578c7cdc8b01b31e64af93a` | 기대값과 일치 |
 | Speech model repository | `Systran/faster-whisper-small` | 기대값과 일치 |
 | Speech model revision | `536b0662742c02347bc0e980a01041f333bce120` | 기대값과 일치 |
+| Speech 실행 model 식별자 | 고정 revision | 허용 식별자와 일치 |
 | `model.bin` SHA-256 | `3e305921...170d671` | 기대값과 일치 |
 | 모델 artifact 검증 상태 | `true` | 통과 |
 | 0개·1개 확인 Rule 실행 | 0건 | 안전 Gate 통과 |
@@ -125,17 +127,17 @@ boolean과 같아 보일 수 있지만 계약 위반으로 실패 처리하며, 
 - Report SHA-256:
   `ef116d33b8d0f46e04a2477dbe4b69d23481565fec4da154b18abd09e1e6f7ab`
 - Provenance 고정 local report SHA-256:
-  `89179fa839bdeabd1f9b7899c1e58236c7dab8ba206368b4874e8b3e6402a4a0`
+  `2afaed9e2740a2094722a4f1e20dee0c3ff07c50614d9961efa2b9d8e36507e3`
 - Evaluator source SHA-256:
-  `74e23a1a33535176edbd02245a655d764ce574691575007f9d3064ad1dcdc4b9`
+  `a60e5b2456e930d8d6951546785aa889d4ea7afa20e3e2a1d4cbd3a72fc40ed2`
 - Model runtime manifest SHA-256:
   `637074a44fbc969baf292435f570800937ef75a72b42a6970034bc0416990b2e`
 - Cross-repo bundle v11 report SHA-256:
-  `26d9df91a489417c71fc034c2959d9ef0d3a7eda49bc37dbe3de31b8e7550497`
+  `fb76e281d5519b80615a7f5bdd10f0647f6addc653f029b0aefbb024feefdbd8`
 - Cross-repo manifest file SHA-256:
-  `0f4a021b2d35909a4123fc8f52a864e9d58dca85a1b838b60916a7d3d4883fc5`
+  `4c7de6a76c802fae6db596bde219e4ffe53ff1d74ccd4f980822cf3689162f08`
 
-69-check 보고서는 `chemicheck119-cross-service-voice-to-record-v2`, 잠금 manifest는
+70-check 보고서는 `chemicheck119-cross-service-voice-to-record-v2`, 잠금 manifest는
 `chemicheck119-cross-repo-safety-evidence-manifest-v5`로 버전을 올렸습니다. 2026-09-08의
 64-check 보고서와 manifest v4는 별도 legacy 계약으로 계속 재현되며 새 provenance 검사를
 과거 결과에 소급하지 않습니다.

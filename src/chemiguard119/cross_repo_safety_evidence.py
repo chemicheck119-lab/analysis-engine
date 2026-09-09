@@ -21,7 +21,7 @@ LEGACY_VOICE_FLOW_SCHEMA_VERSION = "chemicheck119-cross-service-voice-to-record-
 VOICE_FLOW_SCHEMA_VERSION = "chemicheck119-cross-service-voice-to-record-v2"
 VOICE_FLOW_EXPECTED_CHECK_COUNTS = {
     LEGACY_VOICE_FLOW_SCHEMA_VERSION: 64,
-    VOICE_FLOW_SCHEMA_VERSION: 69,
+    VOICE_FLOW_SCHEMA_VERSION: 70,
 }
 SOURCE_IDS = (
     "analysis_engine",
@@ -114,6 +114,7 @@ REQUIRED_VOICE_FLOW_CHECKS: dict[str, Any] = {
     "speech_requires_responder_review": True,
     "speech_audio_retained": False,
     "speech_hotwords_used": False,
+    "speech_model_identifier": True,
     "speech_model_artifact_verified": True,
     "speech_safety_uncertaintyPreserved": True,
     "speech_safety_qualitySignalsAreCalibratedProbabilities": False,
@@ -684,6 +685,7 @@ def _validate_voice_flow(
     required_checks = dict(REQUIRED_VOICE_FLOW_CHECKS)
     if report_schema == LEGACY_VOICE_FLOW_SCHEMA_VERSION:
         required_checks.pop("speech_model_artifact_verified")
+        required_checks.pop("speech_model_identifier")
     for name, expected in required_checks.items():
         row = check_map.get(name)
         if (

@@ -214,6 +214,7 @@ def _voice_flow_report() -> dict:
         "speech_requires_responder_review": True,
         "speech_audio_retained": False,
         "speech_hotwords_used": False,
+        "speech_model_identifier": True,
         "speech_service_git_commit": "c" * 40,
         "speech_model_repository": "Systran/faster-whisper-small",
         "speech_model_revision": "e" * 40,
@@ -256,7 +257,7 @@ def _voice_flow_report() -> dict:
             "actual": True,
             "passed": True,
         }
-        for index in range(69 - len(checks))
+        for index in range(70 - len(checks))
     )
     return {
         "schema_version": VOICE_FLOW_SCHEMA_VERSION,
@@ -332,6 +333,7 @@ def _legacy_voice_flow_report() -> dict:
     report = _voice_flow_report()
     provenance_check_names = {
         "speech_service_git_commit",
+        "speech_model_identifier",
         "speech_model_repository",
         "speech_model_revision",
         "speech_model_bin_sha256",
