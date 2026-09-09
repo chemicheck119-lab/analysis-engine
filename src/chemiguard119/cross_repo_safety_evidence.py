@@ -15,7 +15,10 @@ from chemiguard119.utils import sha256_file, write_json
 
 
 LEGACY_MANIFEST_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-manifest-v4"
-MANIFEST_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-manifest-v5"
+PREVIOUS_MANIFEST_SCHEMA_VERSION = (
+    "chemicheck119-cross-repo-safety-evidence-manifest-v5"
+)
+MANIFEST_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-manifest-v6"
 REPORT_SCHEMA_VERSION = "chemicheck119-cross-repo-safety-evidence-report-v6"
 LEGACY_VOICE_FLOW_SCHEMA_VERSION = "chemicheck119-cross-service-voice-to-record-v1"
 VOICE_FLOW_SCHEMA_VERSION = "chemicheck119-cross-service-voice-to-record-v2"
@@ -32,7 +35,7 @@ SOURCE_IDS = (
     "speech_seoul_radio_sim",
     "speech_incheon_radio_sim",
 )
-REQUIRED_ANALYSIS_CAPABILITIES = frozenset(
+LEGACY_REQUIRED_ANALYSIS_CAPABILITIES = frozenset(
     {
         "AMBIGUITY_ABSTENTION",
         "CONFIRMATION_GATE",
@@ -45,6 +48,9 @@ REQUIRED_ANALYSIS_CAPABILITIES = frozenset(
         "UNREGISTERED_PRODUCT_ABSTENTION",
         "UNSUPPORTED_PAIR_ABSTENTION",
     }
+)
+REQUIRED_ANALYSIS_CAPABILITIES = frozenset(
+    {*LEGACY_REQUIRED_ANALYSIS_CAPABILITIES, "ASR_INTERNAL_WHITESPACE_RECOVERY"}
 )
 REQUIRED_BACKEND_CHECKS: dict[str, Any] = {
     "confirmation_revision_count_after_new_evidence": 2,
@@ -188,7 +194,11 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
     _append_if(
         errors,
         manifest.get("schema_version")
-        not in {LEGACY_MANIFEST_SCHEMA_VERSION, MANIFEST_SCHEMA_VERSION},
+        not in {
+            LEGACY_MANIFEST_SCHEMA_VERSION,
+            PREVIOUS_MANIFEST_SCHEMA_VERSION,
+            MANIFEST_SCHEMA_VERSION,
+        },
         "MANIFEST_SCHEMA_MISMATCH",
     )
     _append_if(
@@ -246,7 +256,10 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> list[str]:
     return errors
 
 
-def _validate_analysis(report: Mapping[str, Any]) -> list[str]:
+def _validate_analysis(
+    report: Mapping[str, Any],
+    manifest_schema: object,
+) -> list[str]:
     errors: list[str] = []
     _append_if(errors, report.get("status") != "COMPLETED", "ANALYSIS_NOT_COMPLETED")
     _append_if(
@@ -306,9 +319,14 @@ def _validate_analysis(report: Mapping[str, Any]) -> list[str]:
     )
     capabilities = report.get("capability_coverage")
     capability_rows = capabilities if isinstance(capabilities, Mapping) else {}
-    missing = REQUIRED_ANALYSIS_CAPABILITIES - set(capability_rows)
+    required_capabilities = (
+        REQUIRED_ANALYSIS_CAPABILITIES
+        if manifest_schema == MANIFEST_SCHEMA_VERSION
+        else LEGACY_REQUIRED_ANALYSIS_CAPABILITIES
+    )
+    missing = required_capabilities - set(capability_rows)
     _append_if(errors, bool(missing), "ANALYSIS_REQUIRED_CAPABILITY_MISSING")
-    for capability in REQUIRED_ANALYSIS_CAPABILITIES & set(capability_rows):
+    for capability in required_capabilities & set(capability_rows):
         row = capability_rows[capability]
         if not isinstance(row, Mapping) or row.get("pass_rate") != 1.0:
             errors.append(f"ANALYSIS_CAPABILITY_FAILED:{capability}")
@@ -1011,7 +1029,7 @@ def aggregate_cross_repo_safety_evidence(
         validation_errors[source_id] = errors
 
     validation_errors["analysis_engine"].extend(
-        _validate_analysis(reports["analysis_engine"])
+        _validate_analysis(reports["analysis_engine"], manifest.get("schema_version"))
     )
     validation_errors["backend_state"].extend(
         _validate_backend(reports["backend_state"])

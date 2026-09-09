@@ -7,6 +7,7 @@ from chemiguard119.cross_repo_safety_evidence import (
     LEGACY_MANIFEST_SCHEMA_VERSION,
     LEGACY_VOICE_FLOW_SCHEMA_VERSION,
     MANIFEST_SCHEMA_VERSION,
+    PREVIOUS_MANIFEST_SCHEMA_VERSION,
     REPORT_SCHEMA_VERSION,
     VOICE_FLOW_SCHEMA_VERSION,
     aggregate_cross_repo_safety_evidence,
@@ -32,6 +33,7 @@ def _analysis_report() -> dict:
             "RETRIEVER_TIMEOUT_ABSTENTION",
             "UNREGISTERED_PRODUCT_ABSTENTION",
             "UNSUPPORTED_PAIR_ABSTENTION",
+            "ASR_INTERNAL_WHITESPACE_RECOVERY",
         )
     }
     return {
@@ -591,6 +593,48 @@ def test_current_manifest_rejects_legacy_voice_contract(tmp_path: Path) -> None:
     assert (
         "cross_service_voice_to_record:MANIFEST_VOICE_SCHEMA_MISMATCH"
         in report["evidence_integrity_gate"]["errors_by_source"]["manifest"]
+    )
+
+
+def test_previous_manifest_preserves_pre_spacing_analysis_bundle(
+    tmp_path: Path,
+) -> None:
+    paths = _fixture(tmp_path)
+    analysis = json.loads(paths["analysis_engine"].read_text(encoding="utf-8"))
+    analysis["capability_coverage"].pop("ASR_INTERNAL_WHITESPACE_RECOVERY")
+    _write(paths["analysis_engine"], analysis)
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    manifest["schema_version"] = PREVIOUS_MANIFEST_SCHEMA_VERSION
+    manifest["sources"]["analysis_engine"]["expected_sha256"] = sha256_file(
+        paths["analysis_engine"]
+    )
+    _write(paths["manifest"], manifest)
+
+    report = _aggregate(paths)
+
+    assert report["status"] == "COMPLETED"
+    assert report["evidence_integrity_gate"]["passed"] is True
+
+
+def test_current_manifest_requires_asr_spacing_analysis_capability(
+    tmp_path: Path,
+) -> None:
+    paths = _fixture(tmp_path)
+    analysis = json.loads(paths["analysis_engine"].read_text(encoding="utf-8"))
+    analysis["capability_coverage"].pop("ASR_INTERNAL_WHITESPACE_RECOVERY")
+    _write(paths["analysis_engine"], analysis)
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    manifest["sources"]["analysis_engine"]["expected_sha256"] = sha256_file(
+        paths["analysis_engine"]
+    )
+    _write(paths["manifest"], manifest)
+
+    report = _aggregate(paths)
+
+    assert report["status"] == "FAILED"
+    assert (
+        "ANALYSIS_REQUIRED_CAPABILITY_MISSING"
+        in report["evidence_integrity_gate"]["errors_by_source"]["analysis_engine"]
     )
 
 

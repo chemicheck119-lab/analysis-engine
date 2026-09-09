@@ -1625,7 +1625,7 @@ def build_parser() -> argparse.ArgumentParser:
     aggregate_e2e.add_argument(
         "--manifest",
         type=_path,
-        default=EVALUATION_DIR / "cross_repo_safety_evidence_manifest_v5.json",
+        default=EVALUATION_DIR / "cross_repo_safety_evidence_manifest_v6.json",
     )
     aggregate_e2e.add_argument("--analysis-report", type=_path, required=True)
     aggregate_e2e.add_argument("--backend-report", type=_path, required=True)
