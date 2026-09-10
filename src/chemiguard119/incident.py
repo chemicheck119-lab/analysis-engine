@@ -7,6 +7,7 @@ from typing import Any
 
 from chemiguard119.incident_language import (
     COPULA_SUFFIXES,
+    MAX_STATEMENT_CONFLICTS,
     assertion_for,
     conflicting_mentions,
     context_role_for,
@@ -263,6 +264,8 @@ def deterministic_parse(text: str, resolver_artifact: dict[str, Any]) -> dict[st
         else ("TRUE" if "FIRE" in incident_types else "UNKNOWN"),
         "substance_mentions": substances,
         "statement_conflicts": statement_conflicts,
+        "statement_conflict_limit_reached": len(statement_conflicts)
+        >= MAX_STATEMENT_CONFLICTS,
         "requires_statement_clarification": bool(statement_conflicts),
         "planned_actions": planned_actions,
         "needs_substance_confirmation": needs_confirmation,

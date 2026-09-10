@@ -39,6 +39,7 @@ def main():
     cli.add_argument("--resolver-model", type=Path, required=True)
     cli.add_argument("--output", type=Path, required=True)
     cli.add_argument("--region", required=True)
+    cli.add_argument("--expected-stt-model", default="small")
     args = cli.parse_args()
     if args.output.exists():
         raise FileExistsError("기존 감사 보고서는 덮어쓰지 않습니다.")
@@ -57,7 +58,12 @@ def main():
     if summary.get("dataset", {}).get("record_count") != len(rows):
         raise ValueError("STT summary의 표본 수 불일치")
     runtime = summary["runtime"]
-    if runtime.get("model") != "small" or runtime.get("compute_type") != "int8":
+    if (
+        runtime.get("model") != args.expected_stt_model
+        or runtime.get("compute_type") != "int8"
+        or runtime.get("device") != "cpu"
+        or runtime.get("variants") != ["baseline"]
+    ):
         raise ValueError("예정된 STT 기준선이 아님")
     # 출력 관찰 전에 고정한 표본 선정: transcript/label 내용과 무관한 hash 순서 최대 50건.
     selected = sorted(
@@ -94,6 +100,7 @@ def main():
         ).hexdigest(),
         "records_sha256": sha256_file(args.records),
         "summary_sha256": sha256_file(args.summary),
+        "stt_model_identifier": args.expected_stt_model,
         "resolver_sha256": RESOLVER_SHA256,
         "baseline_commit": BASELINE_COMMIT,
         "baseline_parser_sha256": hashlib.sha256(source.encode()).hexdigest(),

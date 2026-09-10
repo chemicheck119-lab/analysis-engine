@@ -26,6 +26,8 @@ POSSIBLE = re.compile(r"같(?:습|아|은)|의심|일\s*수도|가능|추정")
 NEGATED = re.compile(r"아니|아님|아닙|아닌|없(?:다|어|음|습니다|었|는|으며|다고|고|을)")
 INCIDENT_TERMS = ("누출", "새고", "샌", "유출", "화재", "폭발", "탱크에서")
 FACILITY_TERMS = ("옆", "저장고", "창고", "보관", "시설", "함께", "인접")
+# 원문 언급은 모두 보존하지만 충돌 쌍의 직렬화는 제한한다.
+MAX_STATEMENT_CONFLICTS = 64
 
 
 def context_windows(text: str, spans: list[tuple[int, int]]) -> list[tuple[str, str]]:
@@ -109,4 +111,6 @@ def conflicting_mentions(mentions: list[dict]) -> list[dict]:
                     "not_a_verified_contradiction": True,
                 }
             )
+            if len(result) >= MAX_STATEMENT_CONFLICTS:
+                return result
     return result

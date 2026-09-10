@@ -319,3 +319,13 @@ def test_validator_rejects_incorrect_offsets(resolver_artifact):
     assert "물질 표현의 원문 구간이 일치하지 않습니다." in validate_parser_output(
         parsed, "염산 누출"
     )
+
+
+def test_repeated_claims_preserve_mentions_but_bound_conflict_list(resolver_artifact):
+    text = ("염산 없음. 염산. " * 400)[:4000]
+    parsed = deterministic_parse(text, resolver_artifact)
+    assert len(parsed["substance_mentions"]) == 727
+    assert len(parsed["statement_conflicts"]) == 64
+    assert parsed["statement_conflict_limit_reached"]
+    assert parsed["requires_statement_clarification"]
+    assert validate_parser_output(parsed, text) == []
