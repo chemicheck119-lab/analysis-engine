@@ -17,6 +17,7 @@
 - Swagger: `http://127.0.0.1:8011/docs` — Authorize에서 `X-API-Key` 입력 후 Try it out
 - [설치·artifact 준비·요청 예시·SSE·팀원 연동 안내](docs/ACTION_BRIEF.md)
 - [실제 artifact 평가·실패 원인·채택/기각 결과](docs/ACTION_BRIEF_RESULTS.md)
+- [평가 준비 현황·원본 접근·사람 검수 시작 안내](docs/EVALUATION_READINESS_2026-09-11.md): 171질의의 검수 자료를 확인했지만 사람 정답은 아직 0개입니다. 새 모델 성능 결과가 아닙니다.
 - [Parser 고도화 결과·원문 구간·미확인 연동 계약](docs/PARSER_UNCERTAINTY_RESULTS.md): “염산인 것 같습니다”를 놓치지 않고 추정으로 남깁니다. 같은 물질의 서로 다른 진술도 보존합니다. **합성 회귀 개선이지 현장 정확도 증명이 아닙니다.**
 
 승인된 비공개 artifact가 준비된 환경의 최소 실행 명령입니다. 최초 설치와 안전한 manifest 준비는 위 안내를 따르세요.
