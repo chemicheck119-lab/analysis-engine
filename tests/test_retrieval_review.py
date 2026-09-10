@@ -466,6 +466,59 @@ def test_generate_pool_run_rejects_changed_database(tmp_path: Path) -> None:
         )
 
 
+@pytest.mark.parametrize("bad_row", [{}, {"evidence_id": " "}, {"evidence_id": 1}])
+def test_pool_run_does_not_hide_invalid_evidence_as_abstention(
+    tmp_path: Path, bad_row: dict[str, Any]
+) -> None:
+    db, candidates = _generate(tmp_path)
+    output = tmp_path / "pool-run.json"
+    with pytest.raises(ValueError, match="evidence ID"):
+        generate_retriever_pool_run(
+            candidates,
+            db,
+            tmp_path / "retriever.joblib",
+            output,
+            system_id="baseline",
+            system_version="test",
+            retriever_artifact={},
+            searcher=lambda *args, **kwargs: {"results": [bad_row]},
+        )
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("audit_kind", ["status", "pool"])
+def test_audit_reports_are_private_and_preserve_existing_file(
+    tmp_path: Path, audit_kind: str
+) -> None:
+    db, candidates = _generate(tmp_path)
+    report_path = tmp_path / "report.json"
+    if audit_kind == "status":
+        sheet = tmp_path / "labeler.csv"
+        export_review_sheet(
+            candidates, sheet, actor_role="LABELER", actor_id="labeler-01"
+        )
+
+        def run_audit():
+            return audit_review_sheet(
+                candidates, sheet, actor_role="LABELER", report_path=report_path
+            )
+    else:
+        run = tmp_path / "system.json"
+        _pool_run(run, db, candidates)
+
+        def run_audit():
+            return audit_candidate_pool_coverage(
+                candidates, db, [run], report_path=report_path
+            )
+
+    run_audit()
+    original = report_path.read_bytes()
+    assert stat.S_IMODE(report_path.stat().st_mode) == 0o600
+    with pytest.raises(FileExistsError):
+        run_audit()
+    assert report_path.read_bytes() == original
+
+
 def test_pool_audit_requires_expansion_for_unpooled_same_cas_result(
     tmp_path: Path,
 ) -> None:
@@ -818,7 +871,7 @@ def test_cli_exposes_pool_audit_action():
             "bm25.json",
         ]
     )
-    pool_run = parser.parse_args(
+    pool_run = build_parser().parse_args(
         [
             "retriever-review",
             "pool-run",

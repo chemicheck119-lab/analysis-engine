@@ -1237,7 +1237,7 @@ def audit_review_sheet(
         ),
     }
     if report_path is not None:
-        write_json(Path(report_path), report)
+        _write_private_json(Path(report_path), report)
     return report
 
 
@@ -1370,10 +1370,16 @@ def generate_retriever_pool_run(
             top_k=top_k,
             candidate_limit=max(40, top_k),
         )
+        retrieved_rows = retrieval.get("results") or []
+        if any(
+            not isinstance(row, Mapping)
+            or not isinstance(row.get("evidence_id"), str)
+            or not row["evidence_id"].strip()
+            for row in retrieved_rows
+        ):
+            raise ValueError("Retriever 결과의 evidence ID가 누락되거나 잘못됐습니다.")
         returned_ids = [
-            str(row.get("evidence_id") or "").strip()
-            for row in retrieval.get("results") or []
-            if str(row.get("evidence_id") or "").strip()
+            str(row.get("evidence_id") or "").strip() for row in retrieved_rows
         ]
         if len(returned_ids) != len(set(returned_ids)):
             raise ValueError(
@@ -1599,7 +1605,7 @@ def audit_candidate_pool_coverage(
         ),
     }
     if report_path is not None:
-        write_json(Path(report_path), report)
+        _write_private_json(Path(report_path), report)
     return report
 
 
