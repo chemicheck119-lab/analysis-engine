@@ -1,7 +1,14 @@
 {
   "schema_version": "action-brief-evidence-summary-v1",
   "date": "2026-09-10",
-  "implementation_status": "LOCAL_VERIFIED_CI_PENDING",
+  "implementation_status": "IMPLEMENTED_CI_VERIFIED",
+  "ci_evidence": {
+    "implementation_commit": "c0a9c9292df7a7aef280b4a1c54bb4a77dee5486",
+    "url": "https://github.com/chemicheck119-lab/analysis-engine/actions/runs/34460594028",
+    "conclusion": "success",
+    "scope": "기능 구현 커밋의 테스트·정적 검사·계약 drift·Docker 빌드. 후속 테스트·문서 변경의 최신 CI는 PR checks에서 별도 확인",
+    "latest_checks": "https://github.com/chemicheck119-lab/analysis-engine/pull/61/checks"
+  },
   "scope": "실제 artifact + 내부 합성 입력의 개발용 계약 평가; 현장 검증 아님",
   "scenario_count": 15,
   "warm_repeats_per_mode": 3,
@@ -437,8 +444,8 @@
     ]
   },
   "tests": {
-    "local_passed": 590,
-    "new_action_tests": 37,
+    "local_passed": 591,
+    "new_action_tests": 38,
     "field_tests": 0,
     "expert_reviewed_phrases": 0
   },

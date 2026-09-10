@@ -448,3 +448,32 @@ def test_deadline_during_policy_guard_never_starts_late_rule(
             assert not stub_pipeline_boundaries
     finally:
         release.set()
+
+
+def test_concurrent_incidents_do_not_share_request_state(client):
+    import hashlib
+    from concurrent.futures import ThreadPoolExecutor
+
+    payloads = []
+    for suffix in ("A", "B"):
+        payload = deepcopy(UNCONFIRMED)
+        payload["analysis"]["request_id"] = f"REQ-ISOLATION-{suffix}"
+        payload["analysis"]["incident_id"] = f"INC-ISOLATION-{suffix}"
+        payload["analysis"]["input"]["text"] = f"서로 다른 합성 신고 {suffix}"
+        payloads.append(payload)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        responses = list(
+            pool.map(lambda payload: client.post(PATH, json=payload), payloads)
+        )
+    fingerprints = set()
+    for payload, response in zip(payloads, responses, strict=True):
+        assert response.status_code == 200
+        result = response.json()
+        assert result["request_id"] == payload["analysis"]["request_id"]
+        assert result["incident_id"] == payload["analysis"]["incident_id"]
+        assert (
+            result["input_provenance"]["text_sha256"]
+            == hashlib.sha256(payload["analysis"]["input"]["text"].encode()).hexdigest()
+        )
+        fingerprints.add(result["state_fingerprint"])
+    assert len(fingerprints) == 2

@@ -4,11 +4,11 @@
 
 ## 판정
 
-**개발용 API 조건부 채택**입니다. 실제 artifact를 사용하는 JSON/SSE, 확인·보류 정책, 출처 연결, 인계 구조, Swagger와 재현 명령을 구현했습니다. 전문 검수·현장 사용성·안전성 승인은 완료하지 않았습니다. CI 결과가 확정되기 전에는 최종 완료로 표현하지 않습니다.
+**개발용 API 조건부 채택**입니다. 실제 artifact를 사용하는 JSON/SSE, 확인·보류 정책, 출처 연결, 인계 구조, Swagger와 재현 명령을 구현했습니다. 기능 구현 커밋 `c0a9c92`의 [CI 테스트·계약 검사·Docker 이미지 빌드](https://github.com/chemicheck119-lab/analysis-engine/actions/runs/34460594028)가 통과했습니다. 후속 테스트·문서 변경을 포함한 최신 CI는 [PR #61](https://github.com/chemicheck119-lab/analysis-engine/pull/61/checks)에서 커밋별로 확인합니다. 전문 검수·현장 사용성·안전성 승인은 완료하지 않았습니다.
 
 | 상태 | 범위 |
 |---|---|
-| 구현 완료 여부는 CI 판정 참조 | 추가 JSON/SSE API, 카탈로그·정책·확인 취소·출처 검증, 참조 소비자, 로컬 테스트 |
+| 구현 완료 | 추가 JSON/SSE API, 카탈로그·정책·확인 취소·출처 검증, 참조 소비자. 로컬 검사 및 기능 구현 커밋의 CI 통과 범위 |
 | 부분 구현 또는 개발용 데모 | 현장 대응 지원 전체 서비스, 정보 확인·공식 문서 조회 카드, 역할 분리형 결정적 조율 |
 | 설계 완료·구현 전 | 실제 Backend의 revision transaction/영속 저장 연동, 전문 검수 후 전술별 문구 확장 |
 | 검증되지 않은 가설 | 소방대원의 판단 시간 단축, 실무 안전성, 현장 무전 일반화, 병렬 실행의 모든 환경에서의 우위 |
@@ -53,10 +53,10 @@
 
 새 단위·계약 테스트는 실제 artifact 평가와 별도입니다. 다른 CAS 문서, 출처 명령문, 명시적 상충, 취소, 늦은 응답, 같은 revision의 새 요청, 중복 이벤트, API 키, checksum, 고정 문구, LLM 미사용, 로그 원문 비노출 등을 검사합니다. `test_action_brief_http.py`는 실제 소켓 서버에 검색 지연을 주입하여 연결 종료·2개 동시 요청·503·timeout·작업 정리 후 복구를 검사합니다. 실제 현장 장애 통계가 아닙니다.
 
-- 로컬 전체 검사: **590 tests passed**, Ruff check/format, OpenAPI drift 통과. 새 행동 카드 관련 검사는 37개입니다.
+- 로컬 전체 검사: **591 tests passed**, Ruff check/format, OpenAPI drift 통과. 새 행동 카드 관련 검사는 38개이며 서로 다른 사고의 동시 요청 격리도 검사합니다.
 - Swagger: 브라우저에서 Authorize → Try it out → Execute 후 실제 `200`, `NEEDS_CONFIRMATION`, Rule 미실행 응답 확인.
 - API 키 보안 스키마와 JSON 요청·응답 예시 검증. SSE는 별도 HTTP 클라이언트 검증.
-- 로컬 Docker 엔진 미기동으로 로컬 이미지 빌드는 미실행. GitHub CI 결과로 별도 확인합니다.
+- 로컬 Docker 엔진 미기동으로 로컬 이미지 빌드는 미실행. 기능 구현 커밋의 GitHub CI에서 Docker 이미지 빌드가 통과했습니다. 이미지 배포·Cloud 운영 검증은 하지 않았습니다.
 - 기존 Resolver 419건/Parser 442건/STT/DRAFT Retriever 점수는 다시 측정하거나 합치지 않았습니다.
 
 ## 재현과 비용
