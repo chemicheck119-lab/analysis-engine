@@ -17,6 +17,7 @@
 - Swagger: `http://127.0.0.1:8011/docs` — Authorize에서 `X-API-Key` 입력 후 Try it out
 - [설치·artifact 준비·요청 예시·SSE·팀원 연동 안내](docs/ACTION_BRIEF.md)
 - [실제 artifact 평가·실패 원인·채택/기각 결과](docs/ACTION_BRIEF_RESULTS.md)
+- [Parser 고도화 결과·원문 구간·미확인 연동 계약](docs/PARSER_UNCERTAINTY_RESULTS.md): “염산인 것 같습니다”를 놓치지 않고 추정으로 남깁니다. 같은 물질의 서로 다른 진술도 보존합니다. **합성 회귀 개선이지 현장 정확도 증명이 아닙니다.**
 
 승인된 비공개 artifact가 준비된 환경의 최소 실행 명령입니다. 최초 설치와 안전한 manifest 준비는 위 안내를 따르세요.
 
@@ -33,7 +34,7 @@ python -m uvicorn chemiguard119.api:app --host 127.0.0.1 --port 8011 --no-access
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)](docs/API.md)
 [![Docker](https://img.shields.io/badge/Deploy-Docker%20%7C%20Cloud%20Run-4285F4?logo=googlecloud&logoColor=white)](docs/DEPLOYMENT.md)
-[![Tests](https://img.shields.io/badge/Tests-591%20passed-2E7D32)](docs/ACTION_BRIEF_RESULTS.md)
+[![Tests](https://img.shields.io/badge/Tests-645%20passed-2E7D32)](docs/PARSER_UNCERTAINTY_RESULTS.md)
 
 - **참가 부문:** [제6회 소방안전 빅데이터 활용 및 아이디어 경진대회](https://www.bigdata-119.kr/bbs/view?bbsctt_id=571) · 서비스 개발 부문
 - **AI 스택:** Incident Agent · Resolver Fine-tuning · Hybrid Retrieval · Grounded RAG · CAMEO Rule Engine · FastAPI
@@ -100,7 +101,7 @@ flowchart LR
 - 물질 표현과 역할
 - 누출·화재·폭발 등 사고유형
 - 시설·설비 표현
-- 부정·추정·확정 상태
+- 부정·추정·미확인·긍정 진술 상태 — 긍정 진술도 사람의 CAS 확인과 다름
 - 위치와 추가 확인 항목
 
 ### 3. 물질 Resolver·Discovery
@@ -132,18 +133,23 @@ flowchart LR
 | 평가 CAS의 artifact 포함률 | **0.7422 → 0.9714** |
 | 전국 화학사고 외부 평가 | 2021~2025년 442건 |
 | 사고유형 Recall | **0.8376** |
-| 물질명 언급 Recall | **0.8150** |
+| 물질명 언급 Recall (과거 artifact 평가) | **0.8150** |
 | 물질 후보 범위 | 기본 **4,300개** + 소방기록 exact-only **35 CAS** |
 | 관찰 기반 물질 프로필 | **749 CAS** |
 | 전국 시설 과거 이력 | **17개 시·도 · 28,647개 시설** |
 | 공식 근거 검색 인덱스 | 약 **5,858개 문서·절** |
 | CAMEO 충돌 규칙 코어 | **CAS 6종 · 15조합** |
-| 자동화 테스트 | **591개** (로컬 검사, CI는 변경별 확인) |
+| 자동화 테스트 | **645개** (로컬 검사, CI는 변경별 확인) |
 
 평가 데이터, 분할 정책, 실패 사례와 재현 명령은 [모델 평가 문서](docs/EVALUATION.md)에서
 관리합니다. Resolver 수치는 과거 공개 사고 표현 재식별 평가이며 전국 현장 정확도가 아닙니다.
 처음 보는 표현 60건의 Top-1은 0.2833으로 개선되지 않았고, 잘못된 단일 exact 확정은 0건을
 유지했습니다.
+
+2026-09-10 Parser 변경은 같은 최신 artifact의 전국 442건 **82.4451% → 82.4451%**로
+비회귀만 확인했습니다. 위 과거 81.50%는 artifact SHA가 다른 보고서이므로 이번 개선폭으로
+빼지 않습니다. 합성 47건·19개 문장 family의 개선과 원본·버전 차이는
+[별도 결과](docs/PARSER_UNCERTAINTY_RESULTS.md)에 분리했습니다.
 
 ## 소방안전 빅데이터 활용
 
