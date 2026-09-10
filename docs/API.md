@@ -1,5 +1,7 @@
 # 케미체크119 모델 API 계약
 
+행동 카드 추가 계약은 [행동 카드 API 안내](ACTION_BRIEF.md)를 참고하세요. 기존 `/incidents/analyze`와 `/agents/incidents/step`은 유지하고, `/agents/incidents/brief` 및 `/brief/stream`을 추가했습니다. Swagger의 Authorize에서 `X-API-Key`를 입력할 수 있습니다.
+
 ## 1. 기본 정보
 
 | 항목 | 값 |

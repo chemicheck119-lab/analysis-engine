@@ -2712,6 +2712,8 @@ def test_openapi_exposes_only_documented_v1_and_health_paths(
     assert response.json()["info"]["title"] == "케미체크119 모델 API"
     paths = response.json()["paths"]
     assert set(paths) == {
+        "/api/v1/agents/incidents/brief",
+        "/api/v1/agents/incidents/brief/stream",
         "/health/live",
         "/health/ready",
         "/api/v1/meta",

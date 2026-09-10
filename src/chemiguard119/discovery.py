@@ -248,6 +248,7 @@ def discover_substances(
     retriever_artifact: dict[str, Any],
     top_k: int = 5,
     evidence_top_k: int = 3,
+    evidence_searcher: Any = None,
 ) -> dict[str, Any]:
     """정확 식별과 물성 검색을 합쳐 확인이 필요한 물질 후보를 반환한다."""
 
@@ -297,7 +298,7 @@ def discover_substances(
             or identity["canonical_name_en"]
             or cas_number
         )
-        evidence_result = search_evidence(
+        evidence_result = (evidence_searcher or search_evidence)(
             f"{display_name} {query} 누출 대응 반응성 보호구",
             db_path,
             retriever_artifact,
