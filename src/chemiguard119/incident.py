@@ -5,6 +5,13 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from chemiguard119.incident_language import (
+    COPULA_SUFFIXES,
+    assertion_for,
+    conflicting_mentions,
+    context_role_for,
+    context_windows,
+)
 from chemiguard119.resolver import (
     AUTHORITATIVE_ALIAS_TYPES,
     find_exact_alias_spans,
@@ -20,7 +27,7 @@ ACTION_PATTERNS = {
     "FOAM": ("포 소화", "포소화", "포 방사"),
     "DRAIN_BLOCK": ("배수로 차단", "배수 차단", "유입 차단"),
 }
-INCIDENT_PARSER_POLICY_VERSION = "incident-parser-policy-v2-national-dev-through-2020"
+INCIDENT_PARSER_POLICY_VERSION = "incident-parser-policy-v3-span-uncertainty"
 
 # 신고·사고 정리문에서 같은 사건이 다양한 동사로 기록된다. 아래 표현은
 # 2020년까지의 전국 공식 사고 개발 구간에서 확인한 뒤, 뜻이 직접적인
@@ -38,7 +45,13 @@ EVENT_NEGATION_PATTERN = re.compile(r"(?:안|없|아니|아닙|아님|아닌|미
 # 한국어 현장 문장에서는 물질명과 설비·물성이 붙어 쓰이는 경우가 많다.
 # 이 접미사는 화학 정체성을 바꾸지 않는 문맥만 허용한다. 예를 들어
 # ``염소가스``는 염소 후보로 찾되 ``염소소독제``나 ``차아염소산``은 찾지 않는다.
-INCIDENT_ALIAS_CONTEXT_SUFFIXES = ("저장탱크", "탱크", "용기", "가스", "통")
+INCIDENT_ALIAS_CONTEXT_SUFFIXES = (
+    "저장탱크",
+    "탱크",
+    "용기",
+    "가스",
+    "통",
+) + COPULA_SUFFIXES
 INCIDENT_WHITESPACE_TOLERANT_ALIAS_MIN_LENGTH = 6
 KOREAN_ALIAS_PATTERN = re.compile(r"[가-힣\s]+")
 
@@ -83,10 +96,13 @@ def _allows_internal_whitespace(row: dict[str, Any], alias: str) -> bool:
 
 
 def _compact_whitespace_view(text: str) -> tuple[str, tuple[int, ...]]:
-    positions = tuple(
-        index for index, character in enumerate(text) if not character.isspace()
-    )
-    return "".join(text[index] for index in positions).casefold(), positions
+    characters, positions = [], []
+    for index, character in enumerate(text):
+        if not character.isspace():
+            folded = character.casefold()
+            characters.append(folded)
+            positions.extend([index] * len(folded))
+    return "".join(characters), tuple(positions)
 
 
 def _spans_ignoring_internal_whitespace(
@@ -142,57 +158,6 @@ def _incident_alias_spans(
     )
 
 
-def _negated(text: str, surface: str) -> bool:
-    escaped = re.escape(surface)
-    return bool(
-        re.search(
-            rf"{escaped}.{{0,10}}(?:아니|아님|아닙니다|없(?:다|어|음|습니다|었(?:다|습니다)|는)|미확인)",
-            text,
-            re.IGNORECASE,
-        )
-        or re.search(rf"(?:아닌|없는).{{0,8}}{escaped}", text, re.IGNORECASE)
-    )
-
-
-def _role(text: str, surface: str) -> str:
-    if _negated(text, surface):
-        return "NEGATED"
-    index = text.lower().find(surface.lower())
-    start = max(0, index - 32)
-    end = min(len(text), index + len(surface) + 24)
-    left_context = text[start:index]
-    right_context = text[index + len(surface) : end]
-    incident_terms = ("누출", "새고", "샌", "유출", "화재", "폭발", "탱크에서")
-    facility_terms = (
-        "옆",
-        "저장고",
-        "창고",
-        "보관",
-        "시설",
-        "함께",
-        "인접",
-        "있어",
-        "있습니다",
-    )
-    # 물질명 뒤에 바로 사고 동사가 오는 경우를 가장 강한 사고물질 신호로 본다.
-    if any(term in right_context[:20] for term in incident_terms):
-        return "INCIDENT"
-    # 왼쪽 문맥에 두 종류가 모두 있으면 물질명에 더 가까운 마지막 표지를 사용한다.
-    nearest_incident = max(
-        (left_context.rfind(term) for term in incident_terms), default=-1
-    )
-    nearest_facility = max(
-        (left_context.rfind(term) for term in facility_terms), default=-1
-    )
-    if nearest_facility > nearest_incident:
-        return "FACILITY"
-    if nearest_incident >= 0:
-        return "INCIDENT"
-    if any(term in right_context for term in facility_terms):
-        return "FACILITY"
-    return "UNKNOWN"
-
-
 def deterministic_parse(text: str, resolver_artifact: dict[str, Any]) -> dict[str, Any]:
     incident_types = _incident_types(text)
     fire_negative = "FIRE" not in incident_types and bool(
@@ -222,37 +187,46 @@ def deterministic_parse(text: str, resolver_artifact: dict[str, Any]) -> dict[st
         ):
             matches.append((start, end, row, surface))
 
-    found_by_cas: dict[str, dict[str, Any]] = {}
+    selected: list[tuple[int, int, dict[str, Any], str]] = []
     selected_spans: list[tuple[int, int]] = []
     for start, end, row, surface in sorted(
         matches,
         key=lambda item: (-(item[1] - item[0]), item[0], item[2]["cas_number"]),
     ):
-        cas = row["cas_number"]
-        if cas in found_by_cas:
-            continue
         if any(
             start < selected_end and selected_start < end
             for selected_start, selected_end in selected_spans
         ):
             continue
         selected_spans.append((start, end))
-        role = _role(text, surface)
-        candidate_like = bool(
-            re.search(
-                rf"{re.escape(surface)}.{{0,6}}(?:같|의심|일 수도|가능)",
-                text,
-                re.IGNORECASE,
+        selected.append((start, end, row, surface))
+    # 같은 CAS도 다른 원문 구간이면 보존한다. 길이 우선 선택 후 원문 순서로 반환한다.
+    selected.sort(key=lambda item: (item[0], item[1]))
+    windows = context_windows(text, [(item[0], item[1]) for item in selected])
+    substances = []
+    resolutions: dict[str, dict[str, Any]] = {}
+    for (start, end, _row, surface), (left, right) in zip(
+        selected, windows, strict=True
+    ):
+        assertion = assertion_for(left, right)
+        context_role = context_role_for(left, right)
+        if surface not in resolutions:
+            resolutions[surface] = resolve_substance(
+                surface, resolver_artifact, top_k=3
             )
+        substances.append(
+            {
+                "mention_id": f"mention-{start}-{end}",
+                "start": start,
+                "end": end,
+                "surface_text": surface,
+                "role": "NEGATED" if assertion == "NEGATED" else context_role,
+                "context_role": context_role,
+                "assertion": assertion,
+                "assertion_basis": "LOCAL_RULE_NOT_HUMAN_CONFIRMATION",
+                "resolver": resolutions[surface],
+            }
         )
-        found_by_cas[cas] = {
-            "surface_text": surface,
-            "role": role,
-            "assertion": "NEGATED"
-            if role == "NEGATED"
-            else ("POSSIBLE" if candidate_like else "AFFIRMED"),
-            "resolver": resolve_substance(surface, resolver_artifact, top_k=3),
-        }
 
     planned_actions = []
     for action_code, patterns in ACTION_PATTERNS.items():
@@ -267,7 +241,7 @@ def deterministic_parse(text: str, resolver_artifact: dict[str, Any]) -> dict[st
                 )
                 break
 
-    substances = list(found_by_cas.values())
+    statement_conflicts = conflicting_mentions(substances)
     needs_confirmation = any(
         item["role"] == "UNKNOWN"
         or item["assertion"] != "AFFIRMED"
@@ -280,12 +254,16 @@ def deterministic_parse(text: str, resolver_artifact: dict[str, Any]) -> dict[st
 
     return {
         "backend": "DETERMINISTIC_BASELINE",
+        "parser_policy_version": INCIDENT_PARSER_POLICY_VERSION,
+        "span_encoding": "UNICODE_CODE_POINT_START_INCLUSIVE_END_EXCLUSIVE",
         "source_text": text,
         "incident_types": incident_types,
         "fire_status": "FALSE"
         if fire_negative
         else ("TRUE" if "FIRE" in incident_types else "UNKNOWN"),
         "substance_mentions": substances,
+        "statement_conflicts": statement_conflicts,
+        "requires_statement_clarification": bool(statement_conflicts),
         "planned_actions": planned_actions,
         "needs_substance_confirmation": needs_confirmation,
         "missing_fields": ["substance"] if not substances else [],
@@ -308,6 +286,17 @@ def validate_parser_output(payload: dict[str, Any], source_text: str) -> list[st
         surface = str(mention.get("surface_text") or "")
         if surface and normalize_text(surface) not in normalize_text(source_text):
             errors.append(f"원문에 없는 물질 표현: {surface}")
+        if "start" in mention or "end" in mention:
+            start, end = mention.get("start"), mention.get("end")
+            if (
+                not isinstance(start, int)
+                or isinstance(start, bool)
+                or not isinstance(end, int)
+                or isinstance(end, bool)
+                or not 0 <= start < end <= len(source_text)
+                or source_text[start:end] != surface
+            ):
+                errors.append("물질 표현의 원문 구간이 일치하지 않습니다.")
     allowed_incidents = {"LEAK", "FIRE", "EXPLOSION", "UNKNOWN"}
     if any(item not in allowed_incidents for item in payload.get("incident_types", [])):
         errors.append("허용되지 않은 사고유형")

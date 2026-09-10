@@ -128,6 +128,11 @@ def _candidate_mentions(
                 "surface_text": mention.get("surface_text"),
                 "role": role,
                 "assertion": mention.get("assertion"),
+                **{
+                    key: mention[key]
+                    for key in ("mention_id", "start", "end", "context_role")
+                    if key in mention
+                },
                 "resolver_status": resolver.get("status"),
                 "resolver_input_class": resolver.get("input_class"),
                 "evidence_cas_hint": select_evidence_cas_hint(resolver),

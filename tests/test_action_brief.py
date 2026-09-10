@@ -477,3 +477,32 @@ def test_concurrent_incidents_do_not_share_request_state(client):
         )
         fingerprints.add(result["state_fingerprint"])
     assert len(fingerprints) == 2
+
+
+def test_statement_clarification_blocks_rule_before_confirmed_pair(
+    client, stub_pipeline_boundaries
+):
+    from chemiguard119.action_policy import before_rule, BriefHeld
+
+    payload = BriefRequest.model_validate(BOTH_CONFIRMED).effective_analysis()
+    with pytest.raises(BriefHeld, match="STATEMENT_CLARIFICATION_REQUIRED"):
+        before_rule(
+            payload, {"parsed_report": {"requires_statement_clarification": True}}
+        )
+    # 미확인 입력의 Parser 진술은 삭제하지 않고 전달할 수 있다.
+    before_rule(
+        BriefRequest.model_validate(UNCONFIRMED).effective_analysis(),
+        {"parsed_report": {"requires_statement_clarification": True}},
+    )
+
+
+def test_statement_clarification_returns_review_card_not_generic_failure():
+    from chemiguard119.action_brief import initial_brief, failed_brief
+
+    payload = BriefRequest.model_validate(BOTH_CONFIRMED)
+    initial = initial_brief(payload, "REQ-STATEMENT-TEST", "test-runtime", {})
+    result = failed_brief(initial, "STATEMENT_CLARIFICATION_REQUIRED", {})
+    assert result.status == "HELD"
+    assert not result.rule_review.get("executed")
+    assert "HOLD_CONFLICT" in {c.phrase_id for c in result.cards}
+    assert not result.substance_candidates
