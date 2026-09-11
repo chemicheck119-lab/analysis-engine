@@ -28,7 +28,7 @@ ACTION_PATTERNS = {
     "FOAM": ("포 소화", "포소화", "포 방사"),
     "DRAIN_BLOCK": ("배수로 차단", "배수 차단", "유입 차단"),
 }
-INCIDENT_PARSER_POLICY_VERSION = "incident-parser-policy-v3-span-uncertainty"
+INCIDENT_PARSER_POLICY_VERSION = "incident-parser-policy-v3.1-negation-scope"
 
 # 신고·사고 정리문에서 같은 사건이 다양한 동사로 기록된다. 아래 표현은
 # 2020년까지의 전국 공식 사고 개발 구간에서 확인한 뒤, 뜻이 직접적인
