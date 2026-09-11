@@ -224,6 +224,14 @@ Docker 빌드·원격 CI 상태는 아래에 실행 환경을 나누어 기록�
 
 ## 6. 완료 범위와 다음 판단
 
+### PR 리뷰 보완: 혼합 실행 차단
+
+현재 `prepare`는 다운로드·출력 생성 전에 BGE-M3 모델·토크나이저 파일 6개의 고정 hash를 확인합니다. 캐시 벡터와 다른 모델의 새 벡터를 섞는 실행은 허용하지 않습니다. `rerank`도 기존 보고서에 기록된 Reranker 파일 hash를 적재 전에 확인합니다.
+
+준비 manifest의 script·도메인 모듈·encoder 모듈 hash를 현재 코드와 대조하고, 다르면 `rerank/train`을 중단합니다. **기존 manifest를 새 hash로 덮어써 우회하지 않습니다.** 위 과거 수치를 재현하려면 기록된 `6ab87f5` 실행 버전을 별도로 사용하고, 보완된 현재 코드로는 새 private 출력 경로에서 `prepare`부터 수행해야 합니다. 이번 보완은 합성 계약 테스트와 보유 모델 파일의 실제 hash 검사이며 재학습·새 성능 측정은 아닙니다. 현장 성능·전문 검수 판정은 바뀌지 않습니다.
+
+선행 PR의 리뷰 수정까지 포함한 로컬 검사: **759 tests passed**, Ruff·format·OpenAPI drift 통과. 보유 BGE-M3·Reranker 파일은 각각 6개 hash 일치를 확인했습니다. 후속 커밋의 원격 검사·Docker 빌드는 [PR #67 Checks](https://github.com/chemicheck119-lab/analysis-engine/pull/67/checks)에서 해당 HEAD 기준으로 확인합니다. 위의 718개 CI 기록은 이전 커밋의 이력이며 새 실행으로 덮어쓰지 않습니다.
+
 | 사실 상태 | 내용 |
 |---|---|
 | 구현 완료 | 세 단계 오프라인 실험 코드·실제 artifact 평가·누수 감사·재현 문서·로컬/원격 테스트·Docker CI |

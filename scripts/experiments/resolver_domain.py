@@ -17,9 +17,11 @@ import numpy as np
 from chemiguard119.incident_replay import _private_bytes, _private_json
 from chemiguard119.resolver import _load_alias_rows, load_resolver
 from chemiguard119.resolver_dense_experiment import (
+    BGE_M3_HASHES,
     _normalize_embeddings,
     build_dense_alias_corpus,
     make_transformer_cls_encoder,
+    verify_bge_m3_snapshot,
 )
 from chemiguard119.resolver_domain_experiment import (
     DOWNLOAD_URL,
@@ -38,6 +40,20 @@ from chemiguard119.ulsan_resolver_comparison import MODEL_HASH
 from chemiguard119.utils import compact_text, sha256_file
 
 RERANK_REVISION = "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e"
+RERANK_HASHES = {
+    "config.json": "13dcd6c31d9fec9d1d8e158702072f62d7fa7d312a64b9fe057bec9a08cfe41a",
+    "model.safetensors": "d9e3e081faff1eefb84019509b2f5558fd74c1a05a2c7db22f74174fcedb5286",
+    "sentencepiece.bpe.model": "cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865",
+    "special_tokens_map.json": "8c785abebea9ae3257b61681b4e6fd8365ceafde980c21970d001e834cf10835",
+    "tokenizer.json": "69564b696052886ed0ac63fa393e928384e0f8caada38c1f4864a9bfbf379c15",
+    "tokenizer_config.json": "7e4c1cc848840aeccdd763458c18dd525eb0f795c992e00ebe9c28554e7db2d4",
+}
+ROOT = Path(__file__).resolve().parents[2]
+CODE_PATHS = {
+    "script_sha256": Path(__file__).resolve(),
+    "module_sha256": ROOT / "src/chemiguard119/resolver_domain_experiment.py",
+    "encoder_module_sha256": ROOT / "src/chemiguard119/resolver_dense_experiment.py",
+}
 INPUT_HASHES = {
     "rows.private.json": "892f035f4313fef50e47878257ca2db4e5ad92953231ec2313c09b75ac638bea",
     "corpus-vectors.float32": "cbfe18d59e24c39393983d7956d8d53a7e013dc59aee68a34f73a69dd27211bc",
@@ -52,6 +68,24 @@ def read_json(path):
 def assert_hash(path, value):
     if sha256_file(path) != value:
         raise ValueError(f"고정 입력 hash 불일치: {path.name}")
+
+
+def preparation_code_hashes():
+    return {key: sha256_file(path) for key, path in CODE_PATHS.items()}
+
+
+def verify_reranker_snapshot(path):
+    if path.name != RERANK_REVISION:
+        raise ValueError("Reranker 고정 revision 불일치")
+    for name, expected in RERANK_HASHES.items():
+        assert_hash(path / name, expected)
+    if any(
+        p.is_file()
+        and p.name
+        not in set(RERANK_HASHES) | {"README.md", "LICENSE", ".gitattributes"}
+        for p in path.iterdir()
+    ):
+        raise ValueError("미검증 Reranker snapshot 파일")
 
 
 def vectors(path, count):
@@ -159,6 +193,9 @@ def safety(rows, rankings, allowed):
 
 
 def prepare(args):
+    # 다운로드·출력 생성·캐시 혼합 전에 같은 벡터 공간의 모델인지 검증한다.
+    embedding_hashes = verify_bge_m3_snapshot(args.embedding_model)
+    code_hashes = preparation_code_hashes()
     import requests
 
     artifact, base, rows, base_vectors, query_vectors = load_inputs(args)
@@ -300,32 +337,37 @@ def prepare(args):
             "python": platform.python_version(),
             "numpy": np.__version__,
         },
-        "script_sha256": sha256_file(Path(__file__)),
-        "module_sha256": sha256_file(
-            Path(__file__).parents[2]
-            / "src/chemiguard119/resolver_domain_experiment.py"
-        ),
+        **code_hashes,
+        "embedding_snapshot_sha256": embedding_hashes,
     }
+    if code_hashes != preparation_code_hashes():
+        raise ValueError("준비 도중 실행 코드 변경; 새 출력 경로에서 다시 시작하세요")
     _private_json(output / "prepared-manifest.json", manifest)
     print(json.dumps(report, ensure_ascii=False), flush=True)
 
 
 def verify_prepared(args):
     manifest = read_json(args.output / "prepared-manifest.json")
+    for name, actual in preparation_code_hashes().items():
+        if manifest.get(name) != actual:
+            raise ValueError(
+                f"준비 단계 실행 코드 hash 불일치: {name}; 새 prepare가 필요합니다"
+            )
+    if manifest.get("embedding_snapshot_sha256") != BGE_M3_HASHES:
+        raise ValueError("준비 단계 BGE-M3 snapshot hash 불일치")
     for name, expected in manifest["files"].items():
         assert_hash(args.output / name, expected)
     return read_json(args.output / "datasets.private.json")
 
 
 def rerank(args):
+    verify_prepared(args)
+    verify_reranker_snapshot(args.reranker_model)
     import torch
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-    verify_prepared(args)
     _, corpus, rows, _, _ = load_inputs(args)
     baseline = read_json(args.output / "rankings.private.json")["baseline"]
-    if args.reranker_model.name != RERANK_REVISION:
-        raise ValueError("Reranker 고정 revision 불일치")
     tokenizer = AutoTokenizer.from_pretrained(
         args.reranker_model, local_files_only=True
     )
