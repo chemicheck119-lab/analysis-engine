@@ -2,15 +2,43 @@
 
 ## 팀에 공유할 주소
 
-공개 문서 주소는 `공개 Swagger 문서 배포` Actions의 실행 요약에서 확인합니다.
+[공개 Swagger 열기](https://chemicheck119-api-docs-w6s6lwanpa-du.a.run.app/) ·
+[OpenAPI JSON](https://chemicheck119-api-docs-w6s6lwanpa-du.a.run.app/openapi.json)
+
+공개 문서 주소는 `공개 Swagger 문서 배포` Actions의 실행 요약에서도 확인합니다.
 서비스는 `chemicheck119-api-docs`이며 실제 모델 API와 별도입니다.
 
 문서는 로그인 없이 요청·응답 schema와 합성 예시를 읽는 용도입니다. 실제 모델 실행과는
 별개이며 `Try it out`과 API 키 입력 UI를 비활성화합니다. 모델 API의 Cloud Run IAM과
 X-API-Key는 그대로 유지합니다. 공개 문서를 만들기 위해 GCP를 공개 전환하지 않습니다.
 
-구현 상태는 PR의 CI·Pages 배포·실제 HTTP/브라우저 검증 결과로 판단합니다. 정적 문서
+구현 상태는 PR의 CI·문서 전용 Cloud Run 배포·실제 HTTP/브라우저 검증 결과로 판단합니다. 정적 문서
 배포 완료를 실제 모델 배포, Backend 연동 완료, 현장 안전 승인으로 표현하지 않습니다.
+
+### 최초 공개 검증 · 2026-09-11
+
+상태: **구현 완료** — 읽기 전용 문서 공개 범위에 한정합니다.
+
+- [PR #70](https://github.com/chemicheck119-lab/analysis-engine/pull/70) main 병합 및
+  [main CI 성공](https://github.com/chemicheck119-lab/analysis-engine/actions/runs/34598029763).
+  로컬 전체 테스트 773개 통과, Ruff·OpenAPI 계약 일치 검사 통과.
+- [GitHub Actions 최초 배포 성공](https://github.com/chemicheck119-lab/analysis-engine/actions/runs/34598141959),
+  문서 commit `c84d018c606a5be1fdd74d50a0ad76d6ae225683`,
+  최초 revision `chemicheck119-api-docs-00001-rst`.
+- 인증 없이 `/`, `/openapi.json`, `/build-info.json`, Swagger JS·CSS HTTP 200.
+  `/.env`·`/server.py` 404, 분석 POST 405, 원래 비공개 모델 `/docs`는 403 유지.
+- 공개 OpenAPI는 저장소 계약과 byte-identical이며 SHA-256은
+  `684fdcb91cda55056ed16ef8b916b2433a837627c5a72371792c208d8a239856`입니다.
+- 실제 공개 URL의 브라우저에서 Swagger 계약 로딩을 확인했습니다.
+  문서 서비스에만 `allUsers` 호출 권한이 있으며 모델 서비스 IAM은 변경하지 않았습니다.
+- 최초 배포 이미지 SHA-256:
+  `ecd1bb86f2be9d499b74e2c02b95a09b8b527ca1b5b51235bd5bf35dad6b9d08`.
+- 이번 빌드·확인 예상 비용은 1,500원 이내입니다. 실제 청구액은 미확인이고,
+  이후 공개 트래픽 비용을 보장하거나 금액 상한으로 차단하는 설정은 아닙니다.
+
+위 내용은 최초 배포 기록입니다. 현재 문서 commit과 파일 hash는 공개 `build-info.json`에서,
+이후 배포 성공 여부는 Actions에서 확인합니다. 실제 모델은 별도의 비공개 preview이며
+운영 서비스·현장 안전성 검증을 완료했다는 의미가 아닙니다.
 
 ## 무엇을 공개하는가
 

@@ -15,7 +15,7 @@
 - JSON: `POST /api/v1/agents/incidents/brief`
 - 순차 출력: `POST /api/v1/agents/incidents/brief/stream` — 확인 안내 먼저, 검증된 후속 결과로 교체
 - Swagger: `http://127.0.0.1:8011/docs` — Authorize에서 `X-API-Key` 입력 후 Try it out
-- [공개 Swagger 안내](docs/PUBLIC_SWAGGER.md) — 로그인 없이 schema·합성 예시 열람. **문서만 공개**, 실제 API는 비공개·실행 버튼 비활성화. 주소는 [문서 배포 Actions](https://github.com/chemicheck119-lab/analysis-engine/actions/workflows/publish-api-docs.yml) 실행 요약에서 확인합니다.
+- [공개 Swagger 열기](https://chemicheck119-api-docs-w6s6lwanpa-du.a.run.app/) — 로그인 없이 schema·합성 예시 열람. **문서만 공개**, 실제 API는 비공개·실행 버튼 비활성화. [공개 범위·배포 검증 안내](docs/PUBLIC_SWAGGER.md)
 - [설치·artifact 준비·요청 예시·SSE·팀원 연동 안내](docs/ACTION_BRIEF.md)
 - [실제 artifact 평가·실패 원인·채택/기각 결과](docs/ACTION_BRIEF_RESULTS.md)
 - [공식 별칭·Top-20 재정렬·도메인 학습 결과](docs/RESOLVER_DOMAIN_RESULTS.md): 이름 보강 효과와 모델 학습 효과를 분리했습니다. CAS를 분리한 공식 명칭 264건에서 학습 보정층의 Top-3가 106→145건으로 개선됐지만, 손실 사례·원문 한계가 있어 운영 Sparse는 유지합니다. [PR #67](https://github.com/chemicheck119-lab/analysis-engine/pull/67)의 실험 코드·평가·CI(Docker 포함) 검증을 완료했습니다. 운영 교체·현장 검증은 아닙니다.
