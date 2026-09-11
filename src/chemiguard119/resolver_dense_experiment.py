@@ -15,6 +15,40 @@ import numpy as np
 from chemiguard119.utils import normalize_text, sha256_file, valid_cas_checksum
 
 EmbeddingFunction = Callable[[list[str]], np.ndarray]
+BGE_M3_REVISION = "5617a9f61b028005a4858fdac845db406aefb181"
+BGE_M3_HASHES = {
+    "pytorch_model.bin": "b5e0ce3470abf5ef3831aa1bd5553b486803e83251590ab7ff35a117cf6aad38",
+    "config.json": "26159e7ad065073448460117eb24b7a4572f6f4e78eadff65dc0a11c052449fa",
+    "tokenizer.json": "21106b6d7dab2952c1d496fb21d5dc9db75c28ed361a05f5020bbba27810dd08",
+    "tokenizer_config.json": "a62b2b6784f990259fddef5f16388693a8043be4f69179e6a5257eeb3f9abac4",
+    "special_tokens_map.json": "8c785abebea9ae3257b61681b4e6fd8365ceafde980c21970d001e834cf10835",
+    "sentencepiece.bpe.model": "cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865",
+}
+
+
+def verify_bge_m3_snapshot(model_path: Path) -> dict[str, str]:
+    """고정 실험의 모델 bytes를 적재 전에 검증한다. 폴더명만 신뢰하지 않는다."""
+    if model_path.name != BGE_M3_REVISION:
+        raise ValueError("사전 고정 BGE-M3 revision 경로가 아닙니다.")
+    for name, expected in BGE_M3_HASHES.items():
+        path = model_path / name
+        if not path.is_file() or sha256_file(path) != expected:
+            raise ValueError(f"사전 고정 BGE-M3 파일 hash 불일치: {name}")
+    # Transformers가 검증하지 않은 safetensors/adapter/추가 vocabulary를
+    # 우선 로드하지 못하게 한다. SentenceTransformer 전용 메타데이터는 미사용.
+    allowed = set(BGE_M3_HASHES) | {
+        "README.md",
+        "LICENSE",
+        ".gitattributes",
+        "modules.json",
+        "sentence_bert_config.json",
+        "config_sentence_transformers.json",
+    }
+    if any(
+        path.is_file() and path.name not in allowed for path in model_path.iterdir()
+    ):
+        raise ValueError("사전 고정 BGE-M3 snapshot에 미검증 파일이 있습니다.")
+    return dict(BGE_M3_HASHES)
 
 
 def build_dense_alias_corpus(artifact: dict[str, Any]) -> list[dict[str, str]]:

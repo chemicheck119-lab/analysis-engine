@@ -30,6 +30,7 @@ from chemiguard119.resolver_dense_experiment import (
     _rrf_fuse,
     build_dense_alias_corpus,
     make_transformer_cls_encoder,
+    verify_bge_m3_snapshot,
 )
 from chemiguard119.utils import sha256_file
 
@@ -340,8 +341,7 @@ def run_comparison(
             raise ValueError(f"사전 고정 입력 hash 불일치: {name}")
     if sha256_file(model_path) != MODEL_HASH:
         raise ValueError("사전 고정 Resolver hash 불일치")
-    if embedding_path.name != MODEL_REVISION:
-        raise ValueError("사전 고정 BGE-M3 revision 경로가 아닙니다.")
+    verify_bge_m3_snapshot(embedding_path)
     artifact = load_resolver(model_path)
     if artifact.get("training_metadata", {}).get("training_year_max") != 2019:
         raise ValueError("2019년 학습 cutoff가 아닙니다.")

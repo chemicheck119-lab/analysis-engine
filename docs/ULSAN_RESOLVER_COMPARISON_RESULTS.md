@@ -145,6 +145,8 @@ python scripts/contracts/export_contracts.py --check
 
 ### 핵심 SHA-256
 
+PR 리뷰 보완으로 현재 비교 도구는 BGE-M3의 revision 이름뿐 아니라 가중치·config·tokenizer 및 토크나이저 보조 파일 6개의 SHA-256을 **적재 전에** 검사합니다. 미검증 대체 가중치·adapter·추가 토큰 파일도 거절합니다. 기대 hash는 `resolver_dense_experiment.BGE_M3_HASHES`에 고정하며 새 모델을 쓰려면 별도 실험으로 준비해야 합니다. 과거 점수·실행 코드 hash는 그대로 보존합니다. 이 보완은 입력 무결성 경계이며 새로운 성능 개선 실험이 아닙니다.
+
 | 대상 | SHA-256 |
 |---|---|
 | 공식 ZIP | `d0ee041579a953084f8037763ac7d0a3d901d11278a6854d348374c69363f976` |
