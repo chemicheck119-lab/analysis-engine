@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from chemiguard119 import pipeline
-from chemiguard119.action_brief import initial_brief
+from chemiguard119.action_brief import failed_brief, initial_brief
 from chemiguard119.action_catalog import CATALOG
 from chemiguard119.action_examples import (
     BOTH_CONFIRMED,
@@ -39,6 +39,23 @@ runtime = api_fixtures.runtime
 stub_pipeline_boundaries = api_fixtures.stub_pipeline_boundaries
 
 PATH = "/api/v1/agents/incidents/brief"
+
+
+@pytest.mark.parametrize(
+    "code", ["DEADLINE_EXCEEDED", "OUTPUT_REJECTED", "CONFIRMATION_CONFLICT"]
+)
+@pytest.mark.parametrize("payload", [BOTH_CONFIRMED, UNCONFIRMED])
+def test_terminal_failure_removes_pending_without_mutating_initial(code, payload):
+    initial = initial_brief(BriefRequest.model_validate(payload), "REQ-1", "v1", {})
+    before = initial.model_dump()
+    result = failed_brief(initial, code, {})
+    assert result.phase == "final"
+    assert result.status == ("TIMEOUT" if code == "DEADLINE_EXCEEDED" else "HELD")
+    assert all(card.phrase_id != "ANALYSIS_PENDING" for card in result.cards)
+    assert {
+        card.card_id for card in initial.cards if card.phrase_id != "ANALYSIS_PENDING"
+    } <= {card.card_id for card in result.cards}
+    assert initial.model_dump() == before
 
 
 @pytest.fixture()
