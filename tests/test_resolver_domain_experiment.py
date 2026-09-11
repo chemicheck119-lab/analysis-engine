@@ -1,5 +1,7 @@
 import csv
 import io
+import json
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -161,3 +163,28 @@ def test_safety_counts_violations():
         "fuzzy_catalog_escape_count": 1,
         "current_inventory_violation_count": 1,
     }
+
+
+def test_recorded_actual_results_preserve_denominators_and_limitations():
+    path = Path(__file__).parents[1] / "data/evaluation/resolver_domain_2026-09-11.json"
+    report = json.loads(path.read_text())
+    assert report["runtime_changed"] is False
+    assert report["server_cost_krw"] == 0
+    assert report["enrichment"]["baseline"]["unseen_60"]["top3_hits"] == 24
+    assert report["enrichment"]["enriched"]["unseen_60"]["top3_hits"] == 43
+    assert report["reranker"]["reranked"]["unseen_60"]["top3_hits"] == 31
+    assert report["projection"]["test_frozen"]["count"] == 264
+    assert report["projection"]["test_selected"]["top3_hits"] == 145
+    assert report["projection"]["learning"]["selected_epoch"] == 5
+    audit = report["audit"]
+    assert (
+        audit["posthoc_2020_exposure"]["unseen_60"][
+            "query_expected_pair_in_projection_training_count"
+        ]
+        == 27
+    )
+    assert audit["synonym_test_paired"]["top3"] == {"gained": 50, "lost": 11}
+    assert not any(audit["checks"].values())
+    assert audit["new_cas_activated"] is False
+    for section in ("enrichment", "reranker", "projection"):
+        assert not any(report[section]["safety"].values())
