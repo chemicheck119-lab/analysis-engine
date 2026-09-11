@@ -304,6 +304,48 @@ def test_same_material_in_different_roles_is_not_by_itself_conflict(resolver_art
     assert not parsed["requires_statement_clarification"]
 
 
+@pytest.mark.parametrize("ending", ["없지만", "없으나", "없는데", "없으며"])
+def test_concessive_negation_preserves_conflict_and_blocks_pair(
+    resolver_artifact, ending
+):
+    from chemiguard119.action_examples import BOTH_CONFIRMED
+    from chemiguard119.action_models import BriefRequest
+    from chemiguard119.action_policy import BriefHeld, before_rule
+
+    text = f"염산은 {ending} 염산이 누출됩니다."
+    parsed = deterministic_parse(text, resolver_artifact)
+    assert [m["assertion"] for m in parsed["substance_mentions"]] == [
+        "NEGATED",
+        "AFFIRMED",
+    ]
+    assert parsed["requires_statement_clarification"]
+    assert parsed["source_text"] == text
+    with pytest.raises(BriefHeld, match="STATEMENT_CLARIFICATION_REQUIRED"):
+        before_rule(
+            BriefRequest.model_validate(BOTH_CONFIRMED).effective_analysis(),
+            {"parsed_report": parsed},
+        )
+
+
+@pytest.mark.parametrize("connector", ["이 아닌", "이 아니라", "은 아닌"])
+def test_alternative_material_does_not_inherit_previous_negation(
+    resolver_artifact, connector
+):
+    text = f"염산{connector} 질산이 누출됩니다."
+    parsed = deterministic_parse(text, resolver_artifact)
+    first, second = parsed["substance_mentions"]
+    assert (first["surface_text"], first["assertion"]) == ("염산", "NEGATED")
+    assert (second["surface_text"], second["assertion"], second["role"]) == (
+        "질산",
+        "AFFIRMED",
+        "INCIDENT",
+    )
+    assert not parsed["requires_statement_clarification"]
+    assert validate_parser_output(parsed, text) == []
+    assert second["resolver"]["requires_responder_confirmation"]
+    assert not second["resolver"]["rule_input_eligible"]
+
+
 def test_unicode_expansion_and_emoji_keep_original_offsets(resolver_artifact):
     text = "ß 📞 차아 염소산 나트륨 탱크에서 누출됩니다."
     parsed = deterministic_parse(text, resolver_artifact)
