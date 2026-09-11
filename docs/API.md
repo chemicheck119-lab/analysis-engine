@@ -1,24 +1,71 @@
-# 케미체크119 모델 API 계약
+# 케미체크119 모델 API 명세서
 
-행동 카드 추가 계약은 [행동 카드 API 안내](ACTION_BRIEF.md)를 참고하세요. 기존 `/incidents/analyze`와 `/agents/incidents/step`은 유지하고, `/agents/incidents/brief` 및 `/brief/stream`을 추가했습니다. Swagger의 Authorize에서 `X-API-Key`를 입력할 수 있습니다.
+> Backend 개발자용 · 전사문을 물질 후보·공식 근거·확인·보류·인계 카드로 바꾸는 API
+
+**기준일: 2026-09-11 · 서비스 0.4.0 · 12개 endpoint.** 서비스 사실 상태는
+**부분 구현 또는 개발용 데모**입니다. 문구 전문 검수·현장 안전성·상용 운영을 보장하지 않습니다.
+이 문서는 `analysis-engine`의 계약이며 `back`의 인증·사고 CRUD나 `speech-service`의 음성
+업로드 API 명세가 아닙니다. 모델 API는 사용자 로그인·사고 영구 저장을 수행하지 않습니다.
+
+| 먼저 필요한 것 | 바로가기 |
+|---|---|
+| 기능별 API 선택 | [전체 API 목록](#endpoint-index) |
+| 실제 GCP 연결과 테스트 | [인증](#authentication), [Swagger·Postman·curl 시작](#quick-test) |
+| 화면에 보여줄 카드 만들기 | [행동 카드 JSON·SSE](#action-brief-contract) |
+| 필수 필드·타입을 기계적으로 확인 | [OpenAPI 원본](../contracts/generated/model-api-v1.openapi.json) |
+| 클릭해서 요청·응답 예시 읽기 | [공개 Swagger](https://chemicheck119-api-docs-w6s6lwanpa-du.a.run.app/) — 읽기 전용 |
+| Postman에서 합성 요청 실행 | [Collection JSON](../examples/api/chemicheck119-model-api.postman_collection.json) — 키 없음 |
+| 장애 응답·Backend 책임 | [오류 계약](#error-contract), [상태 교체·재시도](#state-and-timeout) |
+
+명세 기준 OpenAPI SHA-256:
+`684fdcb91cda55056ed16ef8b916b2433a837627c5a72371792c208d8a239856`.
+서비스 배포 코드 `0533371523b53470ae19ec1e9a04586858111fc3`와 공개 문서 배포 commit은
+별개입니다. [모델 배포 기록](https://github.com/chemicheck119-lab/analysis-engine/issues/68),
+[문서 배포 기록](https://github.com/chemicheck119-lab/analysis-engine/issues/69)을 구분하세요.
+이 명세 추가는 모델 재학습·교체가 아닙니다. OpenAPI에는 표현되지 않는 조건부 필수값은
+아래 표와 실제 Pydantic validator를 함께 따릅니다.
 
 ## 1. 기본 정보
 
 | 항목 | 값 |
 |---|---|
+| 실제 모델 Base URL | `https://chemicheck119-model-api-preview-w6s6lwanpa-du.a.run.app` — 비공개 IAM |
+| 공개 문서 URL | `https://chemicheck119-api-docs-w6s6lwanpa-du.a.run.app/` — 분석 호출 대상 아님 |
 | 로컬 기본 주소 | `http://127.0.0.1:8000` |
-| API schema | `chemiguard119-api-v1` |
+| 기존 분석·오류 schema | `chemiguard119-api-v1` |
+| 행동 카드 body schema | `action-brief-v1` |
+| Agent step body schema | `chemicheck119-incident-agent-v1` |
 | 서비스 ID | `chemicheck119-model-api` |
 | 서비스명 | 케미체크119 |
 | Swagger UI | `/docs` |
 | OpenAPI JSON | `/openapi.json` |
 | 인증 헤더 | `X-API-Key` |
 | 요청 추적 헤더 | `X-Request-Id` |
+| 전송 형식 | POST `Content-Type: application/json`, UTF-8; stream 응답만 `text/event-stream` |
 
 모델 API는 데이터 저장용 CRUD 서버가 아닙니다. 사고 기록, 사용자 인증, 현장 확인 원본은 서비스
 백엔드가 관리하고 모델 API에는 분석에 필요한 값만 전달합니다.
 
+<a id="authentication"></a>
+
 ## 2. 인증
+
+### GCP는 두 단계 인증
+
+| 계층 | 무엇을 보내는가 | 누가 관리하는가 |
+|---|---|---|
+| Cloud Run IAM | `Authorization: Bearer <Google 서명 ID token>` | 호출 Backend의 서비스 계정. 대상 서비스의 `roles/run.invoker` 필요 |
+| 모델 애플리케이션 | `X-API-Key: <모델 키>` | Backend의 Secret. 모든 분석 POST에서 필요 |
+
+서비스 간 ID token의 audience는 **실제 모델 Base URL**입니다. 공개 문서 URL이나
+`/docs`를 audience로 넣지 않습니다. 사용자 로그인 JWT·OAuth access token을 대신 보내지
+않습니다. 실제 서비스에서는 Google 인증 라이브러리로 만료 전에 갱신하고 서비스 계정 키
+JSON을 브라우저·Git에 넣지 않습니다.
+[Google의 서비스 간 인증 안내](https://docs.cloud.google.com/run/docs/authenticating/service-to-service)
+
+Health·meta·`/docs`는 앱 API 키가 없어도 되지만 **배포된 비공개 Cloud Run의 IAM은
+여전히 필요**합니다. API 키만 있어도 IAM 없이는 접근할 수 없습니다. 이 문서의 키 표시는
+placeholder이며 실제 키나 ID token은 제공하지 않습니다.
 
 ### 2.1 로컬 개발
 
@@ -44,7 +91,8 @@ staging·production에서 익명 접근을 켜거나 올바른 API Key가 없으
 
 ## 3. 공통 응답 헤더
 
-모든 응답에는 다음 헤더가 포함됩니다.
+애플리케이션 응답의 공통 헤더입니다. Cloud Run·프록시가 앱 진입 전에 차단한 응답에는
+아래 헤더나 JSON 오류 envelope가 없을 수 있습니다.
 
 | 헤더 | 의미 |
 |---|---|
@@ -56,6 +104,13 @@ staging·production에서 익명 접근을 켜거나 올바른 API Key가 없으
 
 클라이언트가 `X-Request-Id`를 전달할 수 있습니다. 허용 문자는 영문자, 숫자, `_ . : -`이며
 최대 128자입니다. 이 값은 추적용이며 중복 요청을 막는 idempotency key가 아닙니다.
+body의 `request_id`가 헤더보다 우선하므로 동일한 값을 보내세요. brief·step에서는
+`analysis.request_id`입니다. 유효하지 않은 추적 헤더는 새 ID로 대체될 수 있고 잘못된 body ID는
+`422`입니다. 행동 카드 응답도 헤더는 `chemiguard119-api-v1`, body는 `action-brief-v1`이며
+서로 다른 버전 계층입니다. 입력 모델은 알 수 없는 필드를 거부하고 문자열 양끝 공백을 제거합니다.
+STT 원본은 Backend가 별도로 보존하세요. `null`, 필드 생략, 빈 문자열을 임의로 같은 값으로 바꾸지 않습니다.
+
+<a id="endpoint-index"></a>
 
 ## 4. 엔드포인트 요약
 
@@ -64,6 +119,8 @@ staging·production에서 익명 접근을 켜거나 올바른 API Key가 없으
 | `GET` | `/health/live` | 없음 | 프로세스 생존 여부 |
 | `GET` | `/health/ready` | 없음 | runtime·인증·충돌 정책 준비 여부 |
 | `GET` | `/api/v1/meta` | 없음 | 버전·정책·인증 방식·OpenAPI 위치 |
+| `POST` | `/api/v1/agents/incidents/brief` | 필요 | **화면 연동 권장**: 확인·근거·보류·인계 카드 최종 JSON |
+| `POST` | `/api/v1/agents/incidents/brief/stream` | 필요 | 같은 결과를 initial/final 전체 snapshot으로 순차 전달 |
 | `POST` | `/api/v1/incidents/analyze` | 필요 | 전체 사고 분석 |
 | `POST` | `/api/v1/agents/incidents/step` | 필요 | 상태 기반 도구 선택·재계획 |
 | `POST` | `/api/v1/substances/discover` | 필요 | 관찰 정보 기반 확인 전 물질 후보·출처 검색 |
@@ -73,6 +130,58 @@ staging·production에서 익명 접근을 켜거나 올바른 API Key가 없으
 | `POST` | `/api/v1/conflicts/review` | 필요 | 현장 확인된 두 물질 충돌 검토 |
 
 로컬 익명 모드에서는 표의 “필요” 엔드포인트도 API Key 없이 호출할 수 있습니다.
+표의 인증은 **앱 API 키** 기준입니다. GCP IAM은 모든 경로에 별도로 적용됩니다.
+
+새 카드 화면은 `brief` 또는 `brief/stream` **하나부터** 연결하세요. 모든 개별 API를 순서대로
+호출할 필요는 없습니다. `analyze`는 상세 분석 DTO, `step`은 외부 memory 기반 도구 조율이
+필요한 별도 연동점입니다. brief가 step memory를 받거나 여러 LLM을 병렬 호출하는 구조는 아닙니다.
+
+<a id="quick-test"></a>
+
+### 4.1 Swagger·Postman·curl로 테스트
+
+1. GCP 호출 권한이 있는 계정으로 로그인합니다. 팀원에게 권한이 없다면 담당자에게 요청하세요.
+   다음 명령은 로그인·권한 부여를 대신하지 않습니다.
+2. 터미널에서 아래 **인증 프록시**를 실행하고 켜 둡니다. 해당 포트가 이미 사용 중이면 다른
+   포트로 바꾸세요. `127.0.0.1`은 연결 입구이고 실제 모델 계산은 GCP에서 수행됩니다.
+
+```bash
+gcloud run services proxy chemicheck119-model-api-preview \
+  --project=chemi-check --region=asia-northeast3 --port=8087
+```
+
+3. `http://127.0.0.1:8087/health/ready`의 HTTP 200·`READY`를 확인합니다.
+4. `http://127.0.0.1:8087/docs` → Authorize에 모델 키 입력 → `brief` 펼치기 →
+   **합성 예시: 미확인** → Try it out → Execute. 공개 Swagger에서는 실행할 수 없습니다.
+
+모델 키는 권한 있는 담당자가 Secret Manager에서 안전하게 전달합니다. 현재 배포가 참조하는
+Secret은 `chemicheck119-model-api-key` 버전 `1`이며, 회전 시 실제 배포 참조를 재확인합니다.
+키를 FE·소스코드·이슈·스크린샷에 포함하지 마세요.
+
+**Postman**: 위 Collection JSON을 Import한 뒤 개인 환경에서 `base_url`을
+`http://127.0.0.1:8087`, `api_key`를 모델 키로 설정합니다. 기본 collection에는 비밀 값이
+없습니다. GET은 앱 키를 사용하지 않습니다. `Authorization` 헤더는 프록시가 붙이므로 기본
+비활성 상태로 두세요. Cloud Run 직접 호출을 선택할 때만 실제 모델 Base URL과 유효한
+`id_token`을 설정하고 각 요청의 비활성 Authorization 헤더를 켭니다. 키·토큰이 포함된
+환경/collection을 팀 공유·클라우드 동기화·재export하지 마세요.
+
+18개 합성 요청이 준비되어 있습니다. 개별 **Send**로 확인하며 일괄 반복·부하 테스트를
+기본 실행하지 않습니다. Postman의 test script는 HTTP·카드 계약·일부 Gate만 검사합니다.
+GUI 실행 검증·현장 정확도·전문 검수 완료 증명이 아닙니다. SSE의 이벤트 소비는 아래 CLI를 사용합니다.
+
+**curl**: 별도 터미널의 환경변수 `CHEMIGUARD119_API_KEY`에 안전하게 키가 주입된 상태에서
+아래 합성 요청을 사용합니다. 키 값을 명령행에 직접 쓰지 마세요.
+
+```bash
+curl --silent --show-error --fail-with-body --max-time 35 \
+  http://127.0.0.1:8087/api/v1/agents/incidents/brief \
+  -H "X-API-Key: $CHEMIGUARD119_API_KEY" \
+  -H 'Content-Type: application/json' \
+  --data '{"revision":1,"analysis":{"request_id":"REQ-DEMO-1","incident_id":"INC-SYNTHETIC-1","input":{"type":"VOICE_TRANSCRIPT","text":"차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다."},"evidence_top_k":5}}'
+```
+
+`curl -v`·HTTP debug 로그에 인증 헤더를 남기지 마세요. 이후 장의 8000 포트 예시는 별도로
+띄운 **로컬 모델 서버** 기준입니다. GCP 테스트는 8087 프록시로 바꾸고 X-API-Key를 추가합니다.
 
 ## 5. Health와 메타데이터
 
@@ -150,11 +259,227 @@ staging·production에서 익명 접근을 켜거나 올바른 API Key가 없으
 `incident_agent_capability`에서 agent endpoint, planner 방식, 외부 memory 방식, 도구 수와
 자율 위험판정 금지 여부를 확인할 수 있습니다.
 
-## 6. 전체 분석 API
+## 6. 행동 카드와 전체 분석 API
+
+<a id="action-brief-contract"></a>
+
+### 6.0 `POST /api/v1/agents/incidents/brief`
+
+**용도:** 지금 확인할 정보·자료 링크·보류 이유·인계 내용을 짧은 한국어 카드로 반환합니다.
+입력 snapshot 단위로 계산하며 대화·사고 상태를 서버에 저장하지 않습니다. 응답은
+`BriefResponse`이고 `phase=final`입니다. 전술 생성 LLM은 사용하지 않습니다.
+
+#### 요청 · BriefRequest
+
+| 필드 | 타입 | 필수·기본값 | 제약·의미 |
+|---|---|---|---|
+| `analysis` | `IncidentAnalyzeRequest` | 필수 | 기존 상세 분석 요청 그대로 |
+| `revision` | integer | 필수 | 0 이상. Backend가 관리하는 사고 정보 버전 |
+| `invalidated_confirmation_ids` | string[] | `[]` | 최대 2개, 각 1~128자. 해당 ID 확인을 이번 요청에서 제외 |
+| `reported_evidence_conflict` | boolean | `false` | true면 양쪽 확인을 보류. false는 상충 없음의 증명이 아님 |
+| `analysis.incident_id` | string | **brief에서는 필수** | 1~128자, 영문·숫자·`_ . : -`. analyze의 선택 조건과 다름 |
+| `analysis.request_id` | string 또는 null | 선택 | 같은 ID 제약. 새 요청마다 새로운 추적 ID 권장 |
+| `analysis.input` | `IncidentInput` | 필수 | `text`: 1~4,000자, `type`: 아래 값 중 하나 |
+| `analysis.input.type` | enum | `MANUAL_TEXT` | `MANUAL_TEXT`, `DISPATCH_TEXT`, `VOICE_TRANSCRIPT`, `STRUCTURED_FORM` |
+| `analysis.input.occurred_at` | datetime 또는 null | 선택 | 신고 시각. 시간대 포함 ISO 8601 권장 |
+| `analysis.evidence_top_k` | integer | `5` | 1~10 |
+| `analysis.confirmed_incident_substance` | `ConfirmedSubstanceInput` 또는 null | 선택 | 사고물질 확인 기록. `role=INCIDENT` |
+| `analysis.confirmed_facility_substance` | 같은 타입 또는 null | 선택 | 시설물질 확인 기록. `role=FACILITY` |
+| `analysis.location` | `IncidentLocation` 또는 null | 선택 | Backend가 제공한 위치. 삐 처리 주소 복원 불가 |
+| `analysis.operations_context` | `OperationsContext` 또는 null | 선택 | Backend의 출동·경로 정보. API가 길찾기를 대신 호출하지 않음 |
+| `analysis.planned_actions` | `{raw_text: string}[]` | `[]` | 최대 20개, 문장 1~120자. 입력했다고 전술 승인되지 않음 |
+
+확인 객체의 모든 필드와 검증은 [6.3 현장 확인 입력](#63-현장-확인-입력)을 따릅니다.
+두 **확인 ID는 달라야** 하지만 두 역할의 CAS까지 반드시 달라야 하는 것은 아닙니다.
+위치·출동 객체의 전체 중첩 필드·enum은 OpenAPI의 `IncidentLocation`·`OperationsContext`를
+사용하세요. 위도·경도는 쌍으로 입력하고, 지오코딩 제공자는 `GEOCODING_PROVIDER` 출처일 때만
+보냅니다. 요청 타입 검사 통과가 실제 대원 확인·현재 재고·위치의 진위를 인증하지는 않습니다.
+
+#### 응답 · BriefResponse
+
+| 필드 | 타입 | Backend·화면에서 쓰는 방법 |
+|---|---|---|
+| `schema_version` | `action-brief-v1` | body 계약 버전 확인 |
+| `request_id`, `incident_id` | string | 현재 활성 요청·사고와 일치하는지 확인 |
+| `revision` | integer | Backend 최신 버전과 비교 |
+| `state_fingerprint` | string | 같은 요청의 initial/final 입력·버전 비교. 인증 증명 아님 |
+| `phase` | `initial` 또는 `final` | JSON 경로는 final. SSE는 두 단계 |
+| `status` | 아래 enum | HTTP 성공과 별도로 업무 상태 확인 |
+| `summary` | string, 최대 300자 | 화면 상단 요약 |
+| `cards` | `ActionCard[]` | 확인·대응 참고·보류·인계 안내 |
+| `missing_information` | string[] | 다음 확인 질문과 누락 정보 |
+| `sources` | `BriefSource[]` | 카드의 source_ids와 연결 |
+| `facts` | object | Parser가 추출한 원문 표현·부정·추정. 검증된 사실 아님 |
+| `substance_candidates` | object[] | 확정되지 않은 후보. 첫 후보 자동 선택 금지 |
+| `discovery` | object 또는 null | 필요할 때만 실행한 보조 탐색 |
+| `confirmation_state` | object | 정확히 `INCIDENT`, `FACILITY` 두 boolean |
+| `rule_review` | object | `executed`와 규칙 상태 확인. 확률·전술 승인 아님 |
+| `versions` | object | 서비스·Resolver·Retriever·문구·정책·계획 방식·LLM 사용 여부 |
+| `handoff` | object | 받은 확인 기록과 미확인 사항을 분리한 인계 정보 |
+| `processing` | object | 단계별 수행 상태·처리시간. 빠르다는 SLA가 아님 |
+| `input_provenance` | object | 입력 hash·문자 수·STT 포함 여부. STT 실행시간은 별도 |
+| `limitations` | string[] | 검수 전·확인 책임·자료 적용 범위 등 표시할 한계 |
+
+| `status` | 의미 | 소비자 동작 |
+|---|---|---|
+| `PENDING` | 초기 안내, 분석 중 | 초기 확인 카드만 표시 |
+| `NEEDS_CONFIRMATION` | 물질 확인 추가 필요 | 질문·확인 입력 표시, 조합 규칙 잠금 |
+| `HELD` | 근거·조건 부족 등으로 보류 | 보류 이유 표시, 결과를 임의 보완하지 않음 |
+| `COMPLETED` | 현재 요청의 분석 완료 | 출처와 한계를 함께 표시. **현장 승인 아님** |
+| `TIMEOUT` | 조율 제한시간 초과 | 확인·보류 안내만 사용. 이전 결과를 현재 결과로 복원하지 않음 |
+
+정상 응답의 **일부 필드 발췌**입니다. 전체 응답 fixture로 사용하지 마세요.
+완전한 예시는 OpenAPI 응답 `examples.normal_unconfirmed` 등에 포함되어 있으며,
+실제 artifact에 과거 합성 입력을 실행한 기록입니다. 현재 응답의 수치·문구·지연시간을
+고정 보장하는 정답이 아닙니다.
+
+```json
+{
+  "schema_version": "action-brief-v1",
+  "phase": "final",
+  "status": "NEEDS_CONFIRMATION",
+  "confirmation_state": {"INCIDENT": false, "FACILITY": false},
+  "rule_review": {
+    "executed": false,
+    "status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+    "is_probability": false,
+    "tactical_authorization": false
+  }
+}
+```
+
+#### 카드 · ActionCard
+
+| 필드 | 타입·조건 | 의미 |
+|---|---|---|
+| `card_id` | string, 응답 내 고유 | 카드 식별자. 전역 저장 ID라고 가정하지 않음 |
+| `phrase_id`, `phrase_version` | string | 허용 문구와 문구 버전 |
+| `category` | `확인`, `대응 참고`, `보류`, `인계` | 카드 종류 |
+| `priority` | integer 1~4 | 작은 값부터 표시. 위험등급 아님 |
+| `title`, `message`, `reason` | string, 최대 80·240·400자 | 제목·짧은 안내·별도 이유 |
+| `role` | `INCIDENT`, `FACILITY`, `UNKNOWN` | 대상 역할 |
+| `target_label` | string | 사고물질·시설물질·전체 안내 등 한국어 표시 |
+| `cas_number` | string 또는 null | 대상 CAS. 존재만으로 확인 완료 아님 |
+| `confirmation_status` | `UNCONFIRMED`, `CONFIRMED_INPUT`, `NOT_APPLICABLE` | Backend 입력 기준 확인 상태 |
+| `required_conditions`, `unmet_conditions` | string[] | 필요한 조건·현재 미충족 조건 |
+| `source_ids` | string[], 최소 1개 | 같은 응답 sources의 ID에 연결 |
+| `review_status` | `DRAFT_NOT_EXPERT_REVIEWED` | 전문 검수 전이라는 표시 유지 |
+| `tactical_authorization` | `false` | 진입·방수·대피 전술 승인 아님 |
+| `state_fingerprint` | string | 부모 응답과 반드시 일치 |
+
+`대응 참고` 카드는 같은 CAS·역할의 외부 근거가 있고 입력 확인·필수 조건을 충족한 경우만
+허용합니다. 다른 카드의 조건이 미충족이면 보류·확인 안내로 표시합니다. API가 돌려준 문구를
+프런트에서 명령형 전술로 다시 생성하지 마세요.
+
+#### 출처 · BriefSource
+
+`source_id`, `document_id`, `source_type`, `url`, `section`, `document_version`,
+`license_status`, `freshness_status`가 필수입니다. `source_type`은 KOSHA/CAMEO/INTERNAL_POLICY,
+`role`은 INCIDENT/FACILITY/UNKNOWN이고 `cas_number`·`content_sha256`는 null일 수 있습니다.
+`selection_method` 기본값은 `BASELINE_RETRIEVAL`입니다.
+
+- 외부 자료: `license_status=LINK_ONLY_TERMS_REVIEW_REQUIRED`, `freshness_status=INDEX_VERSION_ONLY`.
+- 내부 정책: `PROJECT_AUTHORED`, `VERSIONED_POLICY`. `url`은 저장소 상대 경로일 수 있으므로
+  고정된 신뢰 저장소 주소와 결합합니다. 모든 출처를 외부 HTTPS라고 가정하지 않습니다.
+- `section`은 현재 인덱스 항목 제목입니다. 독립 검수된 SDS section 정답이라고 주장하지 않습니다.
+- `EXACT_CAS_LINK_FALLBACK_NOT_SECTION_RELEVANCE`는 같은 CAS의 보조 링크일 뿐 질문에
+  맞는 절 검색 성공이 아닙니다. `content_sha256`도 검색 반환 내용 hash이지 전체 원문 hash가 아닙니다.
+
+### 6.0.1 `POST /api/v1/agents/incidents/brief/stream`
+
+요청·인증은 brief와 같습니다. 응답은 `Content-Type: text/event-stream`,
+`Cache-Control: no-store`, `X-Accel-Buffering: no`이며 성공 시 initial/final 두 이벤트입니다.
+각 data는 **완전한 BriefResponse JSON**입니다. 아래 꺾쇠 설명은 실제 JSON이 아닌 wire 형식 표기입니다.
+
+```text
+event: initial
+data: <phase=initial인 전체 BriefResponse JSON 한 줄>
+
+event: final
+data: <phase=final인 전체 BriefResponse JSON 한 줄>
+
+```
+
+네이티브 `EventSource`는 이 POST body·인증 헤더 요구에 맞지 않습니다. Backend의 streaming
+HTTP client나 fetch 기반 SSE 소비자를 사용하고 TCP chunk를 곧바로 이벤트 하나로 취급하지
+마세요. UTF-8·줄·빈 줄 경계를 누적 파싱합니다. 이벤트 ID/Last-Event-ID·heartbeat·서버 이어받기는
+제공하지 않습니다. 연결이 final 전에 끝나면 미완료입니다. 이미 200 헤더가 전송된 뒤의 오류는
+항상 일반 JSON 오류로 바꿔 보낼 수 없으므로 종료·파싱 오류를 별도로 처리합니다.
+
+저장소 설치 후 키 환경변수가 있는 별도 터미널에서:
+
+```bash
+python scripts/action_brief_client.py --url http://127.0.0.1:8087 --example unconfirmed
+python scripts/action_brief_client.py --url http://127.0.0.1:8087 --example cancelled
+```
+
+이 클라이언트는 검증한 전체 snapshot만 교체합니다. curl에서는 앞 brief 요청 URL에
+`/stream`을 붙이고 `-N`을 추가하세요. Swagger의 SSE 경로 표시가 실시간 소비자 검증을 대신하지 않습니다.
+
+<a id="state-and-timeout"></a>
+
+### 6.0.2 확인·취소·동시 요청·timeout
+
+| 입력 변화 | Backend 요청 | 기대 동작 |
+|---|---|---|
+| 최초 신고 | 미확인, revision 1 | 후보·확인 안내. Rule 미실행 |
+| 사고물질 확인 | 확인 기록 추가, revision 증가 | 한 역할 근거 참고, 조합 잠금 |
+| 시설물질도 확인 | 서로 다른 확인 ID 두 개 | 지원 조건 통과 시만 제한된 규칙 조회 |
+| 확인 취소 | 기록 제거 또는 invalidated_confirmation_ids, revision 증가 | 취소된 확인 사용 금지 |
+| 새 근거 상충 | reported_evidence_conflict=true, revision 증가 | 양쪽 확인 보류 |
+| 이전 요청 지연·중복 | 활성 요청 ID·revision과 비교 | 오래된 결과 폐기 |
+
+모델 API는 알려주지 않은 Backend 상태 변경을 감지하지 못합니다. 소비자는 다음을 지킵니다.
+
+1. Backend가 사용자 권한·확인 원본·사고 revision을 저장합니다. 모델이 사람 승인 기록을 만들지 않습니다.
+2. 새 요청 **발송 전** 이전 카드를 제거하고 활성 `(incident_id, revision, request_id)`를 갱신합니다.
+3. 응답 ID가 활성 요청과 다르면 폐기합니다. 같은 요청의 fingerprint 불일치도 폐기합니다.
+4. initial→final은 cards/sources를 포함해 **전체 교체**합니다. append하지 않습니다.
+5. final 뒤 initial·중복 final은 폐기합니다. 같은 request_id 재전송도 서버가 중복 실행을 막아주지 않습니다.
+6. 확인 취소 요청의 원본 analysis가 잘못된 CAS를 갖고 있으면 취소 적용 전에 422가 날 수 있습니다.
+   유효하지 않은 기록은 Backend에서 제거해 보내세요.
+
+참조 구현: [`BriefConsumer`](../src/chemiguard119/brief_consumer.py).
+brief revision은 Backend 사고 버전이며 step memory.revision과 같은 카운터로 가정하지 않습니다.
+
+| 항목 | 현재 구현/설정 | 연동 시 주의 |
+|---|---|---|
+| brief 조율 deadline | 기본 15초 | 전체 네트워크·cold start 시간 보장 아님 |
+| 배포 Cloud Run 요청 timeout | 30초 | 앱 TIMEOUT 전에 프록시/연결 종료가 생길 수 있음 |
+| 예제 클라이언트 timeout | 35초 | 테스트용 상한. 응답속도 목표/측정값이 아님 |
+| 도구 실행 | 자동 재시도 0회, 요청당 호출 수 제한 | 클라이언트의 무한 자동 재시도 금지 |
+| 조율/worker 슬롯 | 프로세스당 조율 2개, 도구 worker 6개, 무제한 대기열 없음 | 포화 시 503 BRIEF_CAPACITY_EXCEEDED |
+| 작업 취소 | 협력적 취소, 늦은 결과 폐기 | 실행 중 thread가 즉시 죽는 것은 아님. 종료까지 슬롯 점유 |
+
+Backend 재시도 **권장 정책(실제 BE 구현 여부 별도)**: 네트워크 연결 실패나 retryable 503만
+현재 입력을 재확인한 뒤 최대 1회 backoff 재시도. 401/403/422/안전 검증 500은 자동 재시도하지
+않습니다. HTTP 200의 TIMEOUT도 성공 카드로 저장하지 않습니다. timeout만으로 작업 종료를
+확정하지 않으며 새 요청을 무제한 쌓지 않습니다.
+
+### 6.0.3 계약 테스트와 한계
+
+```bash
+python scripts/contracts/export_contracts.py --check
+python scripts/contracts/export_postman.py --check
+python -m pytest tests/test_api_spec.py
+```
+
+예시와 OpenAPI·Pydantic의 일치 검사입니다. 원본 음성·가중치 없이 실행되며 모델 정확도
+평가가 아닙니다. 실제 artifact·실패 조건 평가 이력은 [행동 카드 평가](ACTION_BRIEF_RESULTS.md),
+현재 연결 확인은 health/meta를 따릅니다. Postman GUI에서 모든 요청을 실행했다고 주장하지 않습니다.
+미지원 조합·누락 근거·의미 상충의 완전 탐지·실제 무전·현장 안전성은 검증 범위 밖입니다.
+
+2026-09-11 로컬 Python 3.11에서 전체 795개 테스트·Ruff·OpenAPI drift 검사를 통과했습니다.
+Postman 18개 요청은 공식 v2.1 JSON Schema 검증과 JavaScript test 구문 검사를 통과했습니다.
+공식 Postman schema SHA-256은
+`90000a561d00b1a06ee37a6d3606e911e1357f757d8d91afc690d87dadacb9b2`입니다.
+CI·병합·공개 문서 배포 상태는 [이슈 #72](https://github.com/chemicheck119-lab/analysis-engine/issues/72)에서
+확인합니다. 합성 계약 테스트 수를 현장 사례 수로 표현하지 않습니다.
 
 ### 6.1 `POST /api/v1/incidents/analyze`
 
-백엔드의 기본 연동점입니다. 한 번의 요청 안에서 파서, Resolver, Retriever, 시설 이력 검색과
+상세 분석 DTO가 필요한 기존 연동점입니다. 새 카드 화면은 brief를 우선 사용합니다.
+한 번의 요청 안에서 파서, Resolver, Retriever, 시설 이력 검색과
 조건부 Rule Engine을 실행합니다.
 
 ### 6.1.1 `POST /api/v1/agents/incidents/step`
@@ -532,6 +857,12 @@ curl -X POST http://127.0.0.1:8000/api/v1/substances/discover \
 염산 CAS 자동 힌트가 되지 않습니다. 이 경우 후보 누락보다 잘못된 동일-CAS 근거 제한을
 피하는 것을 우선합니다.
 
+`score`는 `candidates[].score`를 뜻합니다. 기본 `top_k=3`이고 후보 수는 이보다 적거나
+0개일 수 있습니다. `resolve`, `evidence/search`, `facilities/candidates`, `conflicts/review`의
+최상위 응답은 OpenAPI에서 `object/additionalProperties`인 부분이 있습니다. 이 API들의 전체
+중첩 DTO가 자동생성 타입만으로 엄격히 보장된다고 가정하지 말고, 문서·원본 예시·회귀 테스트를
+함께 고정하세요. 카드 화면은 명시적 `BriefResponse` 계약을 우선 사용합니다.
+
 ## 9. 공식 근거 검색
 
 ### `POST /api/v1/evidence/search`
@@ -561,6 +892,9 @@ Resolver 후보를 검색 힌트로만 사용하는 경우:
 `cas_hint`와 `cas_hint_status`는 함께 보내거나 모두 생략해야 합니다. 후보 기반 검색 결과는
 Rule 입력이 아니며 `risk_determination_allowed=false`입니다. 해당 CAS의 상세 근거가 로드되지
 않았다면 `CAS_EVIDENCE_NOT_LOADED`를 반환하고 다른 CAS 문서로 대체하지 않습니다.
+`query`는 1~500자, `top_k`는 1~10(기본 5)이며 CAS hint는 checksum 검사를 받습니다.
+`RESPONDER_CONFIRMED`라는 문자열만으로 사람 확인을 증명하거나 Rule을 실행할 수 없습니다.
+응답은 `results`와 검색 상태를 확인하고, 빈 결과를 안전·위험 없음으로 해석하지 않습니다.
 
 ## 10. 시설 이력 후보 검색
 
@@ -653,9 +987,13 @@ Rule `VERIFY_REQUIRED`로 반환됩니다.
 `responder_confirmation_required`, `conflict_review_capability`가 포함되고, 실제 스크리닝
 내용은 `result`에 들어갑니다.
 
+<a id="error-contract"></a>
+
 ## 12. 오류 형식
 
-모든 표준 오류는 같은 envelope를 사용합니다.
+애플리케이션의 표준 오류는 같은 envelope를 사용합니다. IAM 차단·프록시·네트워크 오류와
+readiness의 503 응답은 이 envelope가 아닐 수 있습니다. status code와 Content-Type을 먼저
+확인하고 HTML·빈 응답을 무조건 JSON으로 파싱하지 마세요.
 
 ```json
 {
@@ -677,9 +1015,18 @@ Rule `VERIFY_REQUIRED`로 반환됩니다.
 | HTTP | 대표 상황 | 재시도 판단 |
 |---|---|---|
 | `401` | API Key 없음·불일치 | 키 수정 전 재시도 금지 |
+| `403` | Cloud Run IAM 권한·ID token 문제 등 | 앱 진입 전 응답일 수 있음. Google 인증 확인 |
 | `422` | 요청 schema·CAS·역할 오류 | 요청 수정 후 재시도 |
 | `500` | 출력 안전 검증 또는 내부 오류 | 같은 `request_id`로 운영자 확인 |
 | `503` | artifact·manifest·인증 구성 미준비 | readiness 복구 후 재시도 |
+| `503` | `BRIEF_CAPACITY_EXCEEDED`, 조율 슬롯 포화 | 현재 입력 확인 후 제한 재시도 |
+| `504`·연결 종료 | Cloud Run·프록시 timeout 등 | 앱 envelope 보장 없음. 이전 카드 복원 금지 |
+
+`BACKEND_AUTH_REQUIRED`는 401, `INVALID_SCHEMA`는 422입니다. 준비 상태가 잘못되면 인증
+키 검사보다 먼저 503이 반환될 수 있습니다. `error.retryable=false`인 설정·무결성 오류는
+503이어도 자동 재시도하지 않습니다. `500 INTERNAL_ERROR`가 retryable=true여도 무한 재시도
+허가가 아니며 원인 확인을 우선합니다. **HTTP 200 + brief status=TIMEOUT**은 별도의 업무상
+미완료 응답이지 ErrorResponse가 아닙니다.
 
 `AWAITING_SUBSTANCE_CONFIRMATION`, `VERIFY_REQUIRED`, `UNCLASSIFIED`는 정상적인 업무 상태일
 수 있으며 HTTP 오류와 구분해야 합니다.
@@ -693,8 +1040,10 @@ Rule `VERIFY_REQUIRED`로 반환됩니다.
 
 1. Resolver 첫 후보를 자동 확정하지 않습니다.
 2. 백엔드가 인증된 현장 확인 레코드를 만든 후 확인 객체를 전송합니다.
-3. UI는 `confirmation_gate.all_required_confirmed=true`이고
-   `conflict_review.executed=true`일 때만 `risk_level_ko`를 표시할 수 있습니다.
+3. 기존 analyze UI는 `confirmation_gate.all_required_confirmed=true`,
+   `conflict_review.executed=true`, 완료 Rule 상태(`COMPLETED`/`SCREENING_COMPLETED`)와
+   지원 결과 필드를 모두 확인한 경우에만 `risk_level_ko`를 표시합니다. executed=true만으로는
+   미지원·보류 결과를 완료로 표시할 수 없습니다. brief는 해당 endpoint의 별도 카드 계약을 따릅니다.
 4. 서수 등급을 백분율로 바꾸지 않고 `LOW`를 안전 보장으로 표현하지 않습니다.
 5. `expert_reviewed=false`와 공개 근거 파일럿 라벨을 결과 근처에 표시합니다.
 6. `mapping_provenance`와 `evidence_provenance`를 “대응 근거”에서 확인할 수 있게 합니다.
@@ -708,6 +1057,10 @@ Rule `VERIFY_REQUIRED`로 반환됩니다.
 
 ## 14. TypeScript 호출 예시
 
+Backend 전용 예시입니다. 프록시·로컬 모델에서는 idToken을 생략할 수 있고 실제 Cloud Run
+Base URL을 직접 부를 때는 Google 인증 라이브러리에서 받은 ID token이 필요합니다.
+아래 코드는 토큰 발급·갱신이나 최종 DTO 검증까지 제공하는 SDK는 아닙니다.
+
 ```ts
 type AnalyzeRequest = Record<string, unknown>;
 
@@ -715,6 +1068,7 @@ export async function analyzeIncident(
   baseUrl: string,
   apiKey: string,
   payload: AnalyzeRequest,
+  idToken?: string,
 ) {
   const response = await fetch(`${baseUrl}/api/v1/incidents/analyze`, {
     method: "POST",
@@ -722,10 +1076,14 @@ export async function analyzeIncident(
       "Content-Type": "application/json",
       "X-API-Key": apiKey,
       "X-Request-Id": crypto.randomUUID(),
+      ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
     },
     body: JSON.stringify(payload),
   });
 
+  if (!response.headers.get("content-type")?.includes("application/json")) {
+    throw new Error(`모델 API 비JSON 응답: HTTP ${response.status}`);
+  }
   const body = await response.json();
   if (!response.ok) {
     throw new Error(`${body.error?.code ?? "UNKNOWN"}: ${body.error?.message ?? "API 오류"}`);
@@ -738,6 +1096,9 @@ API Key는 서버 환경변수나 Secret Manager에서 읽어야 하며 프론�
 
 ## 15. 관련 문서
 
+- [Postman Collection v2.1 형식](https://schema.postman.com/json/collection/v2.1.0/docs/index.html)
+- [행동 카드 로컬 설치·실제 artifact 준비](ACTION_BRIEF.md)
+- [공개 Swagger 배포와 비공개 API 구분](PUBLIC_SWAGGER.md)
 - [README](../README.md)
 - [아키텍처](ARCHITECTURE.md)
 - [데이터와 모델](DATA_AND_MODEL.md)

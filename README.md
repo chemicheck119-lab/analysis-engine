@@ -16,6 +16,7 @@
 - 순차 출력: `POST /api/v1/agents/incidents/brief/stream` — 확인 안내 먼저, 검증된 후속 결과로 교체
 - Swagger: `http://127.0.0.1:8011/docs` — Authorize에서 `X-API-Key` 입력 후 Try it out
 - [공개 Swagger 열기](https://chemicheck119-api-docs-w6s6lwanpa-du.a.run.app/) — 로그인 없이 schema·합성 예시 열람. **문서만 공개**, 실제 API는 비공개·실행 버튼 비활성화. [공개 범위·배포 검증 안내](docs/PUBLIC_SWAGGER.md)
+- [백엔드용 API 명세서](docs/API.md) — 12개 API·IAM/API 키·필드·오류·확인/취소·SSE·실행 방법. [Postman 합성 테스트 18개](examples/api/chemicheck119-model-api.postman_collection.json)
 - [설치·artifact 준비·요청 예시·SSE·팀원 연동 안내](docs/ACTION_BRIEF.md)
 - [실제 artifact 평가·실패 원인·채택/기각 결과](docs/ACTION_BRIEF_RESULTS.md)
 - [공식 별칭·Top-20 재정렬·도메인 학습 결과](docs/RESOLVER_DOMAIN_RESULTS.md): 이름 보강 효과와 모델 학습 효과를 분리했습니다. CAS를 분리한 공식 명칭 264건에서 학습 보정층의 Top-3가 106→145건으로 개선됐지만, 손실 사례·원문 한계가 있어 운영 Sparse는 유지합니다. [PR #67](https://github.com/chemicheck119-lab/analysis-engine/pull/67)의 실험 코드·평가·CI(Docker 포함) 검증을 완료했습니다. 운영 교체·현장 검증은 아닙니다.
@@ -209,6 +210,8 @@ POST /api/v1/incidents/analyze
 | `GET` | `/health/live` | 프로세스 생존 확인 |
 | `GET` | `/health/ready` | artifact·인증·정책 준비 확인 |
 | `GET` | `/api/v1/meta` | 모델·데이터·규칙 버전 조회 |
+| `POST` | `/api/v1/agents/incidents/brief` | 확인·근거·보류·인계 카드 최종 JSON |
+| `POST` | `/api/v1/agents/incidents/brief/stream` | 검증된 initial/final 전체 snapshot 순차 반환 |
 | `POST` | `/api/v1/incidents/analyze` | 통합 사고 분석 |
 | `POST` | `/api/v1/agents/incidents/step` | Agent 도구 실행·재계획 |
 | `POST` | `/api/v1/substances/resolve` | 물질명·CAS 후보 검색 |
