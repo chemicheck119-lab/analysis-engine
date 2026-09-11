@@ -1,0 +1,24 @@
+{
+  "version": "5.32.15",
+  "commit": "eb37d16243388857e5b7c68c93fd04635c7c96fa",
+  "assets": [
+    {
+      "file": "swagger-ui-bundle.js",
+      "url": "https://raw.githubusercontent.com/swagger-api/swagger-ui/eb37d16243388857e5b7c68c93fd04635c7c96fa/dist/swagger-ui-bundle.js",
+      "sha256": "a7e344f2770b2f07527ce828e0951626983b8f2dcdb7a826689c0232023f995b",
+      "bytes": 1552209
+    },
+    {
+      "file": "swagger-ui.css",
+      "url": "https://raw.githubusercontent.com/swagger-api/swagger-ui/eb37d16243388857e5b7c68c93fd04635c7c96fa/dist/swagger-ui.css",
+      "sha256": "d7f39f764aa18c7b47dd05b9af5613e373e4ac0f3557c2693d52d0abc2464d76",
+      "bytes": 185784
+    },
+    {
+      "file": "LICENSE.txt",
+      "url": "https://raw.githubusercontent.com/swagger-api/swagger-ui/eb37d16243388857e5b7c68c93fd04635c7c96fa/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "bytes": 11358
+    }
+  ]
+}

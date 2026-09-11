@@ -1,0 +1,109 @@
+name: 공개 Swagger 문서 배포
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [모델 API 검증]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-swagger-docs
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: 문서 전용 Cloud Run 공개
+    if: >-
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      DOCS_SERVICE: chemicheck119-api-docs
+      DOCS_RUNTIME_SA: chemicheck119-docs-public@chemi-check.iam.gserviceaccount.com
+      GCP_PROJECT_ID: chemi-check
+      GCP_REGION: asia-northeast3
+      REGISTRY: asia-northeast3-docker.pkg.dev/chemi-check/chemicheck119
+
+    steps:
+      - name: CI를 통과한 main commit 체크아웃
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+
+      - name: 수동 실행도 같은 commit의 main CI 성공 확인
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          commit="$(git rev-parse HEAD)"
+          passed="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$commit&branch=main&event=push&status=success" --jq '.total_count')"
+          test "$passed" -gt 0 || { echo "같은 main commit의 CI 성공이 필요합니다."; exit 1; }
+
+      - name: Python 3.11 설정
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11.15"
+
+      - name: 공개 전용 파일만 묶기
+        run: python scripts/build_public_swagger.py --output public-swagger-site --source-commit "$(git rev-parse HEAD)"
+
+      - name: Google Cloud OIDC 인증
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Google Cloud CLI 설정
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: 정적 파일만 이미지로 빌드·업로드
+        id: image
+        run: |
+          set -euo pipefail
+          context="$(mktemp -d "$RUNNER_TEMP/public-swagger-context-XXXXXX")"
+          cp -R public-swagger-site "$context/site"
+          cp scripts/deployment/Dockerfile.public-swagger "$context/Dockerfile"
+          cp scripts/deployment/public_swagger_server.py "$context/server.py"
+          image="$REGISTRY/public-api-docs:$(git rev-parse HEAD)"
+          gcloud auth configure-docker "$GCP_REGION-docker.pkg.dev" --quiet
+          docker build --tag "$image" "$context"
+          docker push "$image"
+          digest="$(docker inspect --format='{{index .RepoDigests 0}}' "$image")"
+          [[ "$digest" == "$REGISTRY/public-api-docs@sha256:"* ]]
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      - name: 문서 전용 서비스 배포·공개 검사
+        env:
+          DOCS_IMAGE: ${{ steps.image.outputs.digest }}
+        run: |
+          set -euo pipefail
+          gcloud run deploy "$DOCS_SERVICE" \
+            --project="$GCP_PROJECT_ID" --region="$GCP_REGION" \
+            --image="$DOCS_IMAGE" --service-account="$DOCS_RUNTIME_SA" \
+            --allow-unauthenticated --ingress=all \
+            --port=8080 --cpu=1 --memory=128Mi --concurrency=20 --timeout=10s \
+            --min=0 --min-instances=0 --max=1 --max-instances=1 \
+            --no-cpu-boost --quiet
+          url="$(gcloud run services describe "$DOCS_SERVICE" --project="$GCP_PROJECT_ID" --region="$GCP_REGION" --format='value(status.url)')"
+          curl --fail --silent --show-error --max-time 30 "$url/" -o /dev/null
+          curl --fail --silent --show-error --max-time 30 "$url/openapi.json" -o "$RUNNER_TEMP/public-openapi.json"
+          cmp contracts/generated/model-api-v1.openapi.json "$RUNNER_TEMP/public-openapi.json"
+          {
+            echo "## 공개 Swagger 문서 배포 완료"
+            echo "- URL: $url"
+            echo "- 문서만 공개. Try it out 비활성화, API 키 입력 불필요."
+            echo "- 분석 API·DB·Secret·모델 가중치 변경 없음."
+            echo "- 문서 서비스: 최소 0·최대 1 인스턴스, CPU 1·128MiB."
+          } >> "$GITHUB_STEP_SUMMARY"

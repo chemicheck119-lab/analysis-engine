@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    <title>Chemicheck119 · 모델 API 문서</title>
+    <link rel="stylesheet" href="./assets/swagger-ui.css">
+    <link rel="stylesheet" href="./style.css">
+    <link rel="icon" href="data:,">
+    <script src="./assets/swagger-ui-bundle.js" defer></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <header class="hero">
+      <div class="shell">
+        <div class="eyebrow">CHEMICHECK119 / DEVELOPER DOCUMENTATION</div>
+        <h1>신고를 읽고,<br>다음 확인을 연결하는 API.</h1>
+        <p class="intro">전사문 → 물질 후보 → 공식 근거 → 사람 확인 → 행동·인계 카드</p>
+        <nav aria-label="문서 바로가기">
+          <a class="primary" href="#/action-brief">행동 카드 API 보기</a>
+          <a href="./openapi.json" download="chemicheck119-openapi.json">OpenAPI 내려받기</a>
+          <a href="https://github.com/chemicheck119-lab/analysis-engine/blob/main/docs/ACTION_BRIEF.md" target="_blank" rel="noopener noreferrer">연동 가이드 ↗</a>
+        </nav>
+        <div class="notice">
+          <strong>공개 문서 · 읽기 전용</strong>
+          <p>요청·응답 형식과 합성 예시를 볼 수 있습니다. 이 페이지에서는 분석을 실행하지 않으며 API 키를 입력할 필요가 없습니다.</p>
+          <p>실제 GCP API는 <b>Cloud Run IAM + X-API-Key</b>로 보호됩니다. 접근 권한이 있는 Backend에서 호출하세요.</p>
+        </div>
+      </div>
+    </header>
+    <main>
+      <section class="shell quick-start" aria-label="연동 핵심">
+        <article><span>01 / 요청</span><h2>기존 분석 요청을 재사용</h2><p><code>analysis</code>에 전사문을 넣고 Backend가 관리하는 <code>revision</code>을 추가합니다.</p></article>
+        <article><span>02 / 결과</span><h2>JSON 또는 SSE</h2><p>SSE는 <code>initial → final</code> 전체 snapshot입니다. 기존 카드와 이어 붙이지 않습니다.</p></article>
+        <article><span>03 / 확인</span><h2>후보는 확정이 아닙니다</h2><p>사고물질·시설물질을 각각 확인해야 조합 규칙을 조회합니다. 현장 전술 승인이 아닙니다.</p></article>
+      </section>
+      <section class="shell document-meta" aria-label="문서 버전">
+        <p id="build-info" role="status">문서 버전을 확인하는 중입니다.</p>
+        <p>문서 배포 버전과 실제 모델 배포 버전은 별도입니다. 공개 계약의 예시는 합성이며, 카드 문구는 전문 검수 전입니다.</p>
+        <p id="load-error" role="alert" hidden></p>
+      </section>
+      <div id="swagger-ui"></div>
+      <noscript>Swagger 문서를 표시하려면 JavaScript를 켜 주세요. OpenAPI JSON은 상단 링크에서 내려받을 수 있습니다.</noscript>
+    </main>
+    <footer class="shell">개발용 의사결정 지원 API · 현장 안전성·기관 SOP 적용 미검증 · <a href="./assets/LICENSE.txt">Swagger UI Apache 2.0 라이선스</a></footer>
+  </body>
+</html>
