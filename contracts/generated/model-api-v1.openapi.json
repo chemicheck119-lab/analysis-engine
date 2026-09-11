@@ -5943,31 +5943,6 @@
                     "value": {
                       "cards": [
                         {
-                          "card_id": "ANALYSIS_PENDING:UNKNOWN",
-                          "category": "보류",
-                          "confirmation_status": "NOT_APPLICABLE",
-                          "message": "확인 기록을 받았습니다. 공식 근거와 조합 규칙 검증이 끝나기 전에는 대응 결과를 표시하지 않습니다.",
-                          "phrase_id": "ANALYSIS_PENDING",
-                          "phrase_version": "action-catalog-v1",
-                          "priority": 2,
-                          "reason": "확인 기록 수신과 근거 검증 완료는 서로 다릅니다.",
-                          "required_conditions": [
-                            "현재 상태의 분석 완료"
-                          ],
-                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
-                          "role": "UNKNOWN",
-                          "source_ids": [
-                            "POLICY"
-                          ],
-                          "state_fingerprint": "483619d8dc1ae26ba5cc7da48291054d3d4beca0a6436d49b6249fe6a6bfef5f",
-                          "tactical_authorization": false,
-                          "target_label": "전체 안내",
-                          "title": "현재 정보의 분석을 기다려 주세요",
-                          "unmet_conditions": [
-                            "현재 상태의 분석 완료"
-                          ]
-                        },
-                        {
                           "card_id": "VERIFY_LOCATION:UNKNOWN",
                           "category": "확인",
                           "confirmation_status": "NOT_APPLICABLE",

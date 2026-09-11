@@ -23,7 +23,9 @@ UNCONFIRMED = re.compile(
     r"미확인|불명|불확실|모르|확인.{0,12}(?:못|안\s*됐|되지|안\s*했)|알\s*수\s*없|인지(?:\s|$)"
 )
 POSSIBLE = re.compile(r"같(?:습|아|은)|의심|일\s*수도|가능|추정")
-NEGATED = re.compile(r"아니|아님|아닙|아닌|없(?:다|어|음|습니다|었|는|으며|다고|고|을)")
+NEGATED = re.compile(
+    r"아니|아님|아닙|아닌|없(?:다|어|음|습니다|었|는|으며|으나|지만|다고|고|을)"
+)
 INCIDENT_TERMS = ("누출", "새고", "샌", "유출", "화재", "폭발", "탱크에서")
 FACILITY_TERMS = ("옆", "저장고", "창고", "보관", "시설", "함께", "인접")
 # 원문 언급은 모두 보존하지만 충돌 쌍의 직렬화는 제한한다.
@@ -49,7 +51,16 @@ def context_windows(text: str, spans: list[tuple[int, int]]) -> list[tuple[str, 
                 # 접속 어미 자체는 앞 절에 속하게 하고 뒤 절만 제외한다.
                 right = min(right, boundary_end)
                 break
-        result.append((text[left:start], text[end:right]))
+        left_text = text[left:start]
+        # "A가 아닌 B"의 부정은 A에 붙는다. 이전 언급의 조사·부정만
+        # 남은 문맥을 B의 수식어로 다시 사용하지 않는다. 원문 span은 유지한다.
+        if (
+            index
+            and left == spans[index - 1][1]
+            and re.fullmatch(r"\s*(?:이|가|은|는)?\s*아닌\s*", left_text)
+        ):
+            left_text = ""
+        result.append((left_text, text[end:right]))
     return result
 
 
