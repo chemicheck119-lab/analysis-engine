@@ -1,8 +1,9 @@
 # Resolver 고도화: 자료 보강·재정렬·검색 학습 결과
 
-2026-09-11 · 상태: **부분 구현 또는 개발용 데모**. 로컬 구현·실제 artifact 평가를 수행했다.
-사용자가 원본·가중치를 제외한 공개 PR과 CI 실행을 승인했다. 원격 검증을 진행하며,
-현재 서비스의 Sparse Resolver는 그대로다.
+2026-09-11 · **구현 완료:** 오프라인 실험 코드·실제 artifact 평가·재현 문서·공개 PR·CI 검증.
+**부분 구현 또는 개발용 데모:** 실험 모델은 서비스에 연결하지 않은 후속 검증 후보다.
+[PR #67](https://github.com/chemicheck119-lab/analysis-engine/pull/67)을 공개했고 CI의 테스트·계약·Docker 빌드가 통과했다.
+현재 서비스의 Sparse Resolver는 그대로이며 main 병합·배포는 하지 않았다.
 
 ## 먼저 결론
 
@@ -206,22 +207,27 @@ revision `953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e`의 model.safetensors·config
 
 로컬 검증: `python -m pytest` **718 passed**, Ruff check/format 통과,
 `python scripts/contracts/export_contracts.py --check` 통과. 기존 Starlette deprecation 경고 1개.
-Docker 빌드·원격 CI 상태는 아래 인계 상태에 별도로 기록한다.
+Docker 빌드·원격 CI 상태는 아래에 실행 환경을 나누어 기록한다.
 
 - Docker: 로컬 빌드 2회 모두 베이스 이미지 `python:3.11.15-slim`의 metadata 조회 중
   `DeadlineExceeded`로 중단됐다. 애플리케이션 코드를 빌드하는 단계까지 도달하지 못했다.
   로컬 베이스 이미지 캐시는 없었다. 호스트의 Docker Registry 접근은 401 인증 응답까지
   가능했으므로 네트워크/빌더 경로 문제로 분류하며, 원인을 완전히 확정하거나 해결했다고
-  주장하지 않는다. Docker Desktop은 검증 전의 중지 상태로 복원한다.
-- 공개 GitHub PR/CI: 사용자 승인 후 진행 중. **CI 결과 확인 전 전체 구현 완료라고 표시하지 않는다.**
-- PR/이슈 업데이트: 기존 #25에 연결한다. PR base는 `experiment/ulsan-resolver-comparison`이다.
+  주장하지 않는다. Docker Desktop은 검증 전의 중지 상태로 복원했다.
+- 원격 GitHub CI: [run 34578827723](https://github.com/chemicheck119-lab/analysis-engine/actions/runs/34578827723),
+  검증 커밋 `8b9022f8160c53f282b952eddd801eb8b7437d72`, Ubuntu runner에서 **테스트 718개·Ruff·format·계약 drift·Docker 빌드 모두 통과**.
+  로컬 Docker 환경 문제가 해결됐다는 뜻은 아니다. 후속 문서 커밋의 최신 CI는 PR Checks에서 확인한다.
+- CI는 공개 단위/계약 테스트와 운영 이미지 빌드를 검증한다. 비공개 원본·가중치로 수행한
+  세 가지 모델 실험을 GitHub에서 다시 학습·평가했다는 뜻은 아니다.
+- PR/이슈 업데이트: [PR #67](https://github.com/chemicheck119-lab/analysis-engine/pull/67)을 기존 #25에 연결한다. PR base는 `experiment/ulsan-resolver-comparison`이다.
   이전 #66에 이어지는 stacked PR이며 main 병합·서비스 배포는 포함하지 않는다.
 
 ## 6. 완료 범위와 다음 판단
 
 | 사실 상태 | 내용 |
 |---|---|
-| 부분 구현 또는 개발용 데모 | 세 단계 코드·실제 artifact 평가·누수 감사·로컬 테스트 완료, 공개 PR/CI 검증 진행 중 |
+| 구현 완료 | 세 단계 오프라인 실험 코드·실제 artifact 평가·누수 감사·재현 문서·로컬/원격 테스트·Docker CI |
+| 부분 구현 또는 개발용 데모 | 재정렬/보정층은 조건부 후속 검증 후보. API에는 연결하지 않음 |
 | 설계 완료·구현 전 | 세 방법의 결합 ablation, 신규 CAS의 안전한 노출 범위 평가 |
 | 검증되지 않은 가설 | 새 지역·ASR 오인식·현장 무전에도 개선 유지, 사용자 확인 시간 단축 |
 | 구현 완료라고 표현하지 않는 것 | 운영 교체, 전문 검수, 실제 소방 안전성, end-to-end 운영 검증 |
@@ -237,3 +243,4 @@ Docker 빌드·원격 CI 상태는 아래 인계 상태에 별도로 기록한�
 관련 이슈: [#25](https://github.com/chemicheck119-lab/analysis-engine/issues/25).
 작업 브랜치 `modeling/resolver-domain-adaptation`; 원본·가중치 없는 코드·집계만 공개한다.
 Notion·Front·Backend·GCP·API 기본 설정은 수정하지 않았다.
+회의 전달사항은 [1분 설명·숫자·다음 결정사항](RESOLVER_DOMAIN_MEETING_BRIEF.md)을 사용한다.

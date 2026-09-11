@@ -1,7 +1,17 @@
 {
   "schema_version": "resolver-domain-experiment-v1",
   "fact_status": "부분 구현 또는 개발용 데모",
-  "ci_status": "공개 승인 후 PR CI 검증 진행 중",
+  "implementation_status": "구현 완료",
+  "ci_status": "success",
+  "ci_evidence": {
+    "run_id": 34578827723,
+    "validated_commit": "8b9022f8160c53f282b952eddd801eb8b7437d72",
+    "url": "https://github.com/chemicheck119-lab/analysis-engine/actions/runs/34578827723",
+    "pr_url": "https://github.com/chemicheck119-lab/analysis-engine/pull/67",
+    "pytest_passed": 718,
+    "docker_build": "passed_on_github_ubuntu_runner",
+    "private_model_experiments_reexecuted_in_ci": false
+  },
   "local_validation": {
     "pytest_passed": 718,
     "ruff_check": "passed",
@@ -10,7 +20,7 @@
     "docker_build": "blocked_before_application_build_base_image_metadata_timeout",
     "docker_build_attempts": 2,
     "publication_authorized": true,
-    "public_push_performed": false
+    "public_push_performed": true
   },
   "runtime_changed": false,
   "server_cost_krw": 0,
