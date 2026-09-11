@@ -1,7 +1,7 @@
 {
   "schema_version": "resolver-domain-experiment-v1",
   "fact_status": "부분 구현 또는 개발용 데모",
-  "ci_status": "공개 PR 승인 전 미실행",
+  "ci_status": "공개 승인 후 PR CI 검증 진행 중",
   "local_validation": {
     "pytest_passed": 718,
     "ruff_check": "passed",
@@ -9,6 +9,7 @@
     "contract_drift": "passed",
     "docker_build": "blocked_before_application_build_base_image_metadata_timeout",
     "docker_build_attempts": 2,
+    "publication_authorized": true,
     "public_push_performed": false
   },
   "runtime_changed": false,

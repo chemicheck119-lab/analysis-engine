@@ -17,7 +17,8 @@
 - Swagger: `http://127.0.0.1:8011/docs` — Authorize에서 `X-API-Key` 입력 후 Try it out
 - [설치·artifact 준비·요청 예시·SSE·팀원 연동 안내](docs/ACTION_BRIEF.md)
 - [실제 artifact 평가·실패 원인·채택/기각 결과](docs/ACTION_BRIEF_RESULTS.md)
-- [공식 별칭·Top-20 재정렬·도메인 학습 결과](docs/RESOLVER_DOMAIN_RESULTS.md): 이름 보강 효과와 모델 학습 효과를 분리했습니다. CAS를 분리한 공식 명칭 264건에서 학습 보정층의 Top-3가 106→145건으로 개선됐지만, 손실 사례·원문 한계가 있어 운영 Sparse는 유지합니다. 공개 PR/CI 확인 전 로컬 실험 상태입니다.
+- [공식 별칭·Top-20 재정렬·도메인 학습 결과](docs/RESOLVER_DOMAIN_RESULTS.md): 이름 보강 효과와 모델 학습 효과를 분리했습니다. CAS를 분리한 공식 명칭 264건에서 학습 보정층의 Top-3가 106→145건으로 개선됐지만, 손실 사례·원문 한계가 있어 운영 Sparse는 유지합니다. 공개 PR의 CI 검증을 진행합니다.
+- [회의용 1분 요약·숫자 해석·다음 결정사항](docs/RESOLVER_DOMAIN_MEETING_BRIEF.md)
 - [공식 울산 Sparse·Dense·RRF 동조건 비교](docs/ULSAN_RESOLVER_COMPARISON_RESULTS.md): 미관측 60쌍 Top-3는 19/60·24/60·21/60입니다. Dense/RRF는 후속 검증 후보로만 유지하며 현재 API의 Sparse 기본값은 변경하지 않습니다.
 - [공식 울산 ZIP 확보·고정 Resolver 재평가](docs/ULSAN_SOURCE_REPLAY_RESULTS.md): 전체 419건 Top-1 89.74%, 미관측 표현 60건 Top-1 28.33%를 다시 측정했습니다. 새 모델 개선이나 현장 검증이 아니며 Retriever 독립 검수는 일정상 보류합니다.
 - [평가 준비 현황·원본 접근·사람 검수 시작 안내](docs/EVALUATION_READINESS_2026-09-11.md): 171질의의 검수 자료를 확인했지만 사람 정답은 아직 0개입니다. 새 모델 성능 결과가 아닙니다.
@@ -143,7 +144,7 @@ flowchart LR
 | 전국 시설 과거 이력 | **17개 시·도 · 28,647개 시설** |
 | 공식 근거 검색 인덱스 | 약 **5,858개 문서·절** |
 | CAMEO 충돌 규칙 코어 | **CAS 6종 · 15조합** |
-| 자동화 테스트 | **702개** (로컬 검사, CI는 변경별 확인) |
+| 자동화 테스트 | **718개** (로컬 검사, CI는 변경별 확인) |
 
 평가 데이터, 분할 정책, 실패 사례와 재현 명령은 [모델 평가 문서](docs/EVALUATION.md)에서
 관리합니다. Resolver 수치는 과거 공개 사고 표현 재식별 평가이며 전국 현장 정확도가 아닙니다.

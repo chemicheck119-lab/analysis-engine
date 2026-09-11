@@ -1,7 +1,8 @@
 # Resolver 고도화: 자료 보강·재정렬·검색 학습 결과
 
 2026-09-11 · 상태: **부분 구현 또는 개발용 데모**. 로컬 구현·실제 artifact 평가를 수행했다.
-공개 GitHub push/PR/CI는 사용자 확인 전 보류한다. 현재 서비스의 Sparse Resolver는 그대로다.
+사용자가 원본·가중치를 제외한 공개 PR과 CI 실행을 승인했다. 원격 검증을 진행하며,
+현재 서비스의 Sparse Resolver는 그대로다.
 
 ## 먼저 결론
 
@@ -61,8 +62,8 @@ CAS 숫자·UN·formula 타입은 학습 데이터에서 제외했다. 숫자 CA
 | 분할 단위 | CAS별 SHA-256, seed 20260911, 70/15/15 bucket |
 | 2개 이상 이름이 있는 CAS | train 1,202 / dev 252 / test 264 |
 | 학습 벡터 | 4,852개, 2,907 CAS; 한 이름 CAS도 train negative로만 사용 가능 |
-| 학습 양성 쌍 | 3,147개, 동일 CAS의 서로 다른 이름 |
-| 음성 쌍 | 다른 train CAS의 batch negative + frozen Dense hard negative |
+| 일치 쌍(positive) | 3,147개, 동일 CAS의 서로 다른 이름 |
+| 비일치 쌍(negative) | 다른 train CAS의 batch negative + frozen Dense hard negative; 음성 녹음이 아님 |
 | 공통 검색 corpus | 6,461개 별칭, 4,195 CAS |
 | dev/test 질의 | 각 CAS에서 이름 1개를 숨김; 그 정규화 표현은 corpus/학습 모두 제거 |
 | 누수 검사 | train/dev/test CAS 중복 0, 숨긴 표현의 학습/corpus 포함 0 |
@@ -212,15 +213,15 @@ Docker 빌드·원격 CI 상태는 아래 인계 상태에 별도로 기록한�
   로컬 베이스 이미지 캐시는 없었다. 호스트의 Docker Registry 접근은 401 인증 응답까지
   가능했으므로 네트워크/빌더 경로 문제로 분류하며, 원인을 완전히 확정하거나 해결했다고
   주장하지 않는다. Docker Desktop은 검증 전의 중지 상태로 복원한다.
-- 공개 GitHub PR/CI: 사용자 공개 승인 대기. **CI 통과 또는 전체 구현 완료라고 표시하지 않는다.**
-- PR/이슈 업데이트: 기존 #25에 연결할 코드·보고서를 로컬 커밋으로 준비했다. 공개 댓글·PR은
-  아직 게시하지 않았다. PR 생성 시 base는 `experiment/ulsan-resolver-comparison`이다.
+- 공개 GitHub PR/CI: 사용자 승인 후 진행 중. **CI 결과 확인 전 전체 구현 완료라고 표시하지 않는다.**
+- PR/이슈 업데이트: 기존 #25에 연결한다. PR base는 `experiment/ulsan-resolver-comparison`이다.
+  이전 #66에 이어지는 stacked PR이며 main 병합·서비스 배포는 포함하지 않는다.
 
 ## 6. 완료 범위와 다음 판단
 
 | 사실 상태 | 내용 |
 |---|---|
-| 부분 구현 또는 개발용 데모 | 세 단계 코드·실제 artifact 평가·누수 감사·로컬 테스트 완료, 공개 PR/CI 확인 전 |
+| 부분 구현 또는 개발용 데모 | 세 단계 코드·실제 artifact 평가·누수 감사·로컬 테스트 완료, 공개 PR/CI 검증 진행 중 |
 | 설계 완료·구현 전 | 세 방법의 결합 ablation, 신규 CAS의 안전한 노출 범위 평가 |
 | 검증되지 않은 가설 | 새 지역·ASR 오인식·현장 무전에도 개선 유지, 사용자 확인 시간 단축 |
 | 구현 완료라고 표현하지 않는 것 | 운영 교체, 전문 검수, 실제 소방 안전성, end-to-end 운영 검증 |
@@ -234,5 +235,5 @@ Docker 빌드·원격 CI 상태는 아래 인계 상태에 별도로 기록한�
 논문의 전체 모델·데이터·성능을 재현하거나 한국어 화학물질에 그대로 적용했다고 주장하지 않는다.
 
 관련 이슈: [#25](https://github.com/chemicheck119-lab/analysis-engine/issues/25).
-작업 브랜치 `modeling/resolver-domain-adaptation`; 공개 업로드 확인 전에는 로컬 커밋만 유지한다.
+작업 브랜치 `modeling/resolver-domain-adaptation`; 원본·가중치 없는 코드·집계만 공개한다.
 Notion·Front·Backend·GCP·API 기본 설정은 수정하지 않았다.
