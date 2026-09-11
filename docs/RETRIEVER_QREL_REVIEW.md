@@ -25,13 +25,16 @@ KOSHA 상세가 있는 물질
 | 배포 artifact 기반 171질의 후보 | 부분 구현 또는 개발용 데모 |
 | 171질의 사람 이중 검수 | 설계 완료·구현 전 |
 | BM25·Dense·Hybrid·RRF·Reranker 비교 | 설계 완료·구현 전 |
-
-2026-09-09 기준 `baseline-lexical-hybrid` Top-5를 171질의에 실행한 결과 803개 반환
-occurrence가 기존 후보 pool에 모두 포함됐고, 누락 pair는 0건이었다. 답변 불가 질의 1건은
-`NO_EVIDENCE_FOUND`로 기권했다. 사람 라벨은 0/171로 시작 전이며, 이 결과는 검색 정확도가
-아닌 **현재 기준선에 한정된 검수 pool 포함 감사**다. 공개 가능한 집계·artifact hash는
-`data/evaluation/retriever_qrel_pool_audit_2026-09-09.json`에 기록했다.
 | 현장 검색 정확도 | 검증되지 않은 가설 |
+
+2026-09-11 확인한 전체 revision `d5d052556f1d58d70918e74fb7c36756d30ed36f`의 재실행에서
+`baseline-lexical-hybrid` Top-5를 171질의에 실행한 결과 803개 반환
+occurrence가 기존 후보 pool에 모두 포함됐고, 누락 pair는 0건이었다. 결과가 빈 질의 1건은
+관찰된 동작이며 올바른 기권 정답으로 판정하지 않았다. 사람 라벨은 0/171로 시작 전이며, 이 결과는 검색 정확도가
+아닌 **현재 기준선에 한정된 검수 pool 포함 감사**다. 공개 가능한 집계·artifact hash는
+`data/evaluation/retriever_qrel_pool_audit_2026-09-09.json`에 기록했다. 파일명은 기존 링크를
+유지하지만 본문은 [채택한 재실행](EVALUATION_READINESS_2026-09-11.md)의 run·audit hash에 연결된다.
+확인할 수 없는 `570985d` 표기는 `superseded_evidence`로만 보존하고 현재 성과 근거로 쓰지 않는다.
 
 기계 생성 질문은 실제 신고·무전 질문 분포가 아니다. 최종 병합 결과도 비전문가 두 명이
 검수한 KOSHA SDS section 평가일 뿐, 현장 안전성이나 전국 소방 검색 정확도를 증명하지
