@@ -191,6 +191,9 @@ def failed_brief(
     result = initial.model_copy(deep=True)
     result.phase = "final"
     result.status = "TIMEOUT" if code == "DEADLINE_EXCEEDED" else "HELD"
+    result.cards = [
+        card for card in result.cards if card.phrase_id != "ANALYSIS_PENDING"
+    ]
     result.summary = (
         "현재 상태의 분석을 완료하지 못했습니다. 확인·보류 안내만 사용할 수 있습니다."
     )
