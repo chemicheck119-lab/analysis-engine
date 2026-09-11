@@ -61,6 +61,17 @@
 
 ## 재현과 비용
 
+### PR 리뷰 보완: 공개 계측 근거
+
+`data/evaluation/action_brief_v1_runs.json`은 위 표가 참조한 잠금 보고서 5개의 허용된 계측 열을 공개한 것입니다. 원 보고서 SHA-256을 먼저 대조하고, r1 실패 16회와 r3/r4/r7 및 HTTP의 건수·p50·p95를 행 단위로 재계산했습니다. 당시 코드·artifact·입력 hash를 보존하며 원문·전체 응답·근거 본문·가중치는 포함하지 않습니다.
+
+```bash
+python scripts/export_action_brief_evidence.py --verify
+pytest tests/test_action_brief_public_evidence.py
+```
+
+원문 접근 없이 집계 검증이 가능합니다. `same_semantic_result`는 당시 검사 결과 bool의 재집계이며, 공개하지 않은 응답 내용을 독립적으로 다시 판정한 것이 아닙니다. 이 공개 근거를 새 모델 평가·현장 검수로 표현하지 않습니다. 실패 종료 시 `ANALYSIS_PENDING`을 제거하는 후속 수정은 별도 계약 회귀 테스트로 검사했고, 이 과거 지연시간을 수정 후 새 측정값으로 바꾸지 않았습니다.
+
 [실행·평가 명령](ACTION_BRIEF.md), [사전 평가 계획](ACTION_BRIEF_EVALUATION_PLAN.md), `src/chemiguard119/action_evaluation.py`를 사용하세요. 보고서에 입력·artifact·모든 모델 소스코드·정책 파일 hash와 실행 환경이 있습니다. 과거 실패 보고서는 덮어쓰지 않았습니다.
 
 추가 개발 서버 비용 **0원**. 유료 LLM·GPU·Cloud 작업 없음. 누적 계정 비용은 이번 작업에서 확인하지 않았으므로 금액을 확정하지 않습니다. Front·Backend·infra·Notion은 수정하지 않았습니다.
