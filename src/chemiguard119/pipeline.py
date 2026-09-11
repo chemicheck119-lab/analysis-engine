@@ -402,6 +402,9 @@ def analyze_incident(
     config_dir: Path = CONFIG_DIR,
     evidence_top_k: int = 5,
     evidence_searcher: EvidenceSearcher | None = None,
+    evidence_dispatcher: Callable[..., list[dict[str, Any]]] | None = None,
+    cancellation_check: Callable[[], None] | None = None,
+    before_rule_check: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     """사고 신고 한 건을 구조화하고 검증 가능한 분석 JSON으로 변환한다.
 
@@ -465,7 +468,11 @@ def analyze_incident(
         return base
 
     base["trace"].append({"stage": "INPUT_VALIDATION", "status": "PASSED"})
+    if cancellation_check:
+        cancellation_check()
     parsed = deterministic_parse(raw_value, resolver_artifact)
+    if cancellation_check:
+        cancellation_check()
     parser_errors = validate_parser_output(parsed, raw_value)
     base["trace"].append(
         {
@@ -500,8 +507,10 @@ def analyze_incident(
     base["substance_candidates"] = candidates
 
     search = evidence_searcher or search_evidence
-    evidence: list[dict[str, Any]] = []
-    for target in _evidence_targets(raw_value, candidates, incident_cas, facility_cas):
+
+    def retrieve_target(target: dict[str, Any]) -> dict[str, Any]:
+        if cancellation_check:
+            cancellation_check()
         try:
             retrieval = search(
                 target["query"],
@@ -525,7 +534,16 @@ def analyze_incident(
                 "cas_link_warning": None,
                 "results": [],
             }
-        evidence.append({**target, "retrieval": retrieval})
+        if cancellation_check:
+            cancellation_check()
+        return {**target, "retrieval": retrieval}
+
+    targets = _evidence_targets(raw_value, candidates, incident_cas, facility_cas)
+    evidence = (
+        evidence_dispatcher(retrieve_target, targets)
+        if evidence_dispatcher
+        else [retrieve_target(target) for target in targets]
+    )
     base["evidence"] = evidence
     retrieval_statuses = [
         str(item["retrieval"].get("status") or "UNKNOWN") for item in evidence
@@ -561,6 +579,12 @@ def analyze_incident(
     )
 
     review: dict[str, Any] | None = None
+    if cancellation_check:
+        cancellation_check()
+    if before_rule_check:
+        before_rule_check(base)
+    if cancellation_check:
+        cancellation_check()
     if incident_cas and facility_cas:
         review = review_pair(
             incident_cas,

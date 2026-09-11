@@ -19,12 +19,28 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated, Any, AsyncIterator
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
+from fastapi import (
+    Body,
+    Depends,
+    FastAPI,
+    HTTPException,
+    Request,
+    Security,
+    status,
+)
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.security import APIKeyHeader
 from pydantic import ValidationError
 
 from chemiguard119 import __version__
+from chemiguard119.action_brief import initial_brief
+from chemiguard119.action_examples import EXAMPLES as BRIEF_EXAMPLES
+from chemiguard119.action_models import BriefRequest, BriefResponse
+from chemiguard119.action_response_examples import (
+    RESPONSE_EXAMPLES as BRIEF_RESPONSE_EXAMPLES,
+)
+from chemiguard119.brief_orchestrator import BriefOrchestrator, CapacityExceeded
 from chemiguard119.api_models import (
     API_SCHEMA_VERSION,
     CONFIRMATION_GATE_POLICY,
@@ -72,7 +88,7 @@ from chemiguard119.evidence_assurance import (
 )
 from chemiguard119.pipeline import PIPELINE_SCHEMA_VERSION, analyze_incident
 from chemiguard119.preprocessing import MINIMUM_ULSAN_PROFILE_COUNT
-from chemiguard119.rag import GroundedRagService, RAG_SCHEMA_VERSION
+from chemiguard119.rag import GroundedRagService, RAG_SCHEMA_VERSION, RagConfig
 from chemiguard119.resolver import load_resolver, resolve_substance
 from chemiguard119.retrieval import load_retriever, search_evidence
 from chemiguard119.release import (
@@ -659,9 +675,16 @@ def _production_integrity_ready(
     )
 
 
+API_KEY_HEADER = APIKeyHeader(
+    name="X-API-Key",
+    auto_error=False,
+    description="Backend 전용 API 키. 로컬 데모 키를 운영에 사용하지 마세요.",
+)
+
+
 def _authorize(
     request: Request,
-    x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
+    x_api_key: Annotated[str | None, Security(API_KEY_HEADER)] = None,
 ) -> None:
     auth_config_error = getattr(request.app.state, "auth_config_error", None)
     if auth_config_error:
@@ -1191,6 +1214,7 @@ def create_app(
                     error_type=type(error).__name__,
                 )
         yield
+        app.state.brief_orchestrator.close()
 
     application = FastAPI(
         title=f"{PUBLIC_SERVICE_NAME} 모델 API",
@@ -1204,6 +1228,13 @@ def create_app(
     )
     application.state.runtime = runtime
     application.state.rag_service = rag_service or GroundedRagService()
+    application.state.brief_orchestrator = BriefOrchestrator(
+        parallel=_env_flag("CHEMIGUARD119_BRIEF_PARALLEL", False)
+    )
+    # 행동 카드 v1은 유료/외부 LLM을 호출하지 않는다. 기존 API의 RAG 설정은 그대로 둔다.
+    application.state.brief_rag_service = GroundedRagService(
+        RagConfig(mode="extractive")
+    )
     application.state.startup_error = None
     application.state.deployment_environment = resolved_deployment_environment
     application.state.release_tier = _release_tier(resolved_deployment_environment)
@@ -1530,6 +1561,128 @@ def create_app(
             request_id=_request_id(request, payload.request_id),
             analysis_id=_new_id("ANL"),
             request=request,
+        )
+
+    def start_brief(payload: BriefRequest, request: Request) -> Any:
+        initial_started = time.perf_counter()
+        active_runtime = _runtime_or_error(request)
+        request_id = _request_id(request, payload.analysis.request_id)
+        initial = initial_brief(
+            payload,
+            request_id,
+            _agent_runtime_state_fingerprint(request),
+            {
+                "service": __version__,
+                "resolver": active_runtime.resolver_artifact.get("schema_version"),
+                "retriever": active_runtime.retriever_artifact.get("schema_version"),
+                "rule_policy": request.app.state.rule_policy,
+            },
+        )
+        initial.processing = {
+            "initial_build_ms": round(
+                (time.perf_counter() - initial_started) * 1000, 3
+            ),
+            "stt_included": False,
+            "tasks": [
+                {"tool": "FAST_CONFIRMATION_POLICY", "status": "COMPLETED"},
+                {"tool": "PARSER_RESOLVER_EVIDENCE", "status": "PENDING"},
+            ],
+            "llm": "SKIPPED_BY_POLICY",
+        }
+
+        def finalize(
+            effective: IncidentAnalyzeRequest,
+            analysis: dict[str, Any],
+            history: dict[str, Any] | None,
+            started: float,
+        ) -> AnalysisResponse:
+            return _public_analysis_response(
+                effective,
+                analysis,
+                active_runtime,
+                request_id=request_id,
+                analysis_id=_new_id("ANL"),
+                started_at=started,
+                rule_policy=request.app.state.rule_policy,
+                rag_service=request.app.state.brief_rag_service,
+                facility_history=history,
+            )
+
+        try:
+            return request.app.state.brief_orchestrator.start(
+                payload,
+                initial,
+                active_runtime,
+                request.app.state.rule_policy,
+                finalize,
+            )
+        except CapacityExceeded:
+            raise APIBoundaryError(
+                "BRIEF_CAPACITY_EXCEEDED",
+                "동시에 처리할 수 있는 행동 카드 요청 수를 초과했습니다. 잠시 뒤 다시 요청해 주세요.",
+                status_code=503,
+                retryable=True,
+            ) from None
+
+    @application.post(
+        "/api/v1/agents/incidents/brief",
+        response_model=BriefResponse,
+        responses={
+            **STANDARD_ERROR_RESPONSES,
+            200: {
+                "description": "현재 입력의 최종 행동 카드 snapshot. 예시는 실제 artifact에 합성 입력을 실행한 결과입니다.",
+                "content": {"application/json": {"examples": BRIEF_RESPONSE_EXAMPLES}},
+            },
+        },
+        tags=["action-brief"],
+        summary="현재 확인 상태의 행동·확인 카드 생성",
+        description="입력 revision별 stateless 분석입니다. 미확인 물질의 전술 지시를 생성하지 않습니다. timeout은 HTTP 200의 TIMEOUT 보류 응답, 슬롯 포화는 503입니다.",
+    )
+    async def incident_brief(
+        payload: Annotated[BriefRequest, Body(openapi_examples=BRIEF_EXAMPLES)],
+        request: Request,
+        _: Annotated[None, Depends(_authorize)],
+    ) -> BriefResponse:
+        job = start_brief(payload, request)
+        return await request.app.state.brief_orchestrator.finish(
+            job, request.is_disconnected
+        )
+
+    @application.post(
+        "/api/v1/agents/incidents/brief/stream",
+        tags=["action-brief"],
+        response_class=StreamingResponse,
+        responses={
+            **STANDARD_ERROR_RESPONSES,
+            200: {
+                "description": "검증된 initial/final BriefResponse를 담은 SSE. 각 이벤트는 전체 snapshot이며 합쳐서 누적하지 않습니다.",
+                "content": {"text/event-stream": {"schema": {"type": "string"}}},
+            },
+        },
+        summary="검증된 확인 카드와 후속 결과를 SSE로 순차 반환",
+    )
+    async def incident_brief_stream(
+        payload: Annotated[BriefRequest, Body(openapi_examples=BRIEF_EXAMPLES)],
+        request: Request,
+        _: Annotated[None, Depends(_authorize)],
+    ) -> StreamingResponse:
+        job = start_brief(payload, request)
+
+        async def events() -> AsyncIterator[str]:
+            try:
+                yield f"event: initial\ndata: {job.initial.model_dump_json()}\n\n"
+                final = await request.app.state.brief_orchestrator.finish(
+                    job, request.is_disconnected
+                )
+                yield f"event: final\ndata: {final.model_dump_json()}\n\n"
+            finally:
+                job.cancelled.set()
+                job.future.cancel()
+
+        return StreamingResponse(
+            events(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
         )
 
     @application.post(

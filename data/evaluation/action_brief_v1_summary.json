@@ -1,0 +1,470 @@
+{
+  "schema_version": "action-brief-evidence-summary-v1",
+  "date": "2026-09-10",
+  "implementation_status": "IMPLEMENTED_CI_VERIFIED",
+  "ci_evidence": {
+    "implementation_commit": "c0a9c9292df7a7aef280b4a1c54bb4a77dee5486",
+    "url": "https://github.com/chemicheck119-lab/analysis-engine/actions/runs/34460594028",
+    "conclusion": "success",
+    "scope": "기능 구현 커밋의 테스트·정적 검사·계약 drift·Docker 빌드. 후속 테스트·문서 변경의 최신 CI는 PR checks에서 별도 확인",
+    "latest_checks": "https://github.com/chemicheck119-lab/analysis-engine/pull/61/checks"
+  },
+  "scope": "실제 artifact + 내부 합성 입력의 개발용 계약 평가; 현장 검증 아님",
+  "scenario_count": 15,
+  "warm_repeats_per_mode": 3,
+  "mode_order": [
+    "sequential",
+    "parallel"
+  ],
+  "failure_count": 0,
+  "decision": "CONDITIONAL_DEVELOPMENT_ADOPTION",
+  "artifact_sha256": {
+    "sqlite": "ed81fe9aac45a38880920d967ce8f3954acabfedf7b2f6ea59464552e7958b91",
+    "resolver": "2696fa7f067163055ff556e5e12ccfa15e7dc08c9ff803838f0db074aa002dff",
+    "retriever": "2e93e066648890400b26f56b532d6ed608b828203f8668e4af3cf63de1bc544b"
+  },
+  "inputs_sha256": "86eceb870795dc8b5766911667df059424280720668e7b2eadde601d5b25389d",
+  "catalog": "action-catalog-v1",
+  "catalog_sha256": "8648c53dcdc271d5c64307e7d7b05dd4ac16441f19c62f19438f5bdf231f97d8",
+  "policy": "action-policy-v1",
+  "source_sha256": {
+    "src/chemiguard119/__init__.py": "90eec8ac47054937345e63d2711cf960bf19fa9334ac897e9bb777593dca2ae5",
+    "src/chemiguard119/__main__.py": "3c929b609d35b5c027110149ab2158cdabcbc731fa0de61e7ec583e5460ae783",
+    "src/chemiguard119/action_brief.py": "fa234bed4d087987112c655cc79db6b4a1a98a41727bbc528a1fc4766ae1c314",
+    "src/chemiguard119/action_catalog.py": "364d74a9415913f0c97baf768c6ff59fad9d6c551dcb4c16c7af9012162a1c16",
+    "src/chemiguard119/action_evaluation.py": "795fd5ec45539da6b3ba1a59474b866ad38e9c63c6a675708b65ef08911c4446",
+    "src/chemiguard119/action_examples.py": "0fee99120623043ee876d336126c5d5a09b8e3859dac843f4546c3a95aa09b2e",
+    "src/chemiguard119/action_models.py": "01a9bac5909e2a155ce6aaa541b71d650490b503d1182c791c8f2cc2ea1153d7",
+    "src/chemiguard119/action_policy.py": "d0b6cfdd6b196c1afd1cde7b49fb1b2026a96b4bc82163c2887a9eb583a1fd47",
+    "src/chemiguard119/action_response_examples.py": "4ad1d8df00ff871166b8f8362a63f8ef50f7c98cbd6864d6d1cf6bddefe5415c",
+    "src/chemiguard119/agent_loop.py": "19f6289fc3fea344a6cab7a1ec1d269e6f4c1eb9eaf5623e40ded94b0082b42b",
+    "src/chemiguard119/agent_trajectory_evaluation.py": "424631a512681382b8049cbdfd2025fd1b2d0afa6ec93566ef199ea3edbed57e",
+    "src/chemiguard119/api.py": "44bf76744ea75d3479d8135660b24d80ad24d7c8a5e958be147dae5a8d42685d",
+    "src/chemiguard119/api_models.py": "0055922be50461476aa2c1a64d226ca569af6e8f2bf307fef16ac88fbece3b97",
+    "src/chemiguard119/audit.py": "c287aea870ec3e793d3fbebc1becfad2f4b629150ee11903a4cf485536f3790f",
+    "src/chemiguard119/brief_consumer.py": "d901fec0c5a411d9da5682bc4bd9baecfbbde150c3d84612044a96118a8886cc",
+    "src/chemiguard119/brief_orchestrator.py": "e18e0926f21e7a62fa05b5b2b0a7efc918fe6d563b0566375fe4100e1ab2779b",
+    "src/chemiguard119/cli.py": "d52c618ff7dca115c20926b8418aee5d25f094402dcea1bad4e2304fe624fba2",
+    "src/chemiguard119/coverage.py": "45d79812fdbe6fb85c8ffa6c71b8ef2914fe8dd133da9259f3a862e09f6c5167",
+    "src/chemiguard119/cross_repo_safety_evidence.py": "11f137229b79ad6a27d65723af022e05525e41841263718b82dfb2f8df287b07",
+    "src/chemiguard119/cross_service_confirmation_evaluation.py": "85f1309f0ae1eb35dc759c3a4d7a3c9da9df9f3203f7d2f3189ca730e7db66eb",
+    "src/chemiguard119/cross_service_voice_evaluation.py": "a60e5b2456e930d8d6951546785aa889d4ea7afa20e3e2a1d4cbd3a72fc40ed2",
+    "src/chemiguard119/dashboard_contract.py": "8c7bb023dbc1bfc9e1f2c9343e74cb668732f43460cff97b8da0832c402e3896",
+    "src/chemiguard119/database.py": "46ae276e8a15543d99f77c1209a6ed520e8160b4ae006ebe8bd79628e54426a4",
+    "src/chemiguard119/discovery.py": "3600b987d93477d084d594588a08ac9bbe60b38c44dcfbf087665f2f8aaecb0f",
+    "src/chemiguard119/e2e_evaluation.py": "b3bd4f4293250e52ecbac09e45764617d9f6c8c3594fa64c9950b470867071cf",
+    "src/chemiguard119/e2e_review.py": "740df9e6c1368bf941a91fb2c204e106e0a1cb1c1c73f0a324f405e9321bc459",
+    "src/chemiguard119/evaluation_contract.py": "2ad7943f4a3478c32716be7924c0d2fbb6150541974f0434ead111efa29327d3",
+    "src/chemiguard119/evidence_assurance.py": "bdd49b2b3ae1bca1a7c30b4235c9b24ba22becf5df3f4fbfa3e017aaebfcb7d3",
+    "src/chemiguard119/facility.py": "959ae8d41ff3ef99e6f02ae07c1be1700fa3471880b5c7eedf6bc565ac614872",
+    "src/chemiguard119/finetune.py": "deb82d9eed3459e83e9f2d7876280946ccccecb342a0e49d782f2eb1afe54689",
+    "src/chemiguard119/incident.py": "aa5db159f4c199ce1d894fbdf95810fea52d8b0beaa7683c0f0b3a47213b3f22",
+    "src/chemiguard119/incident_adaptation.py": "9d6d254b8b719d54a5236bf01525e539f96427ec9f4e405f62986d471db3b14e",
+    "src/chemiguard119/incident_source_intake.py": "d5750af0ee4238c927b35dc7577c454b379c5ada6ab91ea0d38ea5ff25a7d9d2",
+    "src/chemiguard119/kosha_client.py": "219bffb17d9e6a2fc16ea8ea4b36381e6a0ddb179dce1392d0a0c779c39e1872",
+    "src/chemiguard119/lmstudio.py": "c1ed4f91814fb934f513ec70159b64b64c5a97afae1832dac39e25ea4e77d41f",
+    "src/chemiguard119/material_ranker.py": "04e78a6d468ec9113127f85f467f2ff0b41a64bedcc58eff1e64aeefd46aeb05",
+    "src/chemiguard119/observability.py": "21c9a2fd1e2d76aa5d7da21c51e0600d7eddbd945bfa2637e376a5d5a25e8752",
+    "src/chemiguard119/official_incident_evaluation.py": "bbb6ae0655358999609b0793c1f32241efc4e917c3183a786a1fa31a1726442d",
+    "src/chemiguard119/operations.py": "2ce83f41908f660ab0f95fd3e98f18ae11ccc37712836d057fff6b60ab5999c4",
+    "src/chemiguard119/pair_evaluation.py": "e674e73d7b74593385cd47208cf039dacaae6f8bfefcfecbfb81acad5095fa84",
+    "src/chemiguard119/paths.py": "1af269024124170b982fc0565ff1336f75f8a8c3a9ef13f40d01055217192350",
+    "src/chemiguard119/pipeline.py": "01a49d1d40cfc588148dab0da70a22c1bae100331a4a79b7be298e70ca74d8d8",
+    "src/chemiguard119/preprocessing.py": "d0e6f2bd9cfab839049920b4fdd58f4d51ca4bcf52ddb18a7ede198bd2bf0e52",
+    "src/chemiguard119/rag.py": "bd527c4d83eb67ba3409744417ad6743b3aafffa3055e9b53c47f7106c074df5",
+    "src/chemiguard119/reference_drift.py": "5d153928f86e58cac88102bebdf970da1956c2f5ed37c13da945b03631fc16cf",
+    "src/chemiguard119/release.py": "33bdc04a009c8e9dc9566857ee147815a320bc29627bac3f148bfaa78a96a5f2",
+    "src/chemiguard119/resolver.py": "b6a4947eab2de213725f99df9fbafe0da6feb8d4221234a5856fc2ba00f45f37",
+    "src/chemiguard119/retrieval.py": "b7ddd786c2788d4e8283afddfb19f57bdda44e94f8bf256d32464d25a59d2e5d",
+    "src/chemiguard119/retrieval_evaluation.py": "1c6686509dc8f4950fa05631e5eb7549318f7e70f5eefb1860fcb7f4730572d3",
+    "src/chemiguard119/retrieval_review.py": "6f684f51611b33cb46a5ea33669d89a1fa4800807e893922671d92a2dc2c3b31",
+    "src/chemiguard119/rules.py": "d4e97fb947a571541e465ee0f53721a5db90c2d0154d990898ce27f5c77bcb3a",
+    "src/chemiguard119/stt_downstream_evaluation.py": "c6259ad15887c456be2081b128d59da4814dc6c159988be6fb51431a98697e42",
+    "src/chemiguard119/stt_lora_downstream_evaluation.py": "a3387ddccc592fe6d9c2a009bc75b163bae31c17562b016db9e563e44d50b9fa",
+    "src/chemiguard119/stt_robustness_downstream_evaluation.py": "4af36c935a3907ff0f6f889ff45b422849e3292a618b3d313d6b5877bb5aa9f6",
+    "src/chemiguard119/stt_robustness_lora_gate.py": "f6b2741bab1d85bd8fa1e699cab395b1cb4cf11210ea853652fca02f62570097",
+    "src/chemiguard119/support_priority.py": "5e052e13d5af1368bb97d114bfb2f2cf9a2433b81d6da9d00be00ed3321819d6",
+    "src/chemiguard119/utils.py": "a73930215d3cb138640756dc9ac10d8f5968e8156e4f972e983684ee7987b9be"
+  },
+  "config_sha256": {
+    "config/cameo_crosswalk.csv": "50411363a840c88a0b371123f8e5ab265001ec6ca1bb70840eb93a79b79f617c",
+    "config/conflict_policy.json": "32b5e7e8d127bb2aa73ad1ec9b2c97a82a1eac7e8b6311028c4ccc8d57459bef",
+    "config/dashboard_public_pair_contract.json": "335fc0cbdf8f07b27c0f4f137901aeddeaa40f9e4bded20bba091cf579d451c4",
+    "config/data_source_registry.json": "14600f35a564a7e1c05ccd8b6086777a2a479ba525e5a105247a1ba6569cb499",
+    "config/pair_rules.csv": "0d4cbee2f2a888e1929aff1b15acf42600e5f96bd38af5a673e6c60733fab2ca",
+    "config/reference_assurance_registry.json": "6a02bc11210907dbf4bd22858deeb51d4d12c4744a06e479c2b87e1ff25b567c",
+    "config/release_attestation.schema.json": "449c2d3b7d54bbc8b93f9d2c95a10e8713b4cc6b8a739e6cd11e2ab6732ec10c",
+    "config/release_quality_policy.json": "537e5f2fcf919e255879ad27cde1c8c9ba3057182f3bb69c18ecdb4abb22b720",
+    "config/substance_overrides.csv": "646a2d8f4ee49a6a663bdeb817baf625cfb67313b4515344d744bfc30f94b0e8"
+  },
+  "environment": {
+    "platform": "macOS-26.3-arm64-arm-64bit",
+    "machine": "arm64",
+    "python": "3.11.15",
+    "cpu_count": 10,
+    "processor": "arm"
+  },
+  "runtime_load_ms": 1266.88,
+  "warm_json_latency": {
+    "sequential": {
+      "n": 42,
+      "p50_ms": 115.888,
+      "p95_ms": 140.522,
+      "max_ms": 146.054
+    },
+    "parallel": {
+      "n": 42,
+      "p50_ms": 108.074,
+      "p95_ms": 119.109,
+      "max_ms": 125.45
+    }
+  },
+  "stt_included": false,
+  "limitations": [
+    "현장 안전·사용자 시간 절감·STT 정확도를 검증한 평가가 아님",
+    "문구 전문 검수 0건, 기관 SOP 승인 없음",
+    "부정·추정은 기존 Parser 범위만 지원",
+    "semantic_response 비교는 검색 품질 정답 판정이 아님"
+  ],
+  "lengths": [
+    16,
+    17,
+    18,
+    19,
+    22,
+    26,
+    28,
+    33,
+    38
+  ],
+  "execution_counts": {
+    "attempts": 120,
+    "http_200": 112,
+    "http_422": 8,
+    "rule_calls": 16,
+    "contract_failure_count": 0,
+    "forbidden_rule_execution_failures": 0,
+    "source_cas_role_match_failures": 0
+  },
+  "http_evaluation": {
+    "schema_version": "action-brief-live-http-v1",
+    "scope": "LOCALHOST_SYNTHETIC_ACTUAL_ARTIFACT_SERVER",
+    "openapi_sha256": "6109523b80334cd3c6cd8f116697d62feafee1a935c45a2870c7583d96250842",
+    "sample_count": 30,
+    "first_card": {
+      "n": 30,
+      "p50_ms": 38.688,
+      "p95_ms": 45.12,
+      "max_ms": 45.412
+    },
+    "final": {
+      "n": 30,
+      "p50_ms": 118.596,
+      "p95_ms": 119.774,
+      "max_ms": 120.32
+    },
+    "passed": true,
+    "runs": [
+      {
+        "iteration": 0,
+        "revision": 1,
+        "input_characters": 38,
+        "first_card_ms": 44.662,
+        "final_ms": 118.498,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 0,
+        "revision": 3,
+        "input_characters": 38,
+        "first_card_ms": 31.682,
+        "final_ms": 118.24,
+        "status": "COMPLETED",
+        "passed": true
+      },
+      {
+        "iteration": 0,
+        "revision": 4,
+        "input_characters": 38,
+        "first_card_ms": 38.895,
+        "final_ms": 118.975,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 1,
+        "revision": 1,
+        "input_characters": 38,
+        "first_card_ms": 44.082,
+        "final_ms": 118.962,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 1,
+        "revision": 3,
+        "input_characters": 38,
+        "first_card_ms": 32.694,
+        "final_ms": 117.042,
+        "status": "COMPLETED",
+        "passed": true
+      },
+      {
+        "iteration": 1,
+        "revision": 4,
+        "input_characters": 38,
+        "first_card_ms": 43.215,
+        "final_ms": 118.277,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 2,
+        "revision": 1,
+        "input_characters": 38,
+        "first_card_ms": 31.848,
+        "final_ms": 118.267,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 2,
+        "revision": 3,
+        "input_characters": 38,
+        "first_card_ms": 38.418,
+        "final_ms": 118.602,
+        "status": "COMPLETED",
+        "passed": true
+      },
+      {
+        "iteration": 2,
+        "revision": 4,
+        "input_characters": 38,
+        "first_card_ms": 38.212,
+        "final_ms": 117.926,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 3,
+        "revision": 1,
+        "input_characters": 38,
+        "first_card_ms": 38.625,
+        "final_ms": 118.589,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 3,
+        "revision": 3,
+        "input_characters": 38,
+        "first_card_ms": 38.955,
+        "final_ms": 117.824,
+        "status": "COMPLETED",
+        "passed": true
+      },
+      {
+        "iteration": 3,
+        "revision": 4,
+        "input_characters": 38,
+        "first_card_ms": 44.261,
+        "final_ms": 118.813,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 4,
+        "revision": 1,
+        "input_characters": 38,
+        "first_card_ms": 42.137,
+        "final_ms": 119.23,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 4,
+        "revision": 3,
+        "input_characters": 38,
+        "first_card_ms": 31.596,
+        "final_ms": 118.223,
+        "status": "COMPLETED",
+        "passed": true
+      },
+      {
+        "iteration": 4,
+        "revision": 4,
+        "input_characters": 38,
+        "first_card_ms": 38.991,
+        "final_ms": 119.059,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 5,
+        "revision": 1,
+        "input_characters": 38,
+        "first_card_ms": 45.038,
+        "final_ms": 118.035,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 5,
+        "revision": 3,
+        "input_characters": 38,
+        "first_card_ms": 45.412,
+        "final_ms": 119.13,
+        "status": "COMPLETED",
+        "passed": true
+      },
+      {
+        "iteration": 5,
+        "revision": 4,
+        "input_characters": 38,
+        "first_card_ms": 31.238,
+        "final_ms": 118.169,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 6,
+        "revision": 1,
+        "input_characters": 38,
+        "first_card_ms": 45.12,
+        "final_ms": 118.787,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 6,
+        "revision": 3,
+        "input_characters": 38,
+        "first_card_ms": 31.318,
+        "final_ms": 118.47,
+        "status": "COMPLETED",
+        "passed": true
+      },
+      {
+        "iteration": 6,
+        "revision": 4,
+        "input_characters": 38,
+        "first_card_ms": 32.647,
+        "final_ms": 118.762,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 7,
+        "revision": 1,
+        "input_characters": 38,
+        "first_card_ms": 37.702,
+        "final_ms": 118.997,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 7,
+        "revision": 3,
+        "input_characters": 38,
+        "first_card_ms": 32.252,
+        "final_ms": 120.32,
+        "status": "COMPLETED",
+        "passed": true
+      },
+      {
+        "iteration": 7,
+        "revision": 4,
+        "input_characters": 38,
+        "first_card_ms": 38.502,
+        "final_ms": 119.774,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 8,
+        "revision": 1,
+        "input_characters": 38,
+        "first_card_ms": 38.751,
+        "final_ms": 118.784,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 8,
+        "revision": 3,
+        "input_characters": 38,
+        "first_card_ms": 38.161,
+        "final_ms": 118.519,
+        "status": "COMPLETED",
+        "passed": true
+      },
+      {
+        "iteration": 8,
+        "revision": 4,
+        "input_characters": 38,
+        "first_card_ms": 32.639,
+        "final_ms": 119.045,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 9,
+        "revision": 1,
+        "input_characters": 38,
+        "first_card_ms": 39.076,
+        "final_ms": 117.795,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      },
+      {
+        "iteration": 9,
+        "revision": 3,
+        "input_characters": 38,
+        "first_card_ms": 43.249,
+        "final_ms": 116.368,
+        "status": "COMPLETED",
+        "passed": true
+      },
+      {
+        "iteration": 9,
+        "revision": 4,
+        "input_characters": 38,
+        "first_card_ms": 43.594,
+        "final_ms": 118.885,
+        "status": "NEEDS_CONFIRMATION",
+        "passed": true
+      }
+    ],
+    "stt_included": false,
+    "cold_start_included": false,
+    "limitations": [
+      "기동된 로컬 서버에서 측정. WAN/Cloud/현장/음성 전사 시간 아님",
+      "최초 initial 안내와 완성 final은 별도 snapshot"
+    ]
+  },
+  "tests": {
+    "local_passed": 591,
+    "new_action_tests": 38,
+    "field_tests": 0,
+    "expert_reviewed_phrases": 0
+  },
+  "runtime_load_scope": "artifact 확인 및 joblib 적재. warm API 지연과 별도.",
+  "report_sha256": {
+    "action-brief-v1-r1/report.json": "454382b2b48a579e1635b85c8fd212d675331ecc1d032f1aa0baf155c6bc742d",
+    "action-brief-v1-r3/report.json": "c5bef38ca3231777cbed2b8f36eb95334d8a3b259a02b19beb7bdd5cbb4129d5",
+    "action-brief-v1-r4-reverse/report.json": "8717aac28363c0862bd970a149f36f8f67e0794bb76f85694d35aad806dcbbb6",
+    "action-brief-v1-r7-final/report.json": "0558eef8d348635fd673ed145cb5ec9a6b5ab0dad6c4b48b82f0bfebc3c44b1a",
+    "action-brief-http-v1-r2-final.json": "b31c54a2a523c70be741cf8fd99b4a560337d0eb60794caae8bfd7b2415a48db"
+  },
+  "observed_limitations": [
+    "추정 구어체 '염산인 것 같습니다'의 물질 언급 누락; 안전 계약 통과와 추출 성공은 별개",
+    "모호 표현 실제 fixture는 후보 없음. 복수 CAS 분기는 별도 mock 계약 검사",
+    "KOSHA 일부 항목 URL 미확보; 같은 CAS 공식 링크 보조 조회는 section 정답이 아님",
+    "독립 문서 간 의미상충 자동판정·전술 승인·현장 적용 미검증"
+  ],
+  "default_execution": "SEQUENTIAL",
+  "parallel_decision": "동일 결과는 검증. 회차별 p95 변동 때문에 상시 개선 주장은 기각; 옵션 유지",
+  "additional_server_cost_krw": 0,
+  "cumulative_account_cost": "미확인"
+}

@@ -1,14 +1,39 @@
 # 케미체크119 AI
 
-### 소방안전 빅데이터 기반 화학사고 현장대응 에이전트
+### 화학사고 신고를 확인·근거·보류 카드로 바꾸는 모델 API
 
-> 불완전한 화학사고 신고를 구조화하고, 사고물질·시설물질 후보와 공식 대응 근거를 탐색한 뒤,
-> 확인된 물질 조합의 충돌 위험을 검토하는 배포형 AI 서비스입니다.
+> “어떤 물질인지 먼저 확인하세요”, “이 물질의 공식 자료를 찾았습니다”, “아직 조합을 검토할 수 없습니다”처럼 지금 확인할 내용을 짧게 정리합니다. **현장 지휘·전술 결정을 대신하지 않습니다.**
+
+신고 음성은 `speech-service`의 Whisper가 글로 바꾸고, 이 저장소는 **전사문 → 신고 표현 정리 → 물질 후보 → 공식 근거 → 사람 확인 → 행동·인계 카드**를 담당합니다. Parser는 말을 정리하고, Resolver는 물질 후보를 찾고, Retriever는 자료를 찾습니다. 결정적 Agent 정책이 순서와 보류 조건을 관리합니다. 여러 LLM의 합의로 위험을 판단하는 구조가 아닙니다.
+
+이름을 잘못 들었을 수 있으므로 후보를 자동 확정하지 않습니다. 두 CAS가 각각 확인돼야 CAMEO 조합 규칙을 조회하며, 그것만으로 진입·방수·대피를 승인하지 않습니다. 모르면 이유와 다음 확인을 반환합니다.
+
+## 지금 바로 시연할 기능
+
+상태: **부분 구현 또는 개발용 데모**. Front·Backend를 수정하지 않고 모델 API만으로 실행합니다. 문구 전문 검수·기관 SOP 승인·현장 적용 검증은 완료되지 않았습니다.
+
+- JSON: `POST /api/v1/agents/incidents/brief`
+- 순차 출력: `POST /api/v1/agents/incidents/brief/stream` — 확인 안내 먼저, 검증된 후속 결과로 교체
+- Swagger: `http://127.0.0.1:8011/docs` — Authorize에서 `X-API-Key` 입력 후 Try it out
+- [설치·artifact 준비·요청 예시·SSE·팀원 연동 안내](docs/ACTION_BRIEF.md)
+- [실제 artifact 평가·실패 원인·채택/기각 결과](docs/ACTION_BRIEF_RESULTS.md)
+
+승인된 비공개 artifact가 준비된 환경의 최소 실행 명령입니다. 최초 설치와 안전한 manifest 준비는 위 안내를 따르세요.
+
+```bash
+source .venv/bin/activate
+export CHEMIGUARD119_ARTIFACT_DIR=/비공개/새로운/action-brief-local
+export CHEMIGUARD119_ENVIRONMENT=development
+export CHEMIGUARD119_API_KEY=action-brief-local-demo
+python -m uvicorn chemiguard119.api:app --host 127.0.0.1 --port 8011 --no-access-log
+```
+
+데모 키는 외부 서비스에 사용하지 않습니다. 이번 작업은 로컬 CPU·기존 모델만 사용하며 GPU 재학습, 유료 LLM 호출, 외부 배포는 포함하지 않습니다.
 
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)](docs/API.md)
 [![Docker](https://img.shields.io/badge/Deploy-Docker%20%7C%20Cloud%20Run-4285F4?logo=googlecloud&logoColor=white)](docs/DEPLOYMENT.md)
-[![Tests](https://img.shields.io/badge/Tests-545%20passed-2E7D32)](docs/EVALUATION.md)
+[![Tests](https://img.shields.io/badge/Tests-591%20passed-2E7D32)](docs/ACTION_BRIEF_RESULTS.md)
 
 - **참가 부문:** [제6회 소방안전 빅데이터 활용 및 아이디어 경진대회](https://www.bigdata-119.kr/bbs/view?bbsctt_id=571) · 서비스 개발 부문
 - **AI 스택:** Incident Agent · Resolver Fine-tuning · Hybrid Retrieval · Grounded RAG · CAMEO Rule Engine · FastAPI
@@ -113,7 +138,7 @@ flowchart LR
 | 전국 시설 과거 이력 | **17개 시·도 · 28,647개 시설** |
 | 공식 근거 검색 인덱스 | 약 **5,858개 문서·절** |
 | CAMEO 충돌 규칙 코어 | **CAS 6종 · 15조합** |
-| 자동화 테스트 | **545개** |
+| 자동화 테스트 | **591개** (로컬 검사, CI는 변경별 확인) |
 
 평가 데이터, 분할 정책, 실패 사례와 재현 명령은 [모델 평가 문서](docs/EVALUATION.md)에서
 관리합니다. Resolver 수치는 과거 공개 사고 표현 재식별 평가이며 전국 현장 정확도가 아닙니다.

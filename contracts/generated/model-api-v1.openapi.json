@@ -1,6 +1,146 @@
 {
   "components": {
     "schemas": {
+      "ActionCard": {
+        "additionalProperties": false,
+        "properties": {
+          "card_id": {
+            "title": "Card Id",
+            "type": "string"
+          },
+          "cas_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cas Number"
+          },
+          "category": {
+            "enum": [
+              "확인",
+              "대응 참고",
+              "보류",
+              "인계"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "confirmation_status": {
+            "enum": [
+              "UNCONFIRMED",
+              "CONFIRMED_INPUT",
+              "NOT_APPLICABLE"
+            ],
+            "title": "Confirmation Status",
+            "type": "string"
+          },
+          "message": {
+            "maxLength": 240,
+            "title": "Message",
+            "type": "string"
+          },
+          "phrase_id": {
+            "title": "Phrase Id",
+            "type": "string"
+          },
+          "phrase_version": {
+            "title": "Phrase Version",
+            "type": "string"
+          },
+          "priority": {
+            "description": "표시 순서이며 위험등급이 아닙니다. 1부터 먼저 표시합니다.",
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Priority",
+            "type": "integer"
+          },
+          "reason": {
+            "maxLength": 400,
+            "title": "Reason",
+            "type": "string"
+          },
+          "required_conditions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Required Conditions",
+            "type": "array"
+          },
+          "review_status": {
+            "const": "DRAFT_NOT_EXPERT_REVIEWED",
+            "default": "DRAFT_NOT_EXPERT_REVIEWED",
+            "title": "Review Status",
+            "type": "string"
+          },
+          "role": {
+            "default": "UNKNOWN",
+            "enum": [
+              "INCIDENT",
+              "FACILITY",
+              "UNKNOWN"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "state_fingerprint": {
+            "title": "State Fingerprint",
+            "type": "string"
+          },
+          "tactical_authorization": {
+            "const": false,
+            "default": false,
+            "title": "Tactical Authorization",
+            "type": "boolean"
+          },
+          "target_label": {
+            "description": "화면 표시용 사고물질/시설물질/전체 안내 구분",
+            "title": "Target Label",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 80,
+            "title": "Title",
+            "type": "string"
+          },
+          "unmet_conditions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unmet Conditions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "card_id",
+          "phrase_id",
+          "phrase_version",
+          "category",
+          "priority",
+          "title",
+          "message",
+          "reason",
+          "target_label",
+          "confirmation_status",
+          "required_conditions",
+          "unmet_conditions",
+          "source_ids",
+          "state_fingerprint"
+        ],
+        "title": "ActionCard",
+        "type": "object"
+      },
       "AgentLoopEvent": {
         "additionalProperties": false,
         "properties": {
@@ -711,6 +851,305 @@
           "safety_notice"
         ],
         "title": "AnalysisResponse",
+        "type": "object"
+      },
+      "BriefRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis": {
+            "$ref": "#/components/schemas/IncidentAnalyzeRequest",
+            "description": "기존 분석 요청. 전사 원문은 수정하지 않습니다."
+          },
+          "invalidated_confirmation_ids": {
+            "description": "이번 입력에서 취소된 확인 ID. 해당 역할의 확인을 제거합니다.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 2,
+            "title": "Invalidated Confirmation Ids",
+            "type": "array"
+          },
+          "reported_evidence_conflict": {
+            "default": false,
+            "description": "새 근거 상충을 보고하면 양쪽 확인을 보류합니다. false는 상충 없음의 증명이 아닙니다.",
+            "title": "Reported Evidence Conflict",
+            "type": "boolean"
+          },
+          "revision": {
+            "description": "Backend가 관리하는 사고 revision. 모델 서버가 최신 여부를 보증하지 않습니다.",
+            "minimum": 0.0,
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "analysis",
+          "revision"
+        ],
+        "title": "BriefRequest",
+        "type": "object"
+      },
+      "BriefResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "cards": {
+            "items": {
+              "$ref": "#/components/schemas/ActionCard"
+            },
+            "title": "Cards",
+            "type": "array"
+          },
+          "confirmation_state": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Confirmation State",
+            "type": "object"
+          },
+          "discovery": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "이름 후보가 없을 때만 실행하는 보조 Discovery. 현장 확인·Rule 실행 권한이 없습니다.",
+            "title": "Discovery"
+          },
+          "facts": {
+            "additionalProperties": true,
+            "description": "Parser의 원문 span·부정·추정 그대로. 사실 검증 결과가 아닙니다.",
+            "title": "Facts",
+            "type": "object"
+          },
+          "handoff": {
+            "additionalProperties": true,
+            "description": "확인 기록과 신고 표현·미확인 사항을 분리한 인계용 구조입니다.",
+            "title": "Handoff",
+            "type": "object"
+          },
+          "incident_id": {
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "input_provenance": {
+            "additionalProperties": true,
+            "description": "입력 전사문 hash·문자 수. STT 시간은 분석 지연시간에서 제외합니다.",
+            "title": "Input Provenance",
+            "type": "object"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "missing_information": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Information",
+            "type": "array"
+          },
+          "phase": {
+            "description": "initial은 빠른 확인 안내, final은 현재 요청의 최종 snapshot입니다.",
+            "enum": [
+              "initial",
+              "final"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "processing": {
+            "additionalProperties": true,
+            "title": "Processing",
+            "type": "object"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "rule_review": {
+            "additionalProperties": true,
+            "description": "원 Rule 결과의 제한된 필드. 서수 결과이며 전술 승인이나 확률이 아닙니다.",
+            "title": "Rule Review",
+            "type": "object"
+          },
+          "schema_version": {
+            "const": "action-brief-v1",
+            "default": "action-brief-v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/BriefSource"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "state_fingerprint": {
+            "description": "입력·버전 비교용 hash. 인증·승인·최신 revision 증명이 아닙니다.",
+            "title": "State Fingerprint",
+            "type": "string"
+          },
+          "status": {
+            "description": "PENDING 분석 중 / COMPLETED 분석 완료(현장 승인 아님) / NEEDS_CONFIRMATION 추가 확인 / HELD 근거·조건 부족 / TIMEOUT 제한시간 초과",
+            "enum": [
+              "PENDING",
+              "COMPLETED",
+              "NEEDS_CONFIRMATION",
+              "HELD",
+              "TIMEOUT"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "substance_candidates": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Substance Candidates",
+            "type": "array"
+          },
+          "summary": {
+            "maxLength": 300,
+            "title": "Summary",
+            "type": "string"
+          },
+          "versions": {
+            "additionalProperties": true,
+            "description": "모델·카탈로그·정책·계획 방식. LLM 사용 여부를 구분합니다.",
+            "title": "Versions",
+            "type": "object"
+          }
+        },
+        "required": [
+          "request_id",
+          "incident_id",
+          "revision",
+          "state_fingerprint",
+          "phase",
+          "status",
+          "summary",
+          "cards",
+          "missing_information",
+          "sources",
+          "confirmation_state",
+          "versions"
+        ],
+        "title": "BriefResponse",
+        "type": "object"
+      },
+      "BriefSource": {
+        "additionalProperties": false,
+        "properties": {
+          "cas_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cas Number"
+          },
+          "content_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "검색 반환 내용의 hash. 전체 원문 hash가 아닙니다.",
+            "title": "Content Sha256"
+          },
+          "document_id": {
+            "description": "인덱스 원문 문서/항목 식별자",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "document_version": {
+            "title": "Document Version",
+            "type": "string"
+          },
+          "freshness_status": {
+            "enum": [
+              "INDEX_VERSION_ONLY",
+              "VERSIONED_POLICY"
+            ],
+            "title": "Freshness Status",
+            "type": "string"
+          },
+          "license_status": {
+            "enum": [
+              "LINK_ONLY_TERMS_REVIEW_REQUIRED",
+              "PROJECT_AUTHORED"
+            ],
+            "title": "License Status",
+            "type": "string"
+          },
+          "role": {
+            "default": "UNKNOWN",
+            "enum": [
+              "INCIDENT",
+              "FACILITY",
+              "UNKNOWN"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "section": {
+            "description": "인덱스 항목 제목 또는 내부 정책 항목. SDS section 정답 검수는 별도입니다.",
+            "title": "Section",
+            "type": "string"
+          },
+          "selection_method": {
+            "default": "BASELINE_RETRIEVAL",
+            "title": "Selection Method",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_type": {
+            "enum": [
+              "KOSHA",
+              "CAMEO",
+              "INTERNAL_POLICY"
+            ],
+            "title": "Source Type",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "document_id",
+          "source_type",
+          "url",
+          "section",
+          "document_version",
+          "license_status",
+          "freshness_status"
+        ],
+        "title": "BriefSource",
         "type": "object"
       },
       "ConfirmationBasis": {
@@ -3023,6 +3462,14 @@
         "title": "UnconfirmedConflictReview",
         "type": "object"
       }
+    },
+    "securitySchemes": {
+      "APIKeyHeader": {
+        "description": "Backend 전용 API 키. 로컬 데모 키를 운영에 사용하지 마세요.",
+        "in": "header",
+        "name": "X-API-Key",
+        "type": "apiKey"
+      }
     }
   },
   "info": {
@@ -3032,27 +3479,2928 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/agents/incidents/brief": {
+      "post": {
+        "description": "입력 revision별 stateless 분석입니다. 미확인 물질의 전술 지시를 생성하지 않습니다. timeout은 HTTP 200의 TIMEOUT 보류 응답, 슬롯 포화는 503입니다.",
+        "operationId": "incident_brief_api_v1_agents_incidents_brief_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "both_confirmed": {
+                  "summary": "합성 예시: 두 역할 확인",
+                  "value": {
+                    "analysis": {
+                      "confirmed_facility_substance": {
+                        "cas_number": "7647-01-0",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-FACILITY",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "FACILITY"
+                      },
+                      "confirmed_incident_substance": {
+                        "cas_number": "7681-52-9",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-INCIDENT",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "INCIDENT"
+                      },
+                      "evidence_top_k": 5,
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input": {
+                        "text": "차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.",
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "request_id": "REQ-DEMO-1"
+                    },
+                    "revision": 3
+                  }
+                },
+                "cancelled": {
+                  "summary": "합성 예시: 확인 취소 후 재분석",
+                  "value": {
+                    "analysis": {
+                      "confirmed_facility_substance": {
+                        "cas_number": "7647-01-0",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-FACILITY",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "FACILITY"
+                      },
+                      "confirmed_incident_substance": {
+                        "cas_number": "7681-52-9",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-INCIDENT",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "INCIDENT"
+                      },
+                      "evidence_top_k": 5,
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input": {
+                        "text": "차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.",
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "request_id": "REQ-DEMO-1"
+                    },
+                    "invalidated_confirmation_ids": [
+                      "CNF-DEMO-INCIDENT"
+                    ],
+                    "revision": 4
+                  }
+                },
+                "conflict": {
+                  "summary": "합성 예시: 새 근거 상충 보고",
+                  "value": {
+                    "analysis": {
+                      "confirmed_facility_substance": {
+                        "cas_number": "7647-01-0",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-FACILITY",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "FACILITY"
+                      },
+                      "confirmed_incident_substance": {
+                        "cas_number": "7681-52-9",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-INCIDENT",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "INCIDENT"
+                      },
+                      "evidence_top_k": 5,
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input": {
+                        "text": "차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.",
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "request_id": "REQ-DEMO-1"
+                    },
+                    "reported_evidence_conflict": true,
+                    "revision": 4
+                  }
+                },
+                "invalid_cas": {
+                  "summary": "오류 예시: CAS checksum 오류(422)",
+                  "value": {
+                    "analysis": {
+                      "confirmed_incident_substance": {
+                        "cas_number": "7681-52-0",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-INCIDENT",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "INCIDENT"
+                      },
+                      "evidence_top_k": 5,
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input": {
+                        "text": "차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.",
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "request_id": "REQ-DEMO-1"
+                    },
+                    "revision": 2
+                  }
+                },
+                "no_evidence": {
+                  "summary": "합성 예시: 인덱스의 해당 CAS 근거가 없을 수 있음",
+                  "value": {
+                    "analysis": {
+                      "confirmed_incident_substance": {
+                        "cas_number": "7732-18-5",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-INCIDENT",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "INCIDENT"
+                      },
+                      "evidence_top_k": 5,
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input": {
+                        "text": "미상 제품의 정보 확인 요청",
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "request_id": "REQ-DEMO-1"
+                    },
+                    "revision": 1
+                  }
+                },
+                "one_confirmed": {
+                  "summary": "합성 예시: 사고물질만 확인",
+                  "value": {
+                    "analysis": {
+                      "confirmed_incident_substance": {
+                        "cas_number": "7681-52-9",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-INCIDENT",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "INCIDENT"
+                      },
+                      "evidence_top_k": 5,
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input": {
+                        "text": "차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.",
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "request_id": "REQ-DEMO-1"
+                    },
+                    "revision": 2
+                  }
+                },
+                "unconfirmed": {
+                  "summary": "합성 예시: 미확인",
+                  "value": {
+                    "analysis": {
+                      "evidence_top_k": 5,
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input": {
+                        "text": "차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.",
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "request_id": "REQ-DEMO-1"
+                    },
+                    "revision": 1
+                  }
+                }
+              },
+              "schema": {
+                "$ref": "#/components/schemas/BriefRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "both_confirmed": {
+                    "summary": "실제 artifact + 합성 입력: both_confirmed",
+                    "value": {
+                      "cards": [
+                        {
+                          "card_id": "VERIFY_LOCATION:UNKNOWN",
+                          "category": "확인",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "접수 시스템의 위치 정보를 확인해 주세요. 삐 처리된 주소는 복원하지 않습니다.",
+                          "phrase_id": "VERIFY_LOCATION",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 1,
+                          "reason": "음성에서 가려진 주소를 모델이 추측하지 않습니다.",
+                          "required_conditions": [
+                            "접수 시스템 또는 대원이 확인한 위치"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "2c66cf74daac517364632a274afbdce4f961abb5707f141f81af89cdb9eafc67",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "위치를 별도로 확인해 주세요",
+                          "unmet_conditions": [
+                            "접수 시스템 또는 대원이 확인한 위치"
+                          ]
+                        },
+                        {
+                          "card_id": "REFERENCE_AVAILABLE:FACILITY",
+                          "cas_number": "7647-01-0",
+                          "category": "대응 참고",
+                          "confirmation_status": "CONFIRMED_INPUT",
+                          "message": "연결된 공식 자료 항목을 확인해 주세요. 제품·농도·상태와 기관 절차가 맞는지는 별도 확인이 필요합니다.",
+                          "phrase_id": "REFERENCE_AVAILABLE",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 2,
+                          "reason": "이 카드는 자료 조회 안내입니다. 자료 내용의 현장 적용이나 특정 전술을 승인하지 않습니다.",
+                          "required_conditions": [
+                            "역할별 CAS 확인",
+                            "같은 CAS의 공식 출처",
+                            "상충 보고 없음"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "FACILITY",
+                          "source_ids": [
+                            "FACILITY:CAMEO:3598"
+                          ],
+                          "state_fingerprint": "2c66cf74daac517364632a274afbdce4f961abb5707f141f81af89cdb9eafc67",
+                          "tactical_authorization": false,
+                          "target_label": "시설물질",
+                          "title": "확인 물질의 근거를 찾았습니다",
+                          "unmet_conditions": []
+                        },
+                        {
+                          "card_id": "REFERENCE_AVAILABLE:INCIDENT",
+                          "cas_number": "7681-52-9",
+                          "category": "대응 참고",
+                          "confirmation_status": "CONFIRMED_INPUT",
+                          "message": "연결된 공식 자료 항목을 확인해 주세요. 제품·농도·상태와 기관 절차가 맞는지는 별도 확인이 필요합니다.",
+                          "phrase_id": "REFERENCE_AVAILABLE",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 2,
+                          "reason": "이 카드는 자료 조회 안내입니다. 자료 내용의 현장 적용이나 특정 전술을 승인하지 않습니다.",
+                          "required_conditions": [
+                            "역할별 CAS 확인",
+                            "같은 CAS의 공식 출처",
+                            "상충 보고 없음"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "INCIDENT",
+                          "source_ids": [
+                            "INCIDENT:CAMEO:4503"
+                          ],
+                          "state_fingerprint": "2c66cf74daac517364632a274afbdce4f961abb5707f141f81af89cdb9eafc67",
+                          "tactical_authorization": false,
+                          "target_label": "사고물질",
+                          "title": "확인 물질의 근거를 찾았습니다",
+                          "unmet_conditions": []
+                        },
+                        {
+                          "card_id": "RULE_REFERENCE:UNKNOWN",
+                          "category": "보류",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "조합 규칙 상태를 별도 필드에서 확인해 주세요. 미지원 조합은 보류하며 현장 지휘 판단을 대신하지 않습니다.",
+                          "phrase_id": "RULE_REFERENCE",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 3,
+                          "reason": "공개 CAMEO 규칙의 제한된 서수 결과이며 안전 확률이 아닙니다.",
+                          "required_conditions": [
+                            "제품·농도·상태·사고 조건",
+                            "기관 SOP 적용 확인",
+                            "전문 검수"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "2c66cf74daac517364632a274afbdce4f961abb5707f141f81af89cdb9eafc67",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "조합 규칙 조회와 전술 결정은 다릅니다",
+                          "unmet_conditions": [
+                            "제품·농도·상태·사고 조건",
+                            "기관 SOP 적용 확인",
+                            "전문 검수"
+                          ]
+                        },
+                        {
+                          "card_id": "HANDOFF:UNKNOWN",
+                          "category": "인계",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "확인 상태·물질 후보·근거 링크·미확인 항목을 구분해서 전달해 주세요.",
+                          "phrase_id": "HANDOFF",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 4,
+                          "reason": "후보나 확인 대기 정보를 확정 사실로 인계하지 않습니다.",
+                          "required_conditions": [
+                            "현재 revision의 결과"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "2c66cf74daac517364632a274afbdce4f961abb5707f141f81af89cdb9eafc67",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "확인 내용과 남은 질문을 함께 인계하세요",
+                          "unmet_conditions": []
+                        }
+                      ],
+                      "confirmation_state": {
+                        "FACILITY": true,
+                        "INCIDENT": true
+                      },
+                      "facts": {
+                        "backend": "DETERMINISTIC_BASELINE",
+                        "fire_status": "UNKNOWN",
+                        "incident_types": [
+                          "LEAK"
+                        ],
+                        "missing_fields": [],
+                        "needs_substance_confirmation": true,
+                        "planned_actions": [],
+                        "substance_mentions": [
+                          {
+                            "assertion": "AFFIRMED",
+                            "resolver": {
+                              "candidates": [
+                                {
+                                  "authority_level": "PUBLIC_AUTHORITY_SOURCE",
+                                  "cas_number": "7681-52-9",
+                                  "catalog_candidate_only": false,
+                                  "catalog_scope": "KOSHA_CORE_WITH_DETAIL",
+                                  "current_inventory_confirmed": false,
+                                  "has_kosha_detail": true,
+                                  "match_type": "UNIQUE_ALIAS_EXACT",
+                                  "matched_alias": "차아염소산 나트륨",
+                                  "matched_alias_class": "AUTHORITATIVE_NAME",
+                                  "matched_alias_source": "01_KOSHA_물질안전보건자료.csv",
+                                  "matched_alias_type": "kosha_name",
+                                  "matched_alias_verification_status": "SOURCE_EXACT",
+                                  "rule_eligible": false,
+                                  "score": 1
+                                }
+                              ],
+                              "confirmation_reason": "NAME_MATCH_REQUIRES_IDENTITY_AND_PRESENCE_CONFIRMATION",
+                              "current_inventory_confirmed": false,
+                              "input_class": "AUTHORITATIVE_ALIAS",
+                              "normalized_query": "차아염소산나트륨",
+                              "query": "차아염소산나트륨",
+                              "requires_responder_confirmation": true,
+                              "rule_input_eligible": false,
+                              "status": "EXACT_ALIAS_CANDIDATE"
+                            },
+                            "role": "INCIDENT",
+                            "surface_text": "차아염소산나트륨"
+                          },
+                          {
+                            "assertion": "AFFIRMED",
+                            "resolver": {
+                              "candidates": [
+                                {
+                                  "authority_level": "PUBLIC_AUTHORITY_SOURCE",
+                                  "cas_number": "7647-01-0",
+                                  "catalog_candidate_only": false,
+                                  "catalog_scope": "KOSHA_CORE_WITH_DETAIL",
+                                  "current_inventory_confirmed": false,
+                                  "has_kosha_detail": true,
+                                  "match_type": "UNIQUE_ALIAS_EXACT",
+                                  "matched_alias": "염산",
+                                  "matched_alias_class": "AUTHORITATIVE_NAME",
+                                  "matched_alias_source": "01_KOSHA_물질안전보건자료.csv",
+                                  "matched_alias_type": "search_name",
+                                  "matched_alias_verification_status": "SOURCE_EXACT",
+                                  "rule_eligible": false,
+                                  "score": 1
+                                }
+                              ],
+                              "confirmation_reason": "NAME_MATCH_REQUIRES_IDENTITY_AND_PRESENCE_CONFIRMATION",
+                              "current_inventory_confirmed": false,
+                              "input_class": "AUTHORITATIVE_ALIAS",
+                              "normalized_query": "염산",
+                              "query": "염산",
+                              "requires_responder_confirmation": true,
+                              "rule_input_eligible": false,
+                              "status": "EXACT_ALIAS_CANDIDATE"
+                            },
+                            "role": "FACILITY",
+                            "surface_text": "염산"
+                          }
+                        ],
+                        "warning": "결정적 기준선도 대원 확인 전 물질을 확정하지 않습니다."
+                      },
+                      "handoff": {
+                        "analysis_complete": true,
+                        "received_confirmation_records": [
+                          {
+                            "cas_number": "7681-52-9",
+                            "confirmation_basis": "CONTAINER_LABEL",
+                            "confirmation_id": "CNF-DEMO-INCIDENT",
+                            "model_verified_human_confirmation": false,
+                            "role": "INCIDENT"
+                          },
+                          {
+                            "cas_number": "7647-01-0",
+                            "confirmation_basis": "CONTAINER_LABEL",
+                            "confirmation_id": "CNF-DEMO-FACILITY",
+                            "model_verified_human_confirmation": false,
+                            "role": "FACILITY"
+                          }
+                        ],
+                        "reported_incident_types": [
+                          "LEAK"
+                        ],
+                        "reported_mentions_not_confirmed_facts": [
+                          {
+                            "assertion": "AFFIRMED",
+                            "role": "INCIDENT",
+                            "surface_text": "차아염소산나트륨"
+                          },
+                          {
+                            "assertion": "AFFIRMED",
+                            "role": "FACILITY",
+                            "surface_text": "염산"
+                          }
+                        ],
+                        "rule_status": "SCREENING_COMPLETED",
+                        "source_ids": [
+                          "INCIDENT:CAMEO:4503",
+                          "FACILITY:CAMEO:3598"
+                        ],
+                        "unconfirmed_items": [
+                          "접수 시스템에서 확인한 위치"
+                        ]
+                      },
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input_provenance": {
+                        "characters": 38,
+                        "stt_included": false,
+                        "text_sha256": "81bc382ed0b9466de97396f4a1c2264b8a11810dd6f83433095e205c329b0ff2",
+                        "transcript_rewritten": false,
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "limitations": [
+                        "개발용 의사결정 지원 API입니다. 현장 적용·전술 문구 전문 검수는 완료되지 않았습니다.",
+                        "확인 상태는 Backend가 전달한 기록입니다. 모델 API는 실제 대원 확인이나 최신 revision을 인증하지 않습니다.",
+                        "주소 비식별 부분 복원·ASR 오인식 정답 복구·근거의 의미 상충 완전 탐지는 지원하지 않습니다.",
+                        "공식 자료의 존재와 CAS 일치는 제품·농도·상태·기관 SOP의 현장 적용 승인이 아닙니다."
+                      ],
+                      "missing_information": [
+                        "접수 시스템에서 확인한 위치"
+                      ],
+                      "phase": "final",
+                      "processing": {
+                        "analysis_latency_ms": 107.599,
+                        "cancel_mode": "COOPERATIVE_BOUNDED_INFLIGHT",
+                        "deadline_seconds": 15,
+                        "initial_build_ms": 0.142,
+                        "llm": "SKIPPED_BY_POLICY",
+                        "retries": 0,
+                        "stt_included": false,
+                        "tasks": [
+                          {
+                            "coordinator_slots": 2,
+                            "event": "configured",
+                            "max_cas_link_fallbacks": 2,
+                            "max_discovery_calls": 1,
+                            "max_discovery_internal_searches": 3,
+                            "max_facility_history_calls": 1,
+                            "max_role_retrievals": 2,
+                            "max_rule_calls": 1,
+                            "parallel": false,
+                            "retries": 0,
+                            "role": "결정적 정책",
+                            "tool": "EXECUTION_LIMITS",
+                            "tool_slots": 6
+                          },
+                          {
+                            "event": "started",
+                            "input_characters": 38,
+                            "role": "상황정리·물질식별",
+                            "tool": "PARSER_RESOLVER"
+                          },
+                          {
+                            "candidate_promotion": false,
+                            "event": "completed",
+                            "role": "상황정리·물질식별",
+                            "tool": "PARSER_RESOLVER"
+                          },
+                          {
+                            "arguments": {
+                              "cas_hint": "7681-52-9",
+                              "role": "INCIDENT",
+                              "top_k": 5
+                            },
+                            "event": "started",
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "event": "completed",
+                            "latency_ms": 17.426,
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "arguments": {
+                              "cas_hint": "7681-52-9",
+                              "section_relevance_verified": false,
+                              "top_k": 1
+                            },
+                            "event": "started",
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_CAS_LINK_FALLBACK"
+                          },
+                          {
+                            "event": "completed",
+                            "latency_ms": 0.011,
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_CAS_LINK_FALLBACK"
+                          },
+                          {
+                            "arguments": {
+                              "cas_hint": "7647-01-0",
+                              "role": "FACILITY",
+                              "top_k": 5
+                            },
+                            "event": "started",
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "event": "completed",
+                            "latency_ms": 17.032,
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "arguments": {
+                              "cas_hint": "7647-01-0",
+                              "section_relevance_verified": false,
+                              "top_k": 1
+                            },
+                            "event": "started",
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_CAS_LINK_FALLBACK"
+                          },
+                          {
+                            "event": "completed",
+                            "latency_ms": 0.02,
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_CAS_LINK_FALLBACK"
+                          },
+                          {
+                            "event": "completed",
+                            "executed": true,
+                            "role": "결정적 정책",
+                            "tool": "RULE_GATE"
+                          }
+                        ]
+                      },
+                      "request_id": "REQ-EVAL-both_confirmed",
+                      "revision": 3,
+                      "rule_review": {
+                        "chemical_form_concentration_and_sop_verified": false,
+                        "executed": true,
+                        "gas_products": [
+                          "Acid Fumes",
+                          "BR2",
+                          "Cl2",
+                          "ClO2",
+                          "HX",
+                          "NOx",
+                          "O2",
+                          "X2",
+                          "X2O"
+                        ],
+                        "hazard_codes": [
+                          "C",
+                          "E",
+                          "F",
+                          "G",
+                          "NR",
+                          "R1",
+                          "R3",
+                          "T"
+                        ],
+                        "is_probability": false,
+                        "risk_level": "HIGH",
+                        "risk_level_ko": "높음",
+                        "scope": "LIMITED_PUBLIC_RULE_ORDINAL_NOT_FIELD_PROBABILITY",
+                        "severity": "HIGH_RISK",
+                        "source_urls": [
+                          "https://cameochemicals.noaa.gov/chemical/4503",
+                          "https://cameochemicals.noaa.gov/chemical/3598",
+                          "https://cameochemicals.noaa.gov/reactivity"
+                        ],
+                        "status": "SCREENING_COMPLETED",
+                        "tactical_authorization": false
+                      },
+                      "schema_version": "action-brief-v1",
+                      "sources": [
+                        {
+                          "content_sha256": "8648c53dcdc271d5c64307e7d7b05dd4ac16441f19c62f19438f5bdf231f97d8",
+                          "document_id": "docs/ACTION_BRIEF.md",
+                          "document_version": "action-policy-v1",
+                          "freshness_status": "VERSIONED_POLICY",
+                          "license_status": "PROJECT_AUTHORED",
+                          "role": "UNKNOWN",
+                          "section": "확인 Gate와 카드 정책",
+                          "selection_method": "BASELINE_RETRIEVAL",
+                          "source_id": "POLICY",
+                          "source_type": "INTERNAL_POLICY",
+                          "url": "docs/ACTION_BRIEF.md"
+                        },
+                        {
+                          "cas_number": "7681-52-9",
+                          "content_sha256": "abc24aedb263159e9259dc96f22c1fed70b0202dbe0ceb342d6ef1320c691d0c",
+                          "document_id": "4503",
+                          "document_version": "3.1.0",
+                          "freshness_status": "INDEX_VERSION_ONLY",
+                          "license_status": "LINK_ONLY_TERMS_REVIEW_REQUIRED",
+                          "role": "INCIDENT",
+                          "section": "차아염소산나트륨 | NaOCl | SODIUM HYPOCHLORITE — CAMEO 반응성",
+                          "selection_method": "EXACT_CAS_LINK_FALLBACK_NOT_SECTION_RELEVANCE",
+                          "source_id": "INCIDENT:CAMEO:4503",
+                          "source_type": "CAMEO",
+                          "url": "https://cameochemicals.noaa.gov/chemical/4503"
+                        },
+                        {
+                          "cas_number": "7647-01-0",
+                          "content_sha256": "9d14f32dea73abc1743c9ffdf2f0939f936df7a4a62cab0ad1f089582cb57411",
+                          "document_id": "3598",
+                          "document_version": "3.1.0",
+                          "freshness_status": "INDEX_VERSION_ONLY",
+                          "license_status": "LINK_ONLY_TERMS_REVIEW_REQUIRED",
+                          "role": "FACILITY",
+                          "section": "염화수소 | HCl | HYDROCHLORIC ACID, SOLUTION — CAMEO 반응성",
+                          "selection_method": "EXACT_CAS_LINK_FALLBACK_NOT_SECTION_RELEVANCE",
+                          "source_id": "FACILITY:CAMEO:3598",
+                          "source_type": "CAMEO",
+                          "url": "https://cameochemicals.noaa.gov/chemical/3598"
+                        }
+                      ],
+                      "state_fingerprint": "2c66cf74daac517364632a274afbdce4f961abb5707f141f81af89cdb9eafc67",
+                      "status": "COMPLETED",
+                      "substance_candidates": [
+                        {
+                          "assertion": "AFFIRMED",
+                          "candidates": [
+                            {
+                              "authority_level": "PUBLIC_AUTHORITY_SOURCE",
+                              "cas_number": "7681-52-9",
+                              "catalog_candidate_only": false,
+                              "catalog_scope": "KOSHA_CORE_WITH_DETAIL",
+                              "current_inventory_confirmed": false,
+                              "has_kosha_detail": true,
+                              "match_type": "UNIQUE_ALIAS_EXACT",
+                              "matched_alias": "차아염소산 나트륨",
+                              "matched_alias_class": "AUTHORITATIVE_NAME",
+                              "matched_alias_source": "01_KOSHA_물질안전보건자료.csv",
+                              "matched_alias_type": "kosha_name",
+                              "matched_alias_verification_status": "SOURCE_EXACT",
+                              "rule_eligible": false,
+                              "score": 1
+                            }
+                          ],
+                          "evidence_cas_hint": "7681-52-9",
+                          "matches_confirmed_cas": true,
+                          "requires_responder_confirmation": true,
+                          "resolver_input_class": "AUTHORITATIVE_ALIAS",
+                          "resolver_status": "EXACT_ALIAS_CANDIDATE",
+                          "role": "INCIDENT",
+                          "surface_text": "차아염소산나트륨"
+                        },
+                        {
+                          "assertion": "AFFIRMED",
+                          "candidates": [
+                            {
+                              "authority_level": "PUBLIC_AUTHORITY_SOURCE",
+                              "cas_number": "7647-01-0",
+                              "catalog_candidate_only": false,
+                              "catalog_scope": "KOSHA_CORE_WITH_DETAIL",
+                              "current_inventory_confirmed": false,
+                              "has_kosha_detail": true,
+                              "match_type": "UNIQUE_ALIAS_EXACT",
+                              "matched_alias": "염산",
+                              "matched_alias_class": "AUTHORITATIVE_NAME",
+                              "matched_alias_source": "01_KOSHA_물질안전보건자료.csv",
+                              "matched_alias_type": "search_name",
+                              "matched_alias_verification_status": "SOURCE_EXACT",
+                              "rule_eligible": false,
+                              "score": 1
+                            }
+                          ],
+                          "evidence_cas_hint": "7647-01-0",
+                          "matches_confirmed_cas": true,
+                          "requires_responder_confirmation": true,
+                          "resolver_input_class": "AUTHORITATIVE_ALIAS",
+                          "resolver_status": "EXACT_ALIAS_CANDIDATE",
+                          "role": "FACILITY",
+                          "surface_text": "염산"
+                        }
+                      ],
+                      "summary": "신고 표현: 누출. 확인 기록 2/2개 · 미확인 항목 1개. 후보와 확인 기록을 구분해 인계하세요. 현장 명령이 아닌 검수 전 보조 안내입니다.",
+                      "versions": {
+                        "catalog": "action-catalog-v1",
+                        "catalog_sha256": "8648c53dcdc271d5c64307e7d7b05dd4ac16441f19c62f19438f5bdf231f97d8",
+                        "llm": "NOT_USED",
+                        "phrase_review": "DRAFT_NOT_EXPERT_REVIEWED",
+                        "planning_mode": "DETERMINISTIC_POLICY_PLANNER",
+                        "policy": "action-policy-v1",
+                        "resolver": "resolver-char-tfidf-v4-incident-catalog-expanded",
+                        "retriever": "evidence-hybrid-tfidf-v2",
+                        "rule_policy": "PUBLIC_SOURCE_PILOT_V1",
+                        "service": "0.4.0"
+                      }
+                    }
+                  },
+                  "cancelled": {
+                    "summary": "실제 artifact + 합성 입력: cancelled",
+                    "value": {
+                      "cards": [
+                        {
+                          "card_id": "HOLD_CONFLICT:UNKNOWN",
+                          "category": "보류",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "기존 확인과 새 정보가 충돌하거나 확인이 취소되었습니다. 기존 카드 대신 재확인이 필요합니다.",
+                          "phrase_id": "HOLD_CONFLICT",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 1,
+                          "reason": "새 증거의 의미를 완전 자동 검증하지 않습니다. Backend에서 확인 기록과 revision을 갱신해야 합니다.",
+                          "required_conditions": [
+                            "상충 해소",
+                            "갱신된 현장 확인 기록"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "0378a2d0fdfbb378a2062d7a9aa246afa0600c6340ca5aa0337ca76940d416b1",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "새 근거를 확인한 뒤 다시 확인해 주세요",
+                          "unmet_conditions": [
+                            "상충 해소",
+                            "갱신된 현장 확인 기록"
+                          ]
+                        },
+                        {
+                          "card_id": "VERIFY_LOCATION:UNKNOWN",
+                          "category": "확인",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "접수 시스템의 위치 정보를 확인해 주세요. 삐 처리된 주소는 복원하지 않습니다.",
+                          "phrase_id": "VERIFY_LOCATION",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 1,
+                          "reason": "음성에서 가려진 주소를 모델이 추측하지 않습니다.",
+                          "required_conditions": [
+                            "접수 시스템 또는 대원이 확인한 위치"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "0378a2d0fdfbb378a2062d7a9aa246afa0600c6340ca5aa0337ca76940d416b1",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "위치를 별도로 확인해 주세요",
+                          "unmet_conditions": [
+                            "접수 시스템 또는 대원이 확인한 위치"
+                          ]
+                        },
+                        {
+                          "card_id": "VERIFY_MATERIAL:INCIDENT",
+                          "category": "확인",
+                          "confirmation_status": "UNCONFIRMED",
+                          "message": "용기 라벨이나 제품 SDS에서 물질명과 CAS를 확인해 주세요.",
+                          "phrase_id": "VERIFY_MATERIAL",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 1,
+                          "reason": "신고 표현과 검색 후보는 현장 물질 확인을 대신하지 않습니다.",
+                          "required_conditions": [
+                            "역할별 현장 확인 기록"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "INCIDENT",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "0378a2d0fdfbb378a2062d7a9aa246afa0600c6340ca5aa0337ca76940d416b1",
+                          "tactical_authorization": false,
+                          "target_label": "사고물질",
+                          "title": "물질을 확인해 주세요",
+                          "unmet_conditions": [
+                            "역할별 현장 확인 기록"
+                          ]
+                        },
+                        {
+                          "card_id": "HOLD_PAIR:UNKNOWN",
+                          "category": "보류",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "사고물질과 시설물질의 CAS를 각각 확인해야 조합 규칙을 조회할 수 있습니다.",
+                          "phrase_id": "HOLD_PAIR",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 2,
+                          "reason": "두 CAS 확인은 규칙 실행 조건이며 진입·방수·대피 승인 조건이 아닙니다.",
+                          "required_conditions": [
+                            "사고물질 확인",
+                            "시설물질 확인"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "0378a2d0fdfbb378a2062d7a9aa246afa0600c6340ca5aa0337ca76940d416b1",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "물질 조합 검토는 아직 보류입니다",
+                          "unmet_conditions": [
+                            "사고물질 확인"
+                          ]
+                        },
+                        {
+                          "card_id": "REFERENCE_AVAILABLE:FACILITY",
+                          "cas_number": "7647-01-0",
+                          "category": "대응 참고",
+                          "confirmation_status": "CONFIRMED_INPUT",
+                          "message": "연결된 공식 자료 항목을 확인해 주세요. 제품·농도·상태와 기관 절차가 맞는지는 별도 확인이 필요합니다.",
+                          "phrase_id": "REFERENCE_AVAILABLE",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 2,
+                          "reason": "이 카드는 자료 조회 안내입니다. 자료 내용의 현장 적용이나 특정 전술을 승인하지 않습니다.",
+                          "required_conditions": [
+                            "역할별 CAS 확인",
+                            "같은 CAS의 공식 출처",
+                            "상충 보고 없음"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "FACILITY",
+                          "source_ids": [
+                            "FACILITY:CAMEO:3598"
+                          ],
+                          "state_fingerprint": "0378a2d0fdfbb378a2062d7a9aa246afa0600c6340ca5aa0337ca76940d416b1",
+                          "tactical_authorization": false,
+                          "target_label": "시설물질",
+                          "title": "확인 물질의 근거를 찾았습니다",
+                          "unmet_conditions": []
+                        },
+                        {
+                          "card_id": "HANDOFF:UNKNOWN",
+                          "category": "인계",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "확인 상태·물질 후보·근거 링크·미확인 항목을 구분해서 전달해 주세요.",
+                          "phrase_id": "HANDOFF",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 4,
+                          "reason": "후보나 확인 대기 정보를 확정 사실로 인계하지 않습니다.",
+                          "required_conditions": [
+                            "현재 revision의 결과"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "0378a2d0fdfbb378a2062d7a9aa246afa0600c6340ca5aa0337ca76940d416b1",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "확인 내용과 남은 질문을 함께 인계하세요",
+                          "unmet_conditions": []
+                        }
+                      ],
+                      "confirmation_state": {
+                        "FACILITY": true,
+                        "INCIDENT": false
+                      },
+                      "facts": {
+                        "backend": "DETERMINISTIC_BASELINE",
+                        "fire_status": "UNKNOWN",
+                        "incident_types": [
+                          "LEAK"
+                        ],
+                        "missing_fields": [],
+                        "needs_substance_confirmation": true,
+                        "planned_actions": [],
+                        "substance_mentions": [
+                          {
+                            "assertion": "AFFIRMED",
+                            "resolver": {
+                              "candidates": [
+                                {
+                                  "authority_level": "PUBLIC_AUTHORITY_SOURCE",
+                                  "cas_number": "7681-52-9",
+                                  "catalog_candidate_only": false,
+                                  "catalog_scope": "KOSHA_CORE_WITH_DETAIL",
+                                  "current_inventory_confirmed": false,
+                                  "has_kosha_detail": true,
+                                  "match_type": "UNIQUE_ALIAS_EXACT",
+                                  "matched_alias": "차아염소산 나트륨",
+                                  "matched_alias_class": "AUTHORITATIVE_NAME",
+                                  "matched_alias_source": "01_KOSHA_물질안전보건자료.csv",
+                                  "matched_alias_type": "kosha_name",
+                                  "matched_alias_verification_status": "SOURCE_EXACT",
+                                  "rule_eligible": false,
+                                  "score": 1
+                                }
+                              ],
+                              "confirmation_reason": "NAME_MATCH_REQUIRES_IDENTITY_AND_PRESENCE_CONFIRMATION",
+                              "current_inventory_confirmed": false,
+                              "input_class": "AUTHORITATIVE_ALIAS",
+                              "normalized_query": "차아염소산나트륨",
+                              "query": "차아염소산나트륨",
+                              "requires_responder_confirmation": true,
+                              "rule_input_eligible": false,
+                              "status": "EXACT_ALIAS_CANDIDATE"
+                            },
+                            "role": "INCIDENT",
+                            "surface_text": "차아염소산나트륨"
+                          },
+                          {
+                            "assertion": "AFFIRMED",
+                            "resolver": {
+                              "candidates": [
+                                {
+                                  "authority_level": "PUBLIC_AUTHORITY_SOURCE",
+                                  "cas_number": "7647-01-0",
+                                  "catalog_candidate_only": false,
+                                  "catalog_scope": "KOSHA_CORE_WITH_DETAIL",
+                                  "current_inventory_confirmed": false,
+                                  "has_kosha_detail": true,
+                                  "match_type": "UNIQUE_ALIAS_EXACT",
+                                  "matched_alias": "염산",
+                                  "matched_alias_class": "AUTHORITATIVE_NAME",
+                                  "matched_alias_source": "01_KOSHA_물질안전보건자료.csv",
+                                  "matched_alias_type": "search_name",
+                                  "matched_alias_verification_status": "SOURCE_EXACT",
+                                  "rule_eligible": false,
+                                  "score": 1
+                                }
+                              ],
+                              "confirmation_reason": "NAME_MATCH_REQUIRES_IDENTITY_AND_PRESENCE_CONFIRMATION",
+                              "current_inventory_confirmed": false,
+                              "input_class": "AUTHORITATIVE_ALIAS",
+                              "normalized_query": "염산",
+                              "query": "염산",
+                              "requires_responder_confirmation": true,
+                              "rule_input_eligible": false,
+                              "status": "EXACT_ALIAS_CANDIDATE"
+                            },
+                            "role": "FACILITY",
+                            "surface_text": "염산"
+                          }
+                        ],
+                        "warning": "결정적 기준선도 대원 확인 전 물질을 확정하지 않습니다."
+                      },
+                      "handoff": {
+                        "analysis_complete": true,
+                        "received_confirmation_records": [
+                          {
+                            "cas_number": "7647-01-0",
+                            "confirmation_basis": "CONTAINER_LABEL",
+                            "confirmation_id": "CNF-DEMO-FACILITY",
+                            "model_verified_human_confirmation": false,
+                            "role": "FACILITY"
+                          }
+                        ],
+                        "reported_incident_types": [
+                          "LEAK"
+                        ],
+                        "reported_mentions_not_confirmed_facts": [
+                          {
+                            "assertion": "AFFIRMED",
+                            "role": "INCIDENT",
+                            "surface_text": "차아염소산나트륨"
+                          },
+                          {
+                            "assertion": "AFFIRMED",
+                            "role": "FACILITY",
+                            "surface_text": "염산"
+                          }
+                        ],
+                        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+                        "source_ids": [
+                          "FACILITY:CAMEO:3598"
+                        ],
+                        "unconfirmed_items": [
+                          "사고물질의 현장 확인 기록",
+                          "접수 시스템에서 확인한 위치"
+                        ]
+                      },
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input_provenance": {
+                        "characters": 38,
+                        "stt_included": false,
+                        "text_sha256": "81bc382ed0b9466de97396f4a1c2264b8a11810dd6f83433095e205c329b0ff2",
+                        "transcript_rewritten": false,
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "limitations": [
+                        "개발용 의사결정 지원 API입니다. 현장 적용·전술 문구 전문 검수는 완료되지 않았습니다.",
+                        "확인 상태는 Backend가 전달한 기록입니다. 모델 API는 실제 대원 확인이나 최신 revision을 인증하지 않습니다.",
+                        "주소 비식별 부분 복원·ASR 오인식 정답 복구·근거의 의미 상충 완전 탐지는 지원하지 않습니다.",
+                        "공식 자료의 존재와 CAS 일치는 제품·농도·상태·기관 SOP의 현장 적용 승인이 아닙니다."
+                      ],
+                      "missing_information": [
+                        "사고물질의 현장 확인 기록",
+                        "접수 시스템에서 확인한 위치"
+                      ],
+                      "phase": "final",
+                      "processing": {
+                        "analysis_latency_ms": 107.119,
+                        "cancel_mode": "COOPERATIVE_BOUNDED_INFLIGHT",
+                        "deadline_seconds": 15,
+                        "initial_build_ms": 0.208,
+                        "llm": "SKIPPED_BY_POLICY",
+                        "retries": 0,
+                        "stt_included": false,
+                        "tasks": [
+                          {
+                            "coordinator_slots": 2,
+                            "event": "configured",
+                            "max_cas_link_fallbacks": 2,
+                            "max_discovery_calls": 1,
+                            "max_discovery_internal_searches": 3,
+                            "max_facility_history_calls": 1,
+                            "max_role_retrievals": 2,
+                            "max_rule_calls": 1,
+                            "parallel": false,
+                            "retries": 0,
+                            "role": "결정적 정책",
+                            "tool": "EXECUTION_LIMITS",
+                            "tool_slots": 6
+                          },
+                          {
+                            "event": "started",
+                            "input_characters": 38,
+                            "role": "상황정리·물질식별",
+                            "tool": "PARSER_RESOLVER"
+                          },
+                          {
+                            "candidate_promotion": false,
+                            "event": "completed",
+                            "role": "상황정리·물질식별",
+                            "tool": "PARSER_RESOLVER"
+                          },
+                          {
+                            "arguments": {
+                              "cas_hint": "7681-52-9",
+                              "role": "INCIDENT",
+                              "top_k": 5
+                            },
+                            "event": "started",
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "event": "completed",
+                            "latency_ms": 17.597,
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "arguments": {
+                              "cas_hint": "7647-01-0",
+                              "role": "FACILITY",
+                              "top_k": 5
+                            },
+                            "event": "started",
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "event": "completed",
+                            "latency_ms": 17.139,
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "arguments": {
+                              "cas_hint": "7647-01-0",
+                              "section_relevance_verified": false,
+                              "top_k": 1
+                            },
+                            "event": "started",
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_CAS_LINK_FALLBACK"
+                          },
+                          {
+                            "event": "completed",
+                            "latency_ms": 0.01,
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_CAS_LINK_FALLBACK"
+                          },
+                          {
+                            "event": "completed",
+                            "executed": false,
+                            "role": "결정적 정책",
+                            "tool": "RULE_GATE"
+                          }
+                        ]
+                      },
+                      "request_id": "REQ-EVAL-cancelled",
+                      "revision": 4,
+                      "rule_review": {
+                        "executed": false,
+                        "is_probability": false,
+                        "status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+                        "tactical_authorization": false
+                      },
+                      "schema_version": "action-brief-v1",
+                      "sources": [
+                        {
+                          "content_sha256": "8648c53dcdc271d5c64307e7d7b05dd4ac16441f19c62f19438f5bdf231f97d8",
+                          "document_id": "docs/ACTION_BRIEF.md",
+                          "document_version": "action-policy-v1",
+                          "freshness_status": "VERSIONED_POLICY",
+                          "license_status": "PROJECT_AUTHORED",
+                          "role": "UNKNOWN",
+                          "section": "확인 Gate와 카드 정책",
+                          "selection_method": "BASELINE_RETRIEVAL",
+                          "source_id": "POLICY",
+                          "source_type": "INTERNAL_POLICY",
+                          "url": "docs/ACTION_BRIEF.md"
+                        },
+                        {
+                          "cas_number": "7647-01-0",
+                          "content_sha256": "9d14f32dea73abc1743c9ffdf2f0939f936df7a4a62cab0ad1f089582cb57411",
+                          "document_id": "3598",
+                          "document_version": "3.1.0",
+                          "freshness_status": "INDEX_VERSION_ONLY",
+                          "license_status": "LINK_ONLY_TERMS_REVIEW_REQUIRED",
+                          "role": "FACILITY",
+                          "section": "염화수소 | HCl | HYDROCHLORIC ACID, SOLUTION — CAMEO 반응성",
+                          "selection_method": "EXACT_CAS_LINK_FALLBACK_NOT_SECTION_RELEVANCE",
+                          "source_id": "FACILITY:CAMEO:3598",
+                          "source_type": "CAMEO",
+                          "url": "https://cameochemicals.noaa.gov/chemical/3598"
+                        }
+                      ],
+                      "state_fingerprint": "0378a2d0fdfbb378a2062d7a9aa246afa0600c6340ca5aa0337ca76940d416b1",
+                      "status": "NEEDS_CONFIRMATION",
+                      "substance_candidates": [
+                        {
+                          "assertion": "AFFIRMED",
+                          "candidates": [
+                            {
+                              "authority_level": "PUBLIC_AUTHORITY_SOURCE",
+                              "cas_number": "7681-52-9",
+                              "catalog_candidate_only": false,
+                              "catalog_scope": "KOSHA_CORE_WITH_DETAIL",
+                              "current_inventory_confirmed": false,
+                              "has_kosha_detail": true,
+                              "match_type": "UNIQUE_ALIAS_EXACT",
+                              "matched_alias": "차아염소산 나트륨",
+                              "matched_alias_class": "AUTHORITATIVE_NAME",
+                              "matched_alias_source": "01_KOSHA_물질안전보건자료.csv",
+                              "matched_alias_type": "kosha_name",
+                              "matched_alias_verification_status": "SOURCE_EXACT",
+                              "rule_eligible": false,
+                              "score": 1
+                            }
+                          ],
+                          "evidence_cas_hint": "7681-52-9",
+                          "matches_confirmed_cas": false,
+                          "requires_responder_confirmation": true,
+                          "resolver_input_class": "AUTHORITATIVE_ALIAS",
+                          "resolver_status": "EXACT_ALIAS_CANDIDATE",
+                          "role": "INCIDENT",
+                          "surface_text": "차아염소산나트륨"
+                        },
+                        {
+                          "assertion": "AFFIRMED",
+                          "candidates": [
+                            {
+                              "authority_level": "PUBLIC_AUTHORITY_SOURCE",
+                              "cas_number": "7647-01-0",
+                              "catalog_candidate_only": false,
+                              "catalog_scope": "KOSHA_CORE_WITH_DETAIL",
+                              "current_inventory_confirmed": false,
+                              "has_kosha_detail": true,
+                              "match_type": "UNIQUE_ALIAS_EXACT",
+                              "matched_alias": "염산",
+                              "matched_alias_class": "AUTHORITATIVE_NAME",
+                              "matched_alias_source": "01_KOSHA_물질안전보건자료.csv",
+                              "matched_alias_type": "search_name",
+                              "matched_alias_verification_status": "SOURCE_EXACT",
+                              "rule_eligible": false,
+                              "score": 1
+                            }
+                          ],
+                          "evidence_cas_hint": "7647-01-0",
+                          "matches_confirmed_cas": true,
+                          "requires_responder_confirmation": true,
+                          "resolver_input_class": "AUTHORITATIVE_ALIAS",
+                          "resolver_status": "EXACT_ALIAS_CANDIDATE",
+                          "role": "FACILITY",
+                          "surface_text": "염산"
+                        }
+                      ],
+                      "summary": "신고 표현: 누출. 확인 기록 1/2개 · 미확인 항목 2개. 후보와 확인 기록을 구분해 인계하세요. 현장 명령이 아닌 검수 전 보조 안내입니다.",
+                      "versions": {
+                        "catalog": "action-catalog-v1",
+                        "catalog_sha256": "8648c53dcdc271d5c64307e7d7b05dd4ac16441f19c62f19438f5bdf231f97d8",
+                        "llm": "NOT_USED",
+                        "phrase_review": "DRAFT_NOT_EXPERT_REVIEWED",
+                        "planning_mode": "DETERMINISTIC_POLICY_PLANNER",
+                        "policy": "action-policy-v1",
+                        "resolver": "resolver-char-tfidf-v4-incident-catalog-expanded",
+                        "retriever": "evidence-hybrid-tfidf-v2",
+                        "rule_policy": "PUBLIC_SOURCE_PILOT_V1",
+                        "service": "0.4.0"
+                      }
+                    }
+                  },
+                  "missing_cas_evidence": {
+                    "summary": "실제 artifact + 합성 입력: missing_cas_evidence",
+                    "value": {
+                      "cards": [
+                        {
+                          "card_id": "VERIFY_LOCATION:UNKNOWN",
+                          "category": "확인",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "접수 시스템의 위치 정보를 확인해 주세요. 삐 처리된 주소는 복원하지 않습니다.",
+                          "phrase_id": "VERIFY_LOCATION",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 1,
+                          "reason": "음성에서 가려진 주소를 모델이 추측하지 않습니다.",
+                          "required_conditions": [
+                            "접수 시스템 또는 대원이 확인한 위치"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "adcc78f306e51050da34057c33497b5d9ad6cd4282711edc6842eae7439c2729",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "위치를 별도로 확인해 주세요",
+                          "unmet_conditions": [
+                            "접수 시스템 또는 대원이 확인한 위치"
+                          ]
+                        },
+                        {
+                          "card_id": "VERIFY_MATERIAL:FACILITY",
+                          "category": "확인",
+                          "confirmation_status": "UNCONFIRMED",
+                          "message": "용기 라벨이나 제품 SDS에서 물질명과 CAS를 확인해 주세요.",
+                          "phrase_id": "VERIFY_MATERIAL",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 1,
+                          "reason": "신고 표현과 검색 후보는 현장 물질 확인을 대신하지 않습니다.",
+                          "required_conditions": [
+                            "역할별 현장 확인 기록"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "FACILITY",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "adcc78f306e51050da34057c33497b5d9ad6cd4282711edc6842eae7439c2729",
+                          "tactical_authorization": false,
+                          "target_label": "시설물질",
+                          "title": "물질을 확인해 주세요",
+                          "unmet_conditions": [
+                            "역할별 현장 확인 기록"
+                          ]
+                        },
+                        {
+                          "card_id": "HOLD_PAIR:UNKNOWN",
+                          "category": "보류",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "사고물질과 시설물질의 CAS를 각각 확인해야 조합 규칙을 조회할 수 있습니다.",
+                          "phrase_id": "HOLD_PAIR",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 2,
+                          "reason": "두 CAS 확인은 규칙 실행 조건이며 진입·방수·대피 승인 조건이 아닙니다.",
+                          "required_conditions": [
+                            "사고물질 확인",
+                            "시설물질 확인"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "adcc78f306e51050da34057c33497b5d9ad6cd4282711edc6842eae7439c2729",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "물질 조합 검토는 아직 보류입니다",
+                          "unmet_conditions": [
+                            "시설물질 확인"
+                          ]
+                        },
+                        {
+                          "card_id": "NO_EVIDENCE:INCIDENT",
+                          "cas_number": "9999999-99-5",
+                          "category": "보류",
+                          "confirmation_status": "CONFIRMED_INPUT",
+                          "message": "제품 SDS와 해당 기관의 절차를 별도로 확인해 주세요.",
+                          "phrase_id": "NO_EVIDENCE",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 2,
+                          "reason": "검색 결과 없음·검색 실패·출처 불일치는 생성 답변으로 채우지 않습니다.",
+                          "required_conditions": [
+                            "같은 CAS의 사용 가능한 공식 근거"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "INCIDENT",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "adcc78f306e51050da34057c33497b5d9ad6cd4282711edc6842eae7439c2729",
+                          "tactical_authorization": false,
+                          "target_label": "사고물질",
+                          "title": "사용할 근거가 부족합니다",
+                          "unmet_conditions": [
+                            "같은 CAS의 사용 가능한 공식 근거"
+                          ]
+                        },
+                        {
+                          "card_id": "HANDOFF:UNKNOWN",
+                          "category": "인계",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "확인 상태·물질 후보·근거 링크·미확인 항목을 구분해서 전달해 주세요.",
+                          "phrase_id": "HANDOFF",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 4,
+                          "reason": "후보나 확인 대기 정보를 확정 사실로 인계하지 않습니다.",
+                          "required_conditions": [
+                            "현재 revision의 결과"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "adcc78f306e51050da34057c33497b5d9ad6cd4282711edc6842eae7439c2729",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "확인 내용과 남은 질문을 함께 인계하세요",
+                          "unmet_conditions": []
+                        }
+                      ],
+                      "confirmation_state": {
+                        "FACILITY": false,
+                        "INCIDENT": true
+                      },
+                      "facts": {
+                        "backend": "DETERMINISTIC_BASELINE",
+                        "fire_status": "UNKNOWN",
+                        "incident_types": [
+                          "UNKNOWN"
+                        ],
+                        "missing_fields": [
+                          "substance"
+                        ],
+                        "needs_substance_confirmation": true,
+                        "planned_actions": [],
+                        "substance_mentions": [],
+                        "warning": "결정적 기준선도 대원 확인 전 물질을 확정하지 않습니다."
+                      },
+                      "handoff": {
+                        "analysis_complete": true,
+                        "received_confirmation_records": [
+                          {
+                            "cas_number": "9999999-99-5",
+                            "confirmation_basis": "CONTAINER_LABEL",
+                            "confirmation_id": "CNF-DEMO-INCIDENT",
+                            "model_verified_human_confirmation": false,
+                            "role": "INCIDENT"
+                          }
+                        ],
+                        "reported_incident_types": [
+                          "UNKNOWN"
+                        ],
+                        "reported_mentions_not_confirmed_facts": [],
+                        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+                        "source_ids": [],
+                        "unconfirmed_items": [
+                          "시설물질의 현장 확인 기록",
+                          "접수 시스템에서 확인한 위치",
+                          "사고물질의 사용 가능한 공식 근거"
+                        ]
+                      },
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input_provenance": {
+                        "characters": 17,
+                        "stt_included": false,
+                        "text_sha256": "044f75da713f9d34485226b60fa29eb2a425bd6d2bcb55cbff1e566a8e9ceaef",
+                        "transcript_rewritten": false,
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "limitations": [
+                        "개발용 의사결정 지원 API입니다. 현장 적용·전술 문구 전문 검수는 완료되지 않았습니다.",
+                        "확인 상태는 Backend가 전달한 기록입니다. 모델 API는 실제 대원 확인이나 최신 revision을 인증하지 않습니다.",
+                        "주소 비식별 부분 복원·ASR 오인식 정답 복구·근거의 의미 상충 완전 탐지는 지원하지 않습니다.",
+                        "공식 자료의 존재와 CAS 일치는 제품·농도·상태·기관 SOP의 현장 적용 승인이 아닙니다."
+                      ],
+                      "missing_information": [
+                        "시설물질의 현장 확인 기록",
+                        "접수 시스템에서 확인한 위치",
+                        "사고물질의 사용 가능한 공식 근거"
+                      ],
+                      "phase": "final",
+                      "processing": {
+                        "analysis_latency_ms": 70.652,
+                        "cancel_mode": "COOPERATIVE_BOUNDED_INFLIGHT",
+                        "deadline_seconds": 15,
+                        "initial_build_ms": 0.185,
+                        "llm": "SKIPPED_BY_POLICY",
+                        "retries": 0,
+                        "stt_included": false,
+                        "tasks": [
+                          {
+                            "coordinator_slots": 2,
+                            "event": "configured",
+                            "max_cas_link_fallbacks": 2,
+                            "max_discovery_calls": 1,
+                            "max_discovery_internal_searches": 3,
+                            "max_facility_history_calls": 1,
+                            "max_role_retrievals": 2,
+                            "max_rule_calls": 1,
+                            "parallel": false,
+                            "retries": 0,
+                            "role": "결정적 정책",
+                            "tool": "EXECUTION_LIMITS",
+                            "tool_slots": 6
+                          },
+                          {
+                            "event": "started",
+                            "input_characters": 17,
+                            "role": "상황정리·물질식별",
+                            "tool": "PARSER_RESOLVER"
+                          },
+                          {
+                            "candidate_promotion": false,
+                            "event": "completed",
+                            "role": "상황정리·물질식별",
+                            "tool": "PARSER_RESOLVER"
+                          },
+                          {
+                            "arguments": {
+                              "cas_hint": "9999999-99-5",
+                              "role": "INCIDENT",
+                              "top_k": 5
+                            },
+                            "event": "started",
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "event": "completed",
+                            "latency_ms": 0.012,
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "arguments": {
+                              "cas_hint": "9999999-99-5",
+                              "section_relevance_verified": false,
+                              "top_k": 1
+                            },
+                            "event": "started",
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_CAS_LINK_FALLBACK"
+                          },
+                          {
+                            "event": "completed",
+                            "latency_ms": 0.002,
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_CAS_LINK_FALLBACK"
+                          },
+                          {
+                            "event": "completed",
+                            "executed": false,
+                            "role": "결정적 정책",
+                            "tool": "RULE_GATE"
+                          }
+                        ]
+                      },
+                      "request_id": "REQ-EVAL-missing_cas_evidence",
+                      "revision": 2,
+                      "rule_review": {
+                        "executed": false,
+                        "is_probability": false,
+                        "status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+                        "tactical_authorization": false
+                      },
+                      "schema_version": "action-brief-v1",
+                      "sources": [
+                        {
+                          "content_sha256": "8648c53dcdc271d5c64307e7d7b05dd4ac16441f19c62f19438f5bdf231f97d8",
+                          "document_id": "docs/ACTION_BRIEF.md",
+                          "document_version": "action-policy-v1",
+                          "freshness_status": "VERSIONED_POLICY",
+                          "license_status": "PROJECT_AUTHORED",
+                          "role": "UNKNOWN",
+                          "section": "확인 Gate와 카드 정책",
+                          "selection_method": "BASELINE_RETRIEVAL",
+                          "source_id": "POLICY",
+                          "source_type": "INTERNAL_POLICY",
+                          "url": "docs/ACTION_BRIEF.md"
+                        }
+                      ],
+                      "state_fingerprint": "adcc78f306e51050da34057c33497b5d9ad6cd4282711edc6842eae7439c2729",
+                      "status": "HELD",
+                      "substance_candidates": [],
+                      "summary": "신고 표현: 유형 미상. 확인 기록 1/2개 · 미확인 항목 3개. 후보와 확인 기록을 구분해 인계하세요. 현장 명령이 아닌 검수 전 보조 안내입니다.",
+                      "versions": {
+                        "catalog": "action-catalog-v1",
+                        "catalog_sha256": "8648c53dcdc271d5c64307e7d7b05dd4ac16441f19c62f19438f5bdf231f97d8",
+                        "llm": "NOT_USED",
+                        "phrase_review": "DRAFT_NOT_EXPERT_REVIEWED",
+                        "planning_mode": "DETERMINISTIC_POLICY_PLANNER",
+                        "policy": "action-policy-v1",
+                        "resolver": "resolver-char-tfidf-v4-incident-catalog-expanded",
+                        "retriever": "evidence-hybrid-tfidf-v2",
+                        "rule_policy": "PUBLIC_SOURCE_PILOT_V1",
+                        "service": "0.4.0"
+                      }
+                    }
+                  },
+                  "normal_unconfirmed": {
+                    "summary": "실제 artifact + 합성 입력: normal_unconfirmed",
+                    "value": {
+                      "cards": [
+                        {
+                          "card_id": "VERIFY_LOCATION:UNKNOWN",
+                          "category": "확인",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "접수 시스템의 위치 정보를 확인해 주세요. 삐 처리된 주소는 복원하지 않습니다.",
+                          "phrase_id": "VERIFY_LOCATION",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 1,
+                          "reason": "음성에서 가려진 주소를 모델이 추측하지 않습니다.",
+                          "required_conditions": [
+                            "접수 시스템 또는 대원이 확인한 위치"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "1c1fc20249bc8dec408f086d1c0dc43b76ea9e917cda1c3fe650e9635cf4c173",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "위치를 별도로 확인해 주세요",
+                          "unmet_conditions": [
+                            "접수 시스템 또는 대원이 확인한 위치"
+                          ]
+                        },
+                        {
+                          "card_id": "VERIFY_MATERIAL:FACILITY",
+                          "category": "확인",
+                          "confirmation_status": "UNCONFIRMED",
+                          "message": "용기 라벨이나 제품 SDS에서 물질명과 CAS를 확인해 주세요.",
+                          "phrase_id": "VERIFY_MATERIAL",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 1,
+                          "reason": "신고 표현과 검색 후보는 현장 물질 확인을 대신하지 않습니다.",
+                          "required_conditions": [
+                            "역할별 현장 확인 기록"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "FACILITY",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "1c1fc20249bc8dec408f086d1c0dc43b76ea9e917cda1c3fe650e9635cf4c173",
+                          "tactical_authorization": false,
+                          "target_label": "시설물질",
+                          "title": "물질을 확인해 주세요",
+                          "unmet_conditions": [
+                            "역할별 현장 확인 기록"
+                          ]
+                        },
+                        {
+                          "card_id": "VERIFY_MATERIAL:INCIDENT",
+                          "category": "확인",
+                          "confirmation_status": "UNCONFIRMED",
+                          "message": "용기 라벨이나 제품 SDS에서 물질명과 CAS를 확인해 주세요.",
+                          "phrase_id": "VERIFY_MATERIAL",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 1,
+                          "reason": "신고 표현과 검색 후보는 현장 물질 확인을 대신하지 않습니다.",
+                          "required_conditions": [
+                            "역할별 현장 확인 기록"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "INCIDENT",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "1c1fc20249bc8dec408f086d1c0dc43b76ea9e917cda1c3fe650e9635cf4c173",
+                          "tactical_authorization": false,
+                          "target_label": "사고물질",
+                          "title": "물질을 확인해 주세요",
+                          "unmet_conditions": [
+                            "역할별 현장 확인 기록"
+                          ]
+                        },
+                        {
+                          "card_id": "HOLD_PAIR:UNKNOWN",
+                          "category": "보류",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "사고물질과 시설물질의 CAS를 각각 확인해야 조합 규칙을 조회할 수 있습니다.",
+                          "phrase_id": "HOLD_PAIR",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 2,
+                          "reason": "두 CAS 확인은 규칙 실행 조건이며 진입·방수·대피 승인 조건이 아닙니다.",
+                          "required_conditions": [
+                            "사고물질 확인",
+                            "시설물질 확인"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "1c1fc20249bc8dec408f086d1c0dc43b76ea9e917cda1c3fe650e9635cf4c173",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "물질 조합 검토는 아직 보류입니다",
+                          "unmet_conditions": [
+                            "사고물질 확인",
+                            "시설물질 확인"
+                          ]
+                        },
+                        {
+                          "card_id": "HANDOFF:UNKNOWN",
+                          "category": "인계",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "확인 상태·물질 후보·근거 링크·미확인 항목을 구분해서 전달해 주세요.",
+                          "phrase_id": "HANDOFF",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 4,
+                          "reason": "후보나 확인 대기 정보를 확정 사실로 인계하지 않습니다.",
+                          "required_conditions": [
+                            "현재 revision의 결과"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "1c1fc20249bc8dec408f086d1c0dc43b76ea9e917cda1c3fe650e9635cf4c173",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "확인 내용과 남은 질문을 함께 인계하세요",
+                          "unmet_conditions": []
+                        }
+                      ],
+                      "confirmation_state": {
+                        "FACILITY": false,
+                        "INCIDENT": false
+                      },
+                      "facts": {
+                        "backend": "DETERMINISTIC_BASELINE",
+                        "fire_status": "UNKNOWN",
+                        "incident_types": [
+                          "LEAK"
+                        ],
+                        "missing_fields": [],
+                        "needs_substance_confirmation": true,
+                        "planned_actions": [],
+                        "substance_mentions": [
+                          {
+                            "assertion": "AFFIRMED",
+                            "resolver": {
+                              "candidates": [
+                                {
+                                  "authority_level": "PUBLIC_AUTHORITY_SOURCE",
+                                  "cas_number": "7681-52-9",
+                                  "catalog_candidate_only": false,
+                                  "catalog_scope": "KOSHA_CORE_WITH_DETAIL",
+                                  "current_inventory_confirmed": false,
+                                  "has_kosha_detail": true,
+                                  "match_type": "UNIQUE_ALIAS_EXACT",
+                                  "matched_alias": "차아염소산 나트륨",
+                                  "matched_alias_class": "AUTHORITATIVE_NAME",
+                                  "matched_alias_source": "01_KOSHA_물질안전보건자료.csv",
+                                  "matched_alias_type": "kosha_name",
+                                  "matched_alias_verification_status": "SOURCE_EXACT",
+                                  "rule_eligible": false,
+                                  "score": 1
+                                }
+                              ],
+                              "confirmation_reason": "NAME_MATCH_REQUIRES_IDENTITY_AND_PRESENCE_CONFIRMATION",
+                              "current_inventory_confirmed": false,
+                              "input_class": "AUTHORITATIVE_ALIAS",
+                              "normalized_query": "차아염소산나트륨",
+                              "query": "차아염소산나트륨",
+                              "requires_responder_confirmation": true,
+                              "rule_input_eligible": false,
+                              "status": "EXACT_ALIAS_CANDIDATE"
+                            },
+                            "role": "INCIDENT",
+                            "surface_text": "차아염소산나트륨"
+                          },
+                          {
+                            "assertion": "AFFIRMED",
+                            "resolver": {
+                              "candidates": [
+                                {
+                                  "authority_level": "PUBLIC_AUTHORITY_SOURCE",
+                                  "cas_number": "7647-01-0",
+                                  "catalog_candidate_only": false,
+                                  "catalog_scope": "KOSHA_CORE_WITH_DETAIL",
+                                  "current_inventory_confirmed": false,
+                                  "has_kosha_detail": true,
+                                  "match_type": "UNIQUE_ALIAS_EXACT",
+                                  "matched_alias": "염산",
+                                  "matched_alias_class": "AUTHORITATIVE_NAME",
+                                  "matched_alias_source": "01_KOSHA_물질안전보건자료.csv",
+                                  "matched_alias_type": "search_name",
+                                  "matched_alias_verification_status": "SOURCE_EXACT",
+                                  "rule_eligible": false,
+                                  "score": 1
+                                }
+                              ],
+                              "confirmation_reason": "NAME_MATCH_REQUIRES_IDENTITY_AND_PRESENCE_CONFIRMATION",
+                              "current_inventory_confirmed": false,
+                              "input_class": "AUTHORITATIVE_ALIAS",
+                              "normalized_query": "염산",
+                              "query": "염산",
+                              "requires_responder_confirmation": true,
+                              "rule_input_eligible": false,
+                              "status": "EXACT_ALIAS_CANDIDATE"
+                            },
+                            "role": "FACILITY",
+                            "surface_text": "염산"
+                          }
+                        ],
+                        "warning": "결정적 기준선도 대원 확인 전 물질을 확정하지 않습니다."
+                      },
+                      "handoff": {
+                        "analysis_complete": true,
+                        "received_confirmation_records": [],
+                        "reported_incident_types": [
+                          "LEAK"
+                        ],
+                        "reported_mentions_not_confirmed_facts": [
+                          {
+                            "assertion": "AFFIRMED",
+                            "role": "INCIDENT",
+                            "surface_text": "차아염소산나트륨"
+                          },
+                          {
+                            "assertion": "AFFIRMED",
+                            "role": "FACILITY",
+                            "surface_text": "염산"
+                          }
+                        ],
+                        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+                        "source_ids": [],
+                        "unconfirmed_items": [
+                          "사고물질의 현장 확인 기록",
+                          "시설물질의 현장 확인 기록",
+                          "접수 시스템에서 확인한 위치"
+                        ]
+                      },
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input_provenance": {
+                        "characters": 38,
+                        "stt_included": false,
+                        "text_sha256": "81bc382ed0b9466de97396f4a1c2264b8a11810dd6f83433095e205c329b0ff2",
+                        "transcript_rewritten": false,
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "limitations": [
+                        "개발용 의사결정 지원 API입니다. 현장 적용·전술 문구 전문 검수는 완료되지 않았습니다.",
+                        "확인 상태는 Backend가 전달한 기록입니다. 모델 API는 실제 대원 확인이나 최신 revision을 인증하지 않습니다.",
+                        "주소 비식별 부분 복원·ASR 오인식 정답 복구·근거의 의미 상충 완전 탐지는 지원하지 않습니다.",
+                        "공식 자료의 존재와 CAS 일치는 제품·농도·상태·기관 SOP의 현장 적용 승인이 아닙니다."
+                      ],
+                      "missing_information": [
+                        "사고물질의 현장 확인 기록",
+                        "시설물질의 현장 확인 기록",
+                        "접수 시스템에서 확인한 위치"
+                      ],
+                      "phase": "final",
+                      "processing": {
+                        "analysis_latency_ms": 107.446,
+                        "cancel_mode": "COOPERATIVE_BOUNDED_INFLIGHT",
+                        "deadline_seconds": 15,
+                        "initial_build_ms": 0.196,
+                        "llm": "SKIPPED_BY_POLICY",
+                        "retries": 0,
+                        "stt_included": false,
+                        "tasks": [
+                          {
+                            "coordinator_slots": 2,
+                            "event": "configured",
+                            "max_cas_link_fallbacks": 2,
+                            "max_discovery_calls": 1,
+                            "max_discovery_internal_searches": 3,
+                            "max_facility_history_calls": 1,
+                            "max_role_retrievals": 2,
+                            "max_rule_calls": 1,
+                            "parallel": false,
+                            "retries": 0,
+                            "role": "결정적 정책",
+                            "tool": "EXECUTION_LIMITS",
+                            "tool_slots": 6
+                          },
+                          {
+                            "event": "started",
+                            "input_characters": 38,
+                            "role": "상황정리·물질식별",
+                            "tool": "PARSER_RESOLVER"
+                          },
+                          {
+                            "candidate_promotion": false,
+                            "event": "completed",
+                            "role": "상황정리·물질식별",
+                            "tool": "PARSER_RESOLVER"
+                          },
+                          {
+                            "arguments": {
+                              "cas_hint": "7681-52-9",
+                              "role": "INCIDENT",
+                              "top_k": 5
+                            },
+                            "event": "started",
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "event": "completed",
+                            "latency_ms": 19.711,
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "arguments": {
+                              "cas_hint": "7647-01-0",
+                              "role": "FACILITY",
+                              "top_k": 5
+                            },
+                            "event": "started",
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "event": "completed",
+                            "latency_ms": 17.242,
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "event": "completed",
+                            "executed": false,
+                            "role": "결정적 정책",
+                            "tool": "RULE_GATE"
+                          }
+                        ]
+                      },
+                      "request_id": "REQ-EVAL-normal_unconfirmed",
+                      "revision": 1,
+                      "rule_review": {
+                        "executed": false,
+                        "is_probability": false,
+                        "status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+                        "tactical_authorization": false
+                      },
+                      "schema_version": "action-brief-v1",
+                      "sources": [
+                        {
+                          "content_sha256": "8648c53dcdc271d5c64307e7d7b05dd4ac16441f19c62f19438f5bdf231f97d8",
+                          "document_id": "docs/ACTION_BRIEF.md",
+                          "document_version": "action-policy-v1",
+                          "freshness_status": "VERSIONED_POLICY",
+                          "license_status": "PROJECT_AUTHORED",
+                          "role": "UNKNOWN",
+                          "section": "확인 Gate와 카드 정책",
+                          "selection_method": "BASELINE_RETRIEVAL",
+                          "source_id": "POLICY",
+                          "source_type": "INTERNAL_POLICY",
+                          "url": "docs/ACTION_BRIEF.md"
+                        }
+                      ],
+                      "state_fingerprint": "1c1fc20249bc8dec408f086d1c0dc43b76ea9e917cda1c3fe650e9635cf4c173",
+                      "status": "NEEDS_CONFIRMATION",
+                      "substance_candidates": [
+                        {
+                          "assertion": "AFFIRMED",
+                          "candidates": [
+                            {
+                              "authority_level": "PUBLIC_AUTHORITY_SOURCE",
+                              "cas_number": "7681-52-9",
+                              "catalog_candidate_only": false,
+                              "catalog_scope": "KOSHA_CORE_WITH_DETAIL",
+                              "current_inventory_confirmed": false,
+                              "has_kosha_detail": true,
+                              "match_type": "UNIQUE_ALIAS_EXACT",
+                              "matched_alias": "차아염소산 나트륨",
+                              "matched_alias_class": "AUTHORITATIVE_NAME",
+                              "matched_alias_source": "01_KOSHA_물질안전보건자료.csv",
+                              "matched_alias_type": "kosha_name",
+                              "matched_alias_verification_status": "SOURCE_EXACT",
+                              "rule_eligible": false,
+                              "score": 1
+                            }
+                          ],
+                          "evidence_cas_hint": "7681-52-9",
+                          "matches_confirmed_cas": false,
+                          "requires_responder_confirmation": true,
+                          "resolver_input_class": "AUTHORITATIVE_ALIAS",
+                          "resolver_status": "EXACT_ALIAS_CANDIDATE",
+                          "role": "INCIDENT",
+                          "surface_text": "차아염소산나트륨"
+                        },
+                        {
+                          "assertion": "AFFIRMED",
+                          "candidates": [
+                            {
+                              "authority_level": "PUBLIC_AUTHORITY_SOURCE",
+                              "cas_number": "7647-01-0",
+                              "catalog_candidate_only": false,
+                              "catalog_scope": "KOSHA_CORE_WITH_DETAIL",
+                              "current_inventory_confirmed": false,
+                              "has_kosha_detail": true,
+                              "match_type": "UNIQUE_ALIAS_EXACT",
+                              "matched_alias": "염산",
+                              "matched_alias_class": "AUTHORITATIVE_NAME",
+                              "matched_alias_source": "01_KOSHA_물질안전보건자료.csv",
+                              "matched_alias_type": "search_name",
+                              "matched_alias_verification_status": "SOURCE_EXACT",
+                              "rule_eligible": false,
+                              "score": 1
+                            }
+                          ],
+                          "evidence_cas_hint": "7647-01-0",
+                          "matches_confirmed_cas": false,
+                          "requires_responder_confirmation": true,
+                          "resolver_input_class": "AUTHORITATIVE_ALIAS",
+                          "resolver_status": "EXACT_ALIAS_CANDIDATE",
+                          "role": "FACILITY",
+                          "surface_text": "염산"
+                        }
+                      ],
+                      "summary": "신고 표현: 누출. 확인 기록 0/2개 · 미확인 항목 3개. 후보와 확인 기록을 구분해 인계하세요. 현장 명령이 아닌 검수 전 보조 안내입니다.",
+                      "versions": {
+                        "catalog": "action-catalog-v1",
+                        "catalog_sha256": "8648c53dcdc271d5c64307e7d7b05dd4ac16441f19c62f19438f5bdf231f97d8",
+                        "llm": "NOT_USED",
+                        "phrase_review": "DRAFT_NOT_EXPERT_REVIEWED",
+                        "planning_mode": "DETERMINISTIC_POLICY_PLANNER",
+                        "policy": "action-policy-v1",
+                        "resolver": "resolver-char-tfidf-v4-incident-catalog-expanded",
+                        "retriever": "evidence-hybrid-tfidf-v2",
+                        "rule_policy": "PUBLIC_SOURCE_PILOT_V1",
+                        "service": "0.4.0"
+                      }
+                    }
+                  },
+                  "one_confirmed": {
+                    "summary": "실제 artifact + 합성 입력: one_confirmed",
+                    "value": {
+                      "cards": [
+                        {
+                          "card_id": "VERIFY_LOCATION:UNKNOWN",
+                          "category": "확인",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "접수 시스템의 위치 정보를 확인해 주세요. 삐 처리된 주소는 복원하지 않습니다.",
+                          "phrase_id": "VERIFY_LOCATION",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 1,
+                          "reason": "음성에서 가려진 주소를 모델이 추측하지 않습니다.",
+                          "required_conditions": [
+                            "접수 시스템 또는 대원이 확인한 위치"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "9e305954640d28385b68b922af5fb5681b414f8c8a178688f6c38932f5ce08d3",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "위치를 별도로 확인해 주세요",
+                          "unmet_conditions": [
+                            "접수 시스템 또는 대원이 확인한 위치"
+                          ]
+                        },
+                        {
+                          "card_id": "VERIFY_MATERIAL:FACILITY",
+                          "category": "확인",
+                          "confirmation_status": "UNCONFIRMED",
+                          "message": "용기 라벨이나 제품 SDS에서 물질명과 CAS를 확인해 주세요.",
+                          "phrase_id": "VERIFY_MATERIAL",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 1,
+                          "reason": "신고 표현과 검색 후보는 현장 물질 확인을 대신하지 않습니다.",
+                          "required_conditions": [
+                            "역할별 현장 확인 기록"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "FACILITY",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "9e305954640d28385b68b922af5fb5681b414f8c8a178688f6c38932f5ce08d3",
+                          "tactical_authorization": false,
+                          "target_label": "시설물질",
+                          "title": "물질을 확인해 주세요",
+                          "unmet_conditions": [
+                            "역할별 현장 확인 기록"
+                          ]
+                        },
+                        {
+                          "card_id": "HOLD_PAIR:UNKNOWN",
+                          "category": "보류",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "사고물질과 시설물질의 CAS를 각각 확인해야 조합 규칙을 조회할 수 있습니다.",
+                          "phrase_id": "HOLD_PAIR",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 2,
+                          "reason": "두 CAS 확인은 규칙 실행 조건이며 진입·방수·대피 승인 조건이 아닙니다.",
+                          "required_conditions": [
+                            "사고물질 확인",
+                            "시설물질 확인"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "9e305954640d28385b68b922af5fb5681b414f8c8a178688f6c38932f5ce08d3",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "물질 조합 검토는 아직 보류입니다",
+                          "unmet_conditions": [
+                            "시설물질 확인"
+                          ]
+                        },
+                        {
+                          "card_id": "REFERENCE_AVAILABLE:INCIDENT",
+                          "cas_number": "7681-52-9",
+                          "category": "대응 참고",
+                          "confirmation_status": "CONFIRMED_INPUT",
+                          "message": "연결된 공식 자료 항목을 확인해 주세요. 제품·농도·상태와 기관 절차가 맞는지는 별도 확인이 필요합니다.",
+                          "phrase_id": "REFERENCE_AVAILABLE",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 2,
+                          "reason": "이 카드는 자료 조회 안내입니다. 자료 내용의 현장 적용이나 특정 전술을 승인하지 않습니다.",
+                          "required_conditions": [
+                            "역할별 CAS 확인",
+                            "같은 CAS의 공식 출처",
+                            "상충 보고 없음"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "INCIDENT",
+                          "source_ids": [
+                            "INCIDENT:CAMEO:4503"
+                          ],
+                          "state_fingerprint": "9e305954640d28385b68b922af5fb5681b414f8c8a178688f6c38932f5ce08d3",
+                          "tactical_authorization": false,
+                          "target_label": "사고물질",
+                          "title": "확인 물질의 근거를 찾았습니다",
+                          "unmet_conditions": []
+                        },
+                        {
+                          "card_id": "HANDOFF:UNKNOWN",
+                          "category": "인계",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "확인 상태·물질 후보·근거 링크·미확인 항목을 구분해서 전달해 주세요.",
+                          "phrase_id": "HANDOFF",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 4,
+                          "reason": "후보나 확인 대기 정보를 확정 사실로 인계하지 않습니다.",
+                          "required_conditions": [
+                            "현재 revision의 결과"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "9e305954640d28385b68b922af5fb5681b414f8c8a178688f6c38932f5ce08d3",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "확인 내용과 남은 질문을 함께 인계하세요",
+                          "unmet_conditions": []
+                        }
+                      ],
+                      "confirmation_state": {
+                        "FACILITY": false,
+                        "INCIDENT": true
+                      },
+                      "facts": {
+                        "backend": "DETERMINISTIC_BASELINE",
+                        "fire_status": "UNKNOWN",
+                        "incident_types": [
+                          "LEAK"
+                        ],
+                        "missing_fields": [],
+                        "needs_substance_confirmation": true,
+                        "planned_actions": [],
+                        "substance_mentions": [
+                          {
+                            "assertion": "AFFIRMED",
+                            "resolver": {
+                              "candidates": [
+                                {
+                                  "authority_level": "PUBLIC_AUTHORITY_SOURCE",
+                                  "cas_number": "7681-52-9",
+                                  "catalog_candidate_only": false,
+                                  "catalog_scope": "KOSHA_CORE_WITH_DETAIL",
+                                  "current_inventory_confirmed": false,
+                                  "has_kosha_detail": true,
+                                  "match_type": "UNIQUE_ALIAS_EXACT",
+                                  "matched_alias": "차아염소산 나트륨",
+                                  "matched_alias_class": "AUTHORITATIVE_NAME",
+                                  "matched_alias_source": "01_KOSHA_물질안전보건자료.csv",
+                                  "matched_alias_type": "kosha_name",
+                                  "matched_alias_verification_status": "SOURCE_EXACT",
+                                  "rule_eligible": false,
+                                  "score": 1
+                                }
+                              ],
+                              "confirmation_reason": "NAME_MATCH_REQUIRES_IDENTITY_AND_PRESENCE_CONFIRMATION",
+                              "current_inventory_confirmed": false,
+                              "input_class": "AUTHORITATIVE_ALIAS",
+                              "normalized_query": "차아염소산나트륨",
+                              "query": "차아염소산나트륨",
+                              "requires_responder_confirmation": true,
+                              "rule_input_eligible": false,
+                              "status": "EXACT_ALIAS_CANDIDATE"
+                            },
+                            "role": "INCIDENT",
+                            "surface_text": "차아염소산나트륨"
+                          },
+                          {
+                            "assertion": "AFFIRMED",
+                            "resolver": {
+                              "candidates": [
+                                {
+                                  "authority_level": "PUBLIC_AUTHORITY_SOURCE",
+                                  "cas_number": "7647-01-0",
+                                  "catalog_candidate_only": false,
+                                  "catalog_scope": "KOSHA_CORE_WITH_DETAIL",
+                                  "current_inventory_confirmed": false,
+                                  "has_kosha_detail": true,
+                                  "match_type": "UNIQUE_ALIAS_EXACT",
+                                  "matched_alias": "염산",
+                                  "matched_alias_class": "AUTHORITATIVE_NAME",
+                                  "matched_alias_source": "01_KOSHA_물질안전보건자료.csv",
+                                  "matched_alias_type": "search_name",
+                                  "matched_alias_verification_status": "SOURCE_EXACT",
+                                  "rule_eligible": false,
+                                  "score": 1
+                                }
+                              ],
+                              "confirmation_reason": "NAME_MATCH_REQUIRES_IDENTITY_AND_PRESENCE_CONFIRMATION",
+                              "current_inventory_confirmed": false,
+                              "input_class": "AUTHORITATIVE_ALIAS",
+                              "normalized_query": "염산",
+                              "query": "염산",
+                              "requires_responder_confirmation": true,
+                              "rule_input_eligible": false,
+                              "status": "EXACT_ALIAS_CANDIDATE"
+                            },
+                            "role": "FACILITY",
+                            "surface_text": "염산"
+                          }
+                        ],
+                        "warning": "결정적 기준선도 대원 확인 전 물질을 확정하지 않습니다."
+                      },
+                      "handoff": {
+                        "analysis_complete": true,
+                        "received_confirmation_records": [
+                          {
+                            "cas_number": "7681-52-9",
+                            "confirmation_basis": "CONTAINER_LABEL",
+                            "confirmation_id": "CNF-DEMO-INCIDENT",
+                            "model_verified_human_confirmation": false,
+                            "role": "INCIDENT"
+                          }
+                        ],
+                        "reported_incident_types": [
+                          "LEAK"
+                        ],
+                        "reported_mentions_not_confirmed_facts": [
+                          {
+                            "assertion": "AFFIRMED",
+                            "role": "INCIDENT",
+                            "surface_text": "차아염소산나트륨"
+                          },
+                          {
+                            "assertion": "AFFIRMED",
+                            "role": "FACILITY",
+                            "surface_text": "염산"
+                          }
+                        ],
+                        "rule_status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+                        "source_ids": [
+                          "INCIDENT:CAMEO:4503"
+                        ],
+                        "unconfirmed_items": [
+                          "시설물질의 현장 확인 기록",
+                          "접수 시스템에서 확인한 위치"
+                        ]
+                      },
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input_provenance": {
+                        "characters": 38,
+                        "stt_included": false,
+                        "text_sha256": "81bc382ed0b9466de97396f4a1c2264b8a11810dd6f83433095e205c329b0ff2",
+                        "transcript_rewritten": false,
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "limitations": [
+                        "개발용 의사결정 지원 API입니다. 현장 적용·전술 문구 전문 검수는 완료되지 않았습니다.",
+                        "확인 상태는 Backend가 전달한 기록입니다. 모델 API는 실제 대원 확인이나 최신 revision을 인증하지 않습니다.",
+                        "주소 비식별 부분 복원·ASR 오인식 정답 복구·근거의 의미 상충 완전 탐지는 지원하지 않습니다.",
+                        "공식 자료의 존재와 CAS 일치는 제품·농도·상태·기관 SOP의 현장 적용 승인이 아닙니다."
+                      ],
+                      "missing_information": [
+                        "시설물질의 현장 확인 기록",
+                        "접수 시스템에서 확인한 위치"
+                      ],
+                      "phase": "final",
+                      "processing": {
+                        "analysis_latency_ms": 106.409,
+                        "cancel_mode": "COOPERATIVE_BOUNDED_INFLIGHT",
+                        "deadline_seconds": 15,
+                        "initial_build_ms": 0.169,
+                        "llm": "SKIPPED_BY_POLICY",
+                        "retries": 0,
+                        "stt_included": false,
+                        "tasks": [
+                          {
+                            "coordinator_slots": 2,
+                            "event": "configured",
+                            "max_cas_link_fallbacks": 2,
+                            "max_discovery_calls": 1,
+                            "max_discovery_internal_searches": 3,
+                            "max_facility_history_calls": 1,
+                            "max_role_retrievals": 2,
+                            "max_rule_calls": 1,
+                            "parallel": false,
+                            "retries": 0,
+                            "role": "결정적 정책",
+                            "tool": "EXECUTION_LIMITS",
+                            "tool_slots": 6
+                          },
+                          {
+                            "event": "started",
+                            "input_characters": 38,
+                            "role": "상황정리·물질식별",
+                            "tool": "PARSER_RESOLVER"
+                          },
+                          {
+                            "candidate_promotion": false,
+                            "event": "completed",
+                            "role": "상황정리·물질식별",
+                            "tool": "PARSER_RESOLVER"
+                          },
+                          {
+                            "arguments": {
+                              "cas_hint": "7681-52-9",
+                              "role": "INCIDENT",
+                              "top_k": 5
+                            },
+                            "event": "started",
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "event": "completed",
+                            "latency_ms": 17.361,
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "arguments": {
+                              "cas_hint": "7681-52-9",
+                              "section_relevance_verified": false,
+                              "top_k": 1
+                            },
+                            "event": "started",
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_CAS_LINK_FALLBACK"
+                          },
+                          {
+                            "event": "completed",
+                            "latency_ms": 0.014,
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_CAS_LINK_FALLBACK"
+                          },
+                          {
+                            "arguments": {
+                              "cas_hint": "7647-01-0",
+                              "role": "FACILITY",
+                              "top_k": 5
+                            },
+                            "event": "started",
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "event": "completed",
+                            "latency_ms": 17.15,
+                            "role": "대응근거",
+                            "tool": "OFFICIAL_EVIDENCE"
+                          },
+                          {
+                            "event": "completed",
+                            "executed": false,
+                            "role": "결정적 정책",
+                            "tool": "RULE_GATE"
+                          }
+                        ]
+                      },
+                      "request_id": "REQ-EVAL-one_confirmed",
+                      "revision": 2,
+                      "rule_review": {
+                        "executed": false,
+                        "is_probability": false,
+                        "status": "NOT_RUN_REQUIRES_TWO_CONFIRMED_CAS",
+                        "tactical_authorization": false
+                      },
+                      "schema_version": "action-brief-v1",
+                      "sources": [
+                        {
+                          "content_sha256": "8648c53dcdc271d5c64307e7d7b05dd4ac16441f19c62f19438f5bdf231f97d8",
+                          "document_id": "docs/ACTION_BRIEF.md",
+                          "document_version": "action-policy-v1",
+                          "freshness_status": "VERSIONED_POLICY",
+                          "license_status": "PROJECT_AUTHORED",
+                          "role": "UNKNOWN",
+                          "section": "확인 Gate와 카드 정책",
+                          "selection_method": "BASELINE_RETRIEVAL",
+                          "source_id": "POLICY",
+                          "source_type": "INTERNAL_POLICY",
+                          "url": "docs/ACTION_BRIEF.md"
+                        },
+                        {
+                          "cas_number": "7681-52-9",
+                          "content_sha256": "abc24aedb263159e9259dc96f22c1fed70b0202dbe0ceb342d6ef1320c691d0c",
+                          "document_id": "4503",
+                          "document_version": "3.1.0",
+                          "freshness_status": "INDEX_VERSION_ONLY",
+                          "license_status": "LINK_ONLY_TERMS_REVIEW_REQUIRED",
+                          "role": "INCIDENT",
+                          "section": "차아염소산나트륨 | NaOCl | SODIUM HYPOCHLORITE — CAMEO 반응성",
+                          "selection_method": "EXACT_CAS_LINK_FALLBACK_NOT_SECTION_RELEVANCE",
+                          "source_id": "INCIDENT:CAMEO:4503",
+                          "source_type": "CAMEO",
+                          "url": "https://cameochemicals.noaa.gov/chemical/4503"
+                        }
+                      ],
+                      "state_fingerprint": "9e305954640d28385b68b922af5fb5681b414f8c8a178688f6c38932f5ce08d3",
+                      "status": "NEEDS_CONFIRMATION",
+                      "substance_candidates": [
+                        {
+                          "assertion": "AFFIRMED",
+                          "candidates": [
+                            {
+                              "authority_level": "PUBLIC_AUTHORITY_SOURCE",
+                              "cas_number": "7681-52-9",
+                              "catalog_candidate_only": false,
+                              "catalog_scope": "KOSHA_CORE_WITH_DETAIL",
+                              "current_inventory_confirmed": false,
+                              "has_kosha_detail": true,
+                              "match_type": "UNIQUE_ALIAS_EXACT",
+                              "matched_alias": "차아염소산 나트륨",
+                              "matched_alias_class": "AUTHORITATIVE_NAME",
+                              "matched_alias_source": "01_KOSHA_물질안전보건자료.csv",
+                              "matched_alias_type": "kosha_name",
+                              "matched_alias_verification_status": "SOURCE_EXACT",
+                              "rule_eligible": false,
+                              "score": 1
+                            }
+                          ],
+                          "evidence_cas_hint": "7681-52-9",
+                          "matches_confirmed_cas": true,
+                          "requires_responder_confirmation": true,
+                          "resolver_input_class": "AUTHORITATIVE_ALIAS",
+                          "resolver_status": "EXACT_ALIAS_CANDIDATE",
+                          "role": "INCIDENT",
+                          "surface_text": "차아염소산나트륨"
+                        },
+                        {
+                          "assertion": "AFFIRMED",
+                          "candidates": [
+                            {
+                              "authority_level": "PUBLIC_AUTHORITY_SOURCE",
+                              "cas_number": "7647-01-0",
+                              "catalog_candidate_only": false,
+                              "catalog_scope": "KOSHA_CORE_WITH_DETAIL",
+                              "current_inventory_confirmed": false,
+                              "has_kosha_detail": true,
+                              "match_type": "UNIQUE_ALIAS_EXACT",
+                              "matched_alias": "염산",
+                              "matched_alias_class": "AUTHORITATIVE_NAME",
+                              "matched_alias_source": "01_KOSHA_물질안전보건자료.csv",
+                              "matched_alias_type": "search_name",
+                              "matched_alias_verification_status": "SOURCE_EXACT",
+                              "rule_eligible": false,
+                              "score": 1
+                            }
+                          ],
+                          "evidence_cas_hint": "7647-01-0",
+                          "matches_confirmed_cas": false,
+                          "requires_responder_confirmation": true,
+                          "resolver_input_class": "AUTHORITATIVE_ALIAS",
+                          "resolver_status": "EXACT_ALIAS_CANDIDATE",
+                          "role": "FACILITY",
+                          "surface_text": "염산"
+                        }
+                      ],
+                      "summary": "신고 표현: 누출. 확인 기록 1/2개 · 미확인 항목 2개. 후보와 확인 기록을 구분해 인계하세요. 현장 명령이 아닌 검수 전 보조 안내입니다.",
+                      "versions": {
+                        "catalog": "action-catalog-v1",
+                        "catalog_sha256": "8648c53dcdc271d5c64307e7d7b05dd4ac16441f19c62f19438f5bdf231f97d8",
+                        "llm": "NOT_USED",
+                        "phrase_review": "DRAFT_NOT_EXPERT_REVIEWED",
+                        "planning_mode": "DETERMINISTIC_POLICY_PLANNER",
+                        "policy": "action-policy-v1",
+                        "resolver": "resolver-char-tfidf-v4-incident-catalog-expanded",
+                        "retriever": "evidence-hybrid-tfidf-v2",
+                        "rule_policy": "PUBLIC_SOURCE_PILOT_V1",
+                        "service": "0.4.0"
+                      }
+                    }
+                  },
+                  "timeout": {
+                    "summary": "계약 예시: deadline 초과 보류(모델 정확도·실측 지연 예시 아님)",
+                    "value": {
+                      "cards": [
+                        {
+                          "card_id": "VERIFY_LOCATION:UNKNOWN",
+                          "category": "확인",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "접수 시스템의 위치 정보를 확인해 주세요. 삐 처리된 주소는 복원하지 않습니다.",
+                          "phrase_id": "VERIFY_LOCATION",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 1,
+                          "reason": "음성에서 가려진 주소를 모델이 추측하지 않습니다.",
+                          "required_conditions": [
+                            "접수 시스템 또는 대원이 확인한 위치"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "9df71aebd468d76a5a250c9eed9f640a236270e4869ef6e80f427120d7eef165",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "위치를 별도로 확인해 주세요",
+                          "unmet_conditions": [
+                            "접수 시스템 또는 대원이 확인한 위치"
+                          ]
+                        },
+                        {
+                          "card_id": "HOLD_FAILURE:UNKNOWN",
+                          "category": "보류",
+                          "confirmation_status": "NOT_APPLICABLE",
+                          "message": "이전 결과를 현재 결과로 사용하지 마세요. 필요한 자료를 확인한 뒤 다시 요청해 주세요.",
+                          "phrase_id": "HOLD_FAILURE",
+                          "phrase_version": "action-catalog-v1",
+                          "priority": 1,
+                          "reason": "제한시간·도구 오류·출력 검증 실패 시 추정한 대응을 표시하지 않습니다.",
+                          "required_conditions": [
+                            "현재 상태의 검증된 분석 결과"
+                          ],
+                          "review_status": "DRAFT_NOT_EXPERT_REVIEWED",
+                          "role": "UNKNOWN",
+                          "source_ids": [
+                            "POLICY"
+                          ],
+                          "state_fingerprint": "9df71aebd468d76a5a250c9eed9f640a236270e4869ef6e80f427120d7eef165",
+                          "tactical_authorization": false,
+                          "target_label": "전체 안내",
+                          "title": "분석을 마치지 못했습니다",
+                          "unmet_conditions": [
+                            "현재 상태의 검증된 분석 결과"
+                          ]
+                        }
+                      ],
+                      "confirmation_state": {
+                        "FACILITY": true,
+                        "INCIDENT": true
+                      },
+                      "facts": {},
+                      "handoff": {
+                        "analysis_complete": false,
+                        "received_confirmation_records": [
+                          {
+                            "cas_number": "7681-52-9",
+                            "confirmation_basis": "CONTAINER_LABEL",
+                            "confirmation_id": "CNF-DEMO-INCIDENT",
+                            "model_verified_human_confirmation": false,
+                            "role": "INCIDENT"
+                          },
+                          {
+                            "cas_number": "7647-01-0",
+                            "confirmation_basis": "CONTAINER_LABEL",
+                            "confirmation_id": "CNF-DEMO-FACILITY",
+                            "model_verified_human_confirmation": false,
+                            "role": "FACILITY"
+                          }
+                        ],
+                        "unconfirmed_items": [
+                          "접수 시스템에서 확인한 위치"
+                        ]
+                      },
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input_provenance": {
+                        "characters": 38,
+                        "stt_included": false,
+                        "text_sha256": "81bc382ed0b9466de97396f4a1c2264b8a11810dd6f83433095e205c329b0ff2",
+                        "transcript_rewritten": false,
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "limitations": [
+                        "개발용 의사결정 지원 API입니다. 현장 적용·전술 문구 전문 검수는 완료되지 않았습니다.",
+                        "확인 상태는 Backend가 전달한 기록입니다. 모델 API는 실제 대원 확인이나 최신 revision을 인증하지 않습니다.",
+                        "주소 비식별 부분 복원·ASR 오인식 정답 복구·근거의 의미 상충 완전 탐지는 지원하지 않습니다.",
+                        "공식 자료의 존재와 CAS 일치는 제품·농도·상태·기관 SOP의 현장 적용 승인이 아닙니다."
+                      ],
+                      "missing_information": [
+                        "접수 시스템에서 확인한 위치",
+                        "현재 상태로 재분석한 검증 결과"
+                      ],
+                      "phase": "final",
+                      "processing": {
+                        "example_only": true,
+                        "failure_code": "DEADLINE_EXCEEDED",
+                        "llm": "SKIPPED_BY_POLICY"
+                      },
+                      "request_id": "REQ-TIMEOUT-EXAMPLE",
+                      "revision": 3,
+                      "rule_review": {
+                        "executed": false
+                      },
+                      "schema_version": "action-brief-v1",
+                      "sources": [
+                        {
+                          "content_sha256": "8648c53dcdc271d5c64307e7d7b05dd4ac16441f19c62f19438f5bdf231f97d8",
+                          "document_id": "docs/ACTION_BRIEF.md",
+                          "document_version": "action-policy-v1",
+                          "freshness_status": "VERSIONED_POLICY",
+                          "license_status": "PROJECT_AUTHORED",
+                          "role": "UNKNOWN",
+                          "section": "확인 Gate와 카드 정책",
+                          "selection_method": "BASELINE_RETRIEVAL",
+                          "source_id": "POLICY",
+                          "source_type": "INTERNAL_POLICY",
+                          "url": "docs/ACTION_BRIEF.md"
+                        }
+                      ],
+                      "state_fingerprint": "9df71aebd468d76a5a250c9eed9f640a236270e4869ef6e80f427120d7eef165",
+                      "status": "TIMEOUT",
+                      "substance_candidates": [],
+                      "summary": "현재 상태의 분석을 완료하지 못했습니다. 확인·보류 안내만 사용할 수 있습니다.",
+                      "versions": {
+                        "catalog": "action-catalog-v1",
+                        "catalog_sha256": "8648c53dcdc271d5c64307e7d7b05dd4ac16441f19c62f19438f5bdf231f97d8",
+                        "llm": "NOT_USED",
+                        "phrase_review": "DRAFT_NOT_EXPERT_REVIEWED",
+                        "planning_mode": "DETERMINISTIC_POLICY_PLANNER",
+                        "policy": "action-policy-v1"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/BriefResponse"
+                }
+              }
+            },
+            "description": "현재 입력의 최종 행동 카드 snapshot. 예시는 실제 artifact에 합성 입력을 실행한 결과입니다."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "백엔드 인증 실패"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청 계약 위반"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "출력 안전 검증 또는 내부 오류"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "인증 또는 모델 artifact 준비 실패"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "현재 확인 상태의 행동·확인 카드 생성",
+        "tags": [
+          "action-brief"
+        ]
+      }
+    },
+    "/api/v1/agents/incidents/brief/stream": {
+      "post": {
+        "operationId": "incident_brief_stream_api_v1_agents_incidents_brief_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "both_confirmed": {
+                  "summary": "합성 예시: 두 역할 확인",
+                  "value": {
+                    "analysis": {
+                      "confirmed_facility_substance": {
+                        "cas_number": "7647-01-0",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-FACILITY",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "FACILITY"
+                      },
+                      "confirmed_incident_substance": {
+                        "cas_number": "7681-52-9",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-INCIDENT",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "INCIDENT"
+                      },
+                      "evidence_top_k": 5,
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input": {
+                        "text": "차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.",
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "request_id": "REQ-DEMO-1"
+                    },
+                    "revision": 3
+                  }
+                },
+                "cancelled": {
+                  "summary": "합성 예시: 확인 취소 후 재분석",
+                  "value": {
+                    "analysis": {
+                      "confirmed_facility_substance": {
+                        "cas_number": "7647-01-0",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-FACILITY",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "FACILITY"
+                      },
+                      "confirmed_incident_substance": {
+                        "cas_number": "7681-52-9",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-INCIDENT",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "INCIDENT"
+                      },
+                      "evidence_top_k": 5,
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input": {
+                        "text": "차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.",
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "request_id": "REQ-DEMO-1"
+                    },
+                    "invalidated_confirmation_ids": [
+                      "CNF-DEMO-INCIDENT"
+                    ],
+                    "revision": 4
+                  }
+                },
+                "conflict": {
+                  "summary": "합성 예시: 새 근거 상충 보고",
+                  "value": {
+                    "analysis": {
+                      "confirmed_facility_substance": {
+                        "cas_number": "7647-01-0",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-FACILITY",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "FACILITY"
+                      },
+                      "confirmed_incident_substance": {
+                        "cas_number": "7681-52-9",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-INCIDENT",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "INCIDENT"
+                      },
+                      "evidence_top_k": 5,
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input": {
+                        "text": "차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.",
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "request_id": "REQ-DEMO-1"
+                    },
+                    "reported_evidence_conflict": true,
+                    "revision": 4
+                  }
+                },
+                "invalid_cas": {
+                  "summary": "오류 예시: CAS checksum 오류(422)",
+                  "value": {
+                    "analysis": {
+                      "confirmed_incident_substance": {
+                        "cas_number": "7681-52-0",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-INCIDENT",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "INCIDENT"
+                      },
+                      "evidence_top_k": 5,
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input": {
+                        "text": "차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.",
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "request_id": "REQ-DEMO-1"
+                    },
+                    "revision": 2
+                  }
+                },
+                "no_evidence": {
+                  "summary": "합성 예시: 인덱스의 해당 CAS 근거가 없을 수 있음",
+                  "value": {
+                    "analysis": {
+                      "confirmed_incident_substance": {
+                        "cas_number": "7732-18-5",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-INCIDENT",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "INCIDENT"
+                      },
+                      "evidence_top_k": 5,
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input": {
+                        "text": "미상 제품의 정보 확인 요청",
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "request_id": "REQ-DEMO-1"
+                    },
+                    "revision": 1
+                  }
+                },
+                "one_confirmed": {
+                  "summary": "합성 예시: 사고물질만 확인",
+                  "value": {
+                    "analysis": {
+                      "confirmed_incident_substance": {
+                        "cas_number": "7681-52-9",
+                        "confirmation_basis": "CONTAINER_LABEL",
+                        "confirmation_id": "CNF-DEMO-INCIDENT",
+                        "observed_at": "2026-09-01T00:00:00+09:00",
+                        "presence_status": "CONFIRMED_PRESENT",
+                        "role": "INCIDENT"
+                      },
+                      "evidence_top_k": 5,
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input": {
+                        "text": "차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.",
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "request_id": "REQ-DEMO-1"
+                    },
+                    "revision": 2
+                  }
+                },
+                "unconfirmed": {
+                  "summary": "합성 예시: 미확인",
+                  "value": {
+                    "analysis": {
+                      "evidence_top_k": 5,
+                      "incident_id": "INC-SYNTHETIC-1",
+                      "input": {
+                        "text": "차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.",
+                        "type": "VOICE_TRANSCRIPT"
+                      },
+                      "request_id": "REQ-DEMO-1"
+                    },
+                    "revision": 1
+                  }
+                }
+              },
+              "schema": {
+                "$ref": "#/components/schemas/BriefRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "검증된 initial/final BriefResponse를 담은 SSE. 각 이벤트는 전체 snapshot이며 합쳐서 누적하지 않습니다."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "백엔드 인증 실패"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "요청 계약 위반"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "출력 안전 검증 또는 내부 오류"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "인증 또는 모델 artifact 준비 실패"
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "summary": "검증된 확인 카드와 후속 결과를 SSE로 순차 반환",
+        "tags": [
+          "action-brief"
+        ]
+      }
+    },
     "/api/v1/agents/incidents/step": {
       "post": {
         "operationId": "run_incident_agent_step_api_v1_agents_incidents_step_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-API-Key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3115,6 +6463,11 @@
             "description": "인증 또는 모델 artifact 준비 실패"
           }
         },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
         "summary": "사고 상태를 관찰해 필요한 도구를 선택하고 재계획",
         "tags": [
           "agent"
@@ -3124,24 +6477,6 @@
     "/api/v1/conflicts/review": {
       "post": {
         "operationId": "conflict_review_api_v1_conflicts_review_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-API-Key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3206,6 +6541,11 @@
             "description": "인증 또는 모델 artifact 준비 실패"
           }
         },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
         "summary": "Conflict Review",
         "tags": [
           "rules"
@@ -3215,24 +6555,6 @@
     "/api/v1/evidence/search": {
       "post": {
         "operationId": "evidence_search_api_v1_evidence_search_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-API-Key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3297,6 +6619,11 @@
             "description": "인증 또는 모델 artifact 준비 실패"
           }
         },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
         "summary": "Evidence Search",
         "tags": [
           "models"
@@ -3306,24 +6633,6 @@
     "/api/v1/facilities/candidates": {
       "post": {
         "operationId": "facility_candidates_api_v1_facilities_candidates_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-API-Key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3388,6 +6697,11 @@
             "description": "인증 또는 모델 artifact 준비 실패"
           }
         },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
         "summary": "Facility Candidates",
         "tags": [
           "models"
@@ -3397,24 +6711,6 @@
     "/api/v1/incidents/analyze": {
       "post": {
         "operationId": "analyze_api_v1_incidents_analyze_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-API-Key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3477,6 +6773,11 @@
             "description": "인증 또는 모델 artifact 준비 실패"
           }
         },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
         "summary": "사고 입력을 구조화하고 근거·Rule 검토 상태를 반환",
         "tags": [
           "analysis"
@@ -3509,24 +6810,6 @@
     "/api/v1/substances/discover": {
       "post": {
         "operationId": "discover_api_v1_substances_discover_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-API-Key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3589,6 +6872,11 @@
             "description": "인증 또는 모델 artifact 준비 실패"
           }
         },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
         "summary": "물질명·CAS·관찰 정보에서 확인 전 물질 후보와 공식 근거 검색",
         "tags": [
           "models"
@@ -3598,24 +6886,6 @@
     "/api/v1/substances/resolve": {
       "post": {
         "operationId": "resolve_api_v1_substances_resolve_post",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "X-API-Key",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Api-Key"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3680,6 +6950,11 @@
             "description": "인증 또는 모델 artifact 준비 실패"
           }
         },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
         "summary": "Resolve",
         "tags": [
           "models"
