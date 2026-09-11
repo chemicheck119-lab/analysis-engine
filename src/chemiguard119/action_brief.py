@@ -201,7 +201,12 @@ def failed_brief(
         _card(
             result,
             "HOLD_CONFLICT"
-            if code in {"CONFIRMATION_CONFLICT", "DOCUMENT_CONFLICT"}
+            if code
+            in {
+                "CONFIRMATION_CONFLICT",
+                "DOCUMENT_CONFLICT",
+                "STATEMENT_CLARIFICATION_REQUIRED",
+            }
             else "HOLD_FAILURE",
         )
     )
@@ -346,7 +351,18 @@ def final_brief(
             "analysis_complete": True,
             "reported_incident_types": result.facts.get("incident_types", []),
             "reported_mentions_not_confirmed_facts": [
-                {key: mention.get(key) for key in ("surface_text", "role", "assertion")}
+                {
+                    key: mention.get(key)
+                    for key in (
+                        "surface_text",
+                        "role",
+                        "assertion",
+                        "mention_id",
+                        "start",
+                        "end",
+                        "context_role",
+                    )
+                }
                 for mention in result.substance_candidates
             ],
             "unconfirmed_items": list(result.missing_information),

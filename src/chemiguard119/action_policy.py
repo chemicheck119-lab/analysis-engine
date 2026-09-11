@@ -21,6 +21,10 @@ def before_rule(payload: IncidentAnalyzeRequest, result: dict[str, Any]) -> None
         "INCIDENT": payload.confirmed_incident_substance,
         "FACILITY": payload.confirmed_facility_substance,
     }
+    if any(confirmations.values()) and result.get("parsed_report", {}).get(
+        "requires_statement_clarification"
+    ):
+        raise BriefHeld("STATEMENT_CLARIFICATION_REQUIRED")
     for mention in result.get("substance_candidates", []):
         confirmed = confirmations.get(mention.get("role"))
         hint = mention.get("evidence_cas_hint")

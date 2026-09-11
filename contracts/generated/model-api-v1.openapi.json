@@ -5959,7 +5959,7 @@
                           "source_ids": [
                             "POLICY"
                           ],
-                          "state_fingerprint": "9df71aebd468d76a5a250c9eed9f640a236270e4869ef6e80f427120d7eef165",
+                          "state_fingerprint": "483619d8dc1ae26ba5cc7da48291054d3d4beca0a6436d49b6249fe6a6bfef5f",
                           "tactical_authorization": false,
                           "target_label": "전체 안내",
                           "title": "위치를 별도로 확인해 주세요",
@@ -5984,7 +5984,7 @@
                           "source_ids": [
                             "POLICY"
                           ],
-                          "state_fingerprint": "9df71aebd468d76a5a250c9eed9f640a236270e4869ef6e80f427120d7eef165",
+                          "state_fingerprint": "483619d8dc1ae26ba5cc7da48291054d3d4beca0a6436d49b6249fe6a6bfef5f",
                           "tactical_authorization": false,
                           "target_label": "전체 안내",
                           "title": "분석을 마치지 못했습니다",
@@ -6054,7 +6054,7 @@
                         {
                           "content_sha256": "8648c53dcdc271d5c64307e7d7b05dd4ac16441f19c62f19438f5bdf231f97d8",
                           "document_id": "docs/ACTION_BRIEF.md",
-                          "document_version": "action-policy-v1",
+                          "document_version": "action-policy-v2-statement-clarification",
                           "freshness_status": "VERSIONED_POLICY",
                           "license_status": "PROJECT_AUTHORED",
                           "role": "UNKNOWN",
@@ -6065,7 +6065,7 @@
                           "url": "docs/ACTION_BRIEF.md"
                         }
                       ],
-                      "state_fingerprint": "9df71aebd468d76a5a250c9eed9f640a236270e4869ef6e80f427120d7eef165",
+                      "state_fingerprint": "483619d8dc1ae26ba5cc7da48291054d3d4beca0a6436d49b6249fe6a6bfef5f",
                       "status": "TIMEOUT",
                       "substance_candidates": [],
                       "summary": "현재 상태의 분석을 완료하지 못했습니다. 확인·보류 안내만 사용할 수 있습니다.",
@@ -6075,7 +6075,7 @@
                         "llm": "NOT_USED",
                         "phrase_review": "DRAFT_NOT_EXPERT_REVIEWED",
                         "planning_mode": "DETERMINISTIC_POLICY_PLANNER",
-                        "policy": "action-policy-v1"
+                        "policy": "action-policy-v2-statement-clarification"
                       }
                     }
                   }

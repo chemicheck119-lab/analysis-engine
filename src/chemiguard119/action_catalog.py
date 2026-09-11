@@ -4,7 +4,7 @@ import hashlib
 import json
 
 CATALOG_VERSION = "action-catalog-v1"
-POLICY_VERSION = "action-policy-v1"
+POLICY_VERSION = "action-policy-v2-statement-clarification"
 CATALOG = {
     "ANALYSIS_PENDING": {
         "category": "보류",
