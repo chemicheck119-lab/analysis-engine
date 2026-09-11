@@ -1,0 +1,791 @@
+{
+  "info": {
+    "name": "케미체크119 모델 API · 합성 연동 테스트",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "docs/API.md가 공식 명세서입니다. 공개 Swagger 서버는 실행 대상이 아닙니다. 모든 요청은 공개 합성 입력이며 API 키·ID token은 포함하지 않습니다. 개별 Send로 검증하세요. 예상 결과는 계약 검사이지 현장 정확도 증명이 아닙니다. OpenAPI SHA-256: 684fdcb91cda55056ed16ef8b916b2433a837627c5a72371792c208d8a239856"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{api_key}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8087",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "id_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 상태 확인",
+      "item": [
+        {
+          "name": "GET /api/v1/meta · Metadata",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/meta",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "GET /health/live · Live",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health/live",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "GET /health/ready · Ready",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health/ready",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 행동 카드",
+      "item": [
+        {
+          "name": "POST /api/v1/agents/incidents/brief · 합성 예시: 미확인",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/agents/incidents/brief",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"analysis\": {\n    \"evidence_top_k\": 5,\n    \"incident_id\": \"INC-SYNTHETIC-1\",\n    \"input\": {\n      \"text\": \"차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.\",\n      \"type\": \"VOICE_TRANSCRIPT\"\n    },\n    \"request_id\": \"REQ-DEMO-1\"\n  },\n  \"revision\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test(\"행동 카드 계약\", function () { pm.expect(body.schema_version).to.eql(\"action-brief-v1\"); pm.expect(body.phase).to.eql(\"final\"); });",
+                  "pm.test(\"전술 승인 없음\", function () { body.cards.forEach(card => pm.expect(card.tactical_authorization).to.eql(false)); });",
+                  "pm.test(\"확인 Gate 잠금\", function () { pm.expect(body.rule_review.executed).to.eql(false); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/agents/incidents/brief · 합성 예시: 사고물질만 확인",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/agents/incidents/brief",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"analysis\": {\n    \"confirmed_incident_substance\": {\n      \"cas_number\": \"7681-52-9\",\n      \"confirmation_basis\": \"CONTAINER_LABEL\",\n      \"confirmation_id\": \"CNF-DEMO-INCIDENT\",\n      \"observed_at\": \"2026-09-01T00:00:00+09:00\",\n      \"presence_status\": \"CONFIRMED_PRESENT\",\n      \"role\": \"INCIDENT\"\n    },\n    \"evidence_top_k\": 5,\n    \"incident_id\": \"INC-SYNTHETIC-1\",\n    \"input\": {\n      \"text\": \"차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.\",\n      \"type\": \"VOICE_TRANSCRIPT\"\n    },\n    \"request_id\": \"REQ-DEMO-1\"\n  },\n  \"revision\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test(\"행동 카드 계약\", function () { pm.expect(body.schema_version).to.eql(\"action-brief-v1\"); pm.expect(body.phase).to.eql(\"final\"); });",
+                  "pm.test(\"전술 승인 없음\", function () { body.cards.forEach(card => pm.expect(card.tactical_authorization).to.eql(false)); });",
+                  "pm.test(\"확인 Gate 잠금\", function () { pm.expect(body.rule_review.executed).to.eql(false); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/agents/incidents/brief · 합성 예시: 두 역할 확인",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/agents/incidents/brief",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"analysis\": {\n    \"confirmed_facility_substance\": {\n      \"cas_number\": \"7647-01-0\",\n      \"confirmation_basis\": \"CONTAINER_LABEL\",\n      \"confirmation_id\": \"CNF-DEMO-FACILITY\",\n      \"observed_at\": \"2026-09-01T00:00:00+09:00\",\n      \"presence_status\": \"CONFIRMED_PRESENT\",\n      \"role\": \"FACILITY\"\n    },\n    \"confirmed_incident_substance\": {\n      \"cas_number\": \"7681-52-9\",\n      \"confirmation_basis\": \"CONTAINER_LABEL\",\n      \"confirmation_id\": \"CNF-DEMO-INCIDENT\",\n      \"observed_at\": \"2026-09-01T00:00:00+09:00\",\n      \"presence_status\": \"CONFIRMED_PRESENT\",\n      \"role\": \"INCIDENT\"\n    },\n    \"evidence_top_k\": 5,\n    \"incident_id\": \"INC-SYNTHETIC-1\",\n    \"input\": {\n      \"text\": \"차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.\",\n      \"type\": \"VOICE_TRANSCRIPT\"\n    },\n    \"request_id\": \"REQ-DEMO-1\"\n  },\n  \"revision\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test(\"행동 카드 계약\", function () { pm.expect(body.schema_version).to.eql(\"action-brief-v1\"); pm.expect(body.phase).to.eql(\"final\"); });",
+                  "pm.test(\"전술 승인 없음\", function () { body.cards.forEach(card => pm.expect(card.tactical_authorization).to.eql(false)); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/agents/incidents/brief · 합성 예시: 확인 취소 후 재분석",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/agents/incidents/brief",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"analysis\": {\n    \"confirmed_facility_substance\": {\n      \"cas_number\": \"7647-01-0\",\n      \"confirmation_basis\": \"CONTAINER_LABEL\",\n      \"confirmation_id\": \"CNF-DEMO-FACILITY\",\n      \"observed_at\": \"2026-09-01T00:00:00+09:00\",\n      \"presence_status\": \"CONFIRMED_PRESENT\",\n      \"role\": \"FACILITY\"\n    },\n    \"confirmed_incident_substance\": {\n      \"cas_number\": \"7681-52-9\",\n      \"confirmation_basis\": \"CONTAINER_LABEL\",\n      \"confirmation_id\": \"CNF-DEMO-INCIDENT\",\n      \"observed_at\": \"2026-09-01T00:00:00+09:00\",\n      \"presence_status\": \"CONFIRMED_PRESENT\",\n      \"role\": \"INCIDENT\"\n    },\n    \"evidence_top_k\": 5,\n    \"incident_id\": \"INC-SYNTHETIC-1\",\n    \"input\": {\n      \"text\": \"차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.\",\n      \"type\": \"VOICE_TRANSCRIPT\"\n    },\n    \"request_id\": \"REQ-DEMO-1\"\n  },\n  \"invalidated_confirmation_ids\": [\n    \"CNF-DEMO-INCIDENT\"\n  ],\n  \"revision\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test(\"행동 카드 계약\", function () { pm.expect(body.schema_version).to.eql(\"action-brief-v1\"); pm.expect(body.phase).to.eql(\"final\"); });",
+                  "pm.test(\"전술 승인 없음\", function () { body.cards.forEach(card => pm.expect(card.tactical_authorization).to.eql(false)); });",
+                  "pm.test(\"확인 Gate 잠금\", function () { pm.expect(body.rule_review.executed).to.eql(false); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/agents/incidents/brief · 합성 예시: 새 근거 상충 보고",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/agents/incidents/brief",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"analysis\": {\n    \"confirmed_facility_substance\": {\n      \"cas_number\": \"7647-01-0\",\n      \"confirmation_basis\": \"CONTAINER_LABEL\",\n      \"confirmation_id\": \"CNF-DEMO-FACILITY\",\n      \"observed_at\": \"2026-09-01T00:00:00+09:00\",\n      \"presence_status\": \"CONFIRMED_PRESENT\",\n      \"role\": \"FACILITY\"\n    },\n    \"confirmed_incident_substance\": {\n      \"cas_number\": \"7681-52-9\",\n      \"confirmation_basis\": \"CONTAINER_LABEL\",\n      \"confirmation_id\": \"CNF-DEMO-INCIDENT\",\n      \"observed_at\": \"2026-09-01T00:00:00+09:00\",\n      \"presence_status\": \"CONFIRMED_PRESENT\",\n      \"role\": \"INCIDENT\"\n    },\n    \"evidence_top_k\": 5,\n    \"incident_id\": \"INC-SYNTHETIC-1\",\n    \"input\": {\n      \"text\": \"차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.\",\n      \"type\": \"VOICE_TRANSCRIPT\"\n    },\n    \"request_id\": \"REQ-DEMO-1\"\n  },\n  \"reported_evidence_conflict\": true,\n  \"revision\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test(\"행동 카드 계약\", function () { pm.expect(body.schema_version).to.eql(\"action-brief-v1\"); pm.expect(body.phase).to.eql(\"final\"); });",
+                  "pm.test(\"전술 승인 없음\", function () { body.cards.forEach(card => pm.expect(card.tactical_authorization).to.eql(false)); });",
+                  "pm.test(\"확인 Gate 잠금\", function () { pm.expect(body.rule_review.executed).to.eql(false); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/agents/incidents/brief · 합성 예시: 인덱스의 해당 CAS 근거가 없을 수 있음",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/agents/incidents/brief",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"analysis\": {\n    \"confirmed_incident_substance\": {\n      \"cas_number\": \"7732-18-5\",\n      \"confirmation_basis\": \"CONTAINER_LABEL\",\n      \"confirmation_id\": \"CNF-DEMO-INCIDENT\",\n      \"observed_at\": \"2026-09-01T00:00:00+09:00\",\n      \"presence_status\": \"CONFIRMED_PRESENT\",\n      \"role\": \"INCIDENT\"\n    },\n    \"evidence_top_k\": 5,\n    \"incident_id\": \"INC-SYNTHETIC-1\",\n    \"input\": {\n      \"text\": \"미상 제품의 정보 확인 요청\",\n      \"type\": \"VOICE_TRANSCRIPT\"\n    },\n    \"request_id\": \"REQ-DEMO-1\"\n  },\n  \"revision\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test(\"행동 카드 계약\", function () { pm.expect(body.schema_version).to.eql(\"action-brief-v1\"); pm.expect(body.phase).to.eql(\"final\"); });",
+                  "pm.test(\"전술 승인 없음\", function () { body.cards.forEach(card => pm.expect(card.tactical_authorization).to.eql(false)); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/agents/incidents/brief · 오류 예시: CAS checksum 오류(422)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/agents/incidents/brief",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"analysis\": {\n    \"confirmed_incident_substance\": {\n      \"cas_number\": \"7681-52-0\",\n      \"confirmation_basis\": \"CONTAINER_LABEL\",\n      \"confirmation_id\": \"CNF-DEMO-INCIDENT\",\n      \"observed_at\": \"2026-09-01T00:00:00+09:00\",\n      \"presence_status\": \"CONFIRMED_PRESENT\",\n      \"role\": \"INCIDENT\"\n    },\n    \"evidence_top_k\": 5,\n    \"incident_id\": \"INC-SYNTHETIC-1\",\n    \"input\": {\n      \"text\": \"차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.\",\n      \"type\": \"VOICE_TRANSCRIPT\"\n    },\n    \"request_id\": \"REQ-DEMO-1\"\n  },\n  \"revision\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 422\", function () { pm.response.to.have.status(422); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/agents/incidents/brief/stream · 합성 예시: 미확인",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/agents/incidents/brief/stream",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"analysis\": {\n    \"evidence_top_k\": 5,\n    \"incident_id\": \"INC-SYNTHETIC-1\",\n    \"input\": {\n      \"text\": \"차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.\",\n      \"type\": \"VOICE_TRANSCRIPT\"\n    },\n    \"request_id\": \"REQ-DEMO-1\"\n  },\n  \"revision\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 개별 기능",
+      "item": [
+        {
+          "name": "POST /api/v1/agents/incidents/step · 사고 상태를 관찰해 필요한 도구를 선택하고 재계획",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/agents/incidents/step",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"analysis\": {\n    \"evidence_top_k\": 5,\n    \"incident_id\": \"INC-SYNTHETIC-1\",\n    \"input\": {\n      \"text\": \"차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.\",\n      \"type\": \"VOICE_TRANSCRIPT\"\n    },\n    \"request_id\": \"REQ-DEMO-1\"\n  },\n  \"max_actions\": 6\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/conflicts/review · Conflict Review",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/conflicts/review",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"incident\": {\n    \"cas_number\": \"7681-52-9\",\n    \"confirmation_basis\": \"CONTAINER_LABEL\",\n    \"confirmation_id\": \"CNF-DEMO-INCIDENT\",\n    \"observed_at\": \"2026-09-01T00:00:00+09:00\",\n    \"presence_status\": \"CONFIRMED_PRESENT\",\n    \"role\": \"INCIDENT\"\n  },\n  \"facility\": {\n    \"cas_number\": \"7647-01-0\",\n    \"confirmation_basis\": \"CONTAINER_LABEL\",\n    \"confirmation_id\": \"CNF-DEMO-FACILITY\",\n    \"observed_at\": \"2026-09-01T00:00:00+09:00\",\n    \"presence_status\": \"CONFIRMED_PRESENT\",\n    \"role\": \"FACILITY\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/evidence/search · Evidence Search",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/evidence/search",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"염산의 누출 대응 근거\",\n  \"cas_hint\": \"7647-01-0\",\n  \"cas_hint_status\": \"RESOLVER_CANDIDATE\",\n  \"top_k\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/facilities/candidates · Facility Candidates",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/facilities/candidates",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"합성 예시 사업장\",\n  \"province\": \"울산광역시\",\n  \"top_k\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/incidents/analyze · 사고 입력을 구조화하고 근거·Rule 검토 상태를 반환",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/incidents/analyze",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"evidence_top_k\": 5,\n  \"incident_id\": \"INC-SYNTHETIC-1\",\n  \"input\": {\n    \"text\": \"차아염소산나트륨 탱크에서 누출이 있고 옆 저장고에는 염산이 있습니다.\",\n    \"type\": \"VOICE_TRANSCRIPT\"\n  },\n  \"request_id\": \"REQ-DEMO-1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/substances/discover · 물질명·CAS·관찰 정보에서 확인 전 물질 후보와 공식 근거 검색",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/substances/discover",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"염산\",\n  \"top_k\": 3,\n  \"evidence_top_k\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "POST /api/v1/substances/resolve · Resolve",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/substances/resolve",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{id_token}}",
+                "disabled": true,
+                "description": "기본 프록시에서는 끔. Cloud Run 직접 호출 시에만 유효한 ID token으로 활성화."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "합성 테스트 전용. 실제 확인 기록·현장 검증 결과가 아닙니다. 기본 base_url은 IAM 인증 프록시이고 api_key는 개인 환경에서만 설정하세요. no_evidence와 시설 예시의 검색 결과는 artifact에 따라 달라집니다. SSE는 initial/final 전체 snapshot을 교체하며 자동 재연결하지 않습니다.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"염산\",\n  \"top_k\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ]
+}

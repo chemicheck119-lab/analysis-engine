@@ -1,5 +1,13 @@
 # FE·BE·모델 API 연동 및 병합 계약
 
+> 최신 모델 API 명세는 [API.md](API.md)를 우선 사용합니다. 새 행동 카드 화면은
+> `/agents/incidents/brief` 또는 `/brief/stream`을 연결하며, GCP에는 IAM + X-API-Key가
+> 모두 필요합니다. 아래 `FE_Repository`·`BE_Repository`·`llm` 표기는 이전 저장소 이름으로,
+> 현재는 `chemicheck119-lab/front`·`back`·`analysis-engine`에 해당합니다. 아래 BFF·analyze·step
+> 연동 계약을 brief의 DTO·revision·timeout 계약으로 그대로 재사용하지 마세요.
+> 특히 아래 15초 client timeout은 기존 제안이며, brief 테스트 예제는 35초 상한으로 구분합니다.
+> 실제 Backend 코드·권한·배포의 반영 여부는 별도 확인이 필요합니다.
+
 ## 1. 가장 쉬운 설명
 
 세 저장소의 코드를 한 저장소에 물리적으로 합치는 구조가 아닙니다. 각 저장소에서 담당 기능을
