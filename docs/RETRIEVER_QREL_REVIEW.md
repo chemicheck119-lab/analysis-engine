@@ -20,10 +20,21 @@ KOSHA 상세가 있는 물질
 | 질문·evidence pool 생성기 | 구현 완료 |
 | 독립 검수 CSV export·병합 Gate | 구현 완료 |
 | 질의 단위 검수 배치 분할·재조립 Gate | 구현 완료 |
+| 검수 진행률·원문 무결성 감사 | 구현 완료 |
+| 선언된 검색기 Top-K pool coverage 감사 | 구현·기준선 실행 완료 |
 | 배포 artifact 기반 171질의 후보 | 부분 구현 또는 개발용 데모 |
 | 171질의 사람 이중 검수 | 설계 완료·구현 전 |
 | BM25·Dense·Hybrid·RRF·Reranker 비교 | 설계 완료·구현 전 |
 | 현장 검색 정확도 | 검증되지 않은 가설 |
+
+2026-09-11 확인한 전체 revision `d5d052556f1d58d70918e74fb7c36756d30ed36f`의 재실행에서
+`baseline-lexical-hybrid` Top-5를 171질의에 실행한 결과 803개 반환
+occurrence가 기존 후보 pool에 모두 포함됐고, 누락 pair는 0건이었다. 결과가 빈 질의 1건은
+관찰된 동작이며 올바른 기권 정답으로 판정하지 않았다. 사람 라벨은 0/171로 시작 전이며, 이 결과는 검색 정확도가
+아닌 **현재 기준선에 한정된 검수 pool 포함 감사**다. 공개 가능한 집계·artifact hash는
+`data/evaluation/retriever_qrel_pool_audit_2026-09-09.json`에 기록했다. 파일명은 기존 링크를
+유지하지만 본문은 [채택한 재실행](EVALUATION_READINESS_2026-09-11.md)의 run·audit hash에 연결된다.
+확인할 수 없는 `570985d` 표기는 `superseded_evidence`로만 보존하고 현재 성과 근거로 쓰지 않는다.
 
 기계 생성 질문은 실제 신고·무전 질문 분포가 아니다. 최종 병합 결과도 비전문가 두 명이
 검수한 KOSHA SDS section 평가일 뿐, 현장 안전성이나 전국 소방 검색 정확도를 증명하지
@@ -153,6 +164,62 @@ chemiguard119 retriever-review assemble \
 재조립은 누락·중복 질의, 누락·추가 evidence, actor 변경, 질문·CAS·원문·URL·버전 변경,
 미완료·모순 라벨을 차단한다. 성공해도 한 사람의 완료된 시트일 뿐이다. 두 시트의 독립성과
 완전 일치는 다음 `merge` Gate가 별도로 확인한다.
+
+검수 도중에는 다음 명령으로 정답을 추론하지 않고 진행률과 후보 원문 변조 여부만 확인한다.
+
+```bash
+chemiguard119 retriever-review status \
+  --candidates /approved/private/retriever_qrel_candidates.jsonl \
+  --review-sheet /approved/private/retriever_qrel_labeler.csv \
+  --actor-role LABELER \
+  --report /approved/private/retriever_qrel_labeler_status.json \
+  --json
+```
+
+`NOT_STARTED`, `IN_PROGRESS`, `NEEDS_CORRECTION`,
+`READY_FOR_INDEPENDENT_MERGE`, `BLOCKED_REVIEW_GATE` 중 하나를 반환한다. 이 결과는 한
+사람의 작업 상태일 뿐 Retriever 성능이나 이중 검수 완료를 뜻하지 않는다.
+
+## 2.1 신규 검색 시스템의 pool coverage 감사
+
+BM25·Dense·Hybrid·Reranker를 비교하기 전에 각 시스템은 다음 필드를 가진
+`chemicheck119-retriever-pool-run-v1` JSON을 만든다.
+
+- `system_id`, `system_version`, `candidate_sha256`, `system_artifact_sha256`
+- 후보와 같은 `database_sha256`, 실행 `top_k`
+- 모든 `case_id`별 `query_sha256`, `returned_evidence_ids`
+
+현재 배포 artifact의 lexical hybrid 기준선은 원문 질의나 문서 본문을 복제하지 않고 다음
+명령으로 실행 기록을 만든다. `system-version`에는 평가 코드 revision과 artifact schema를
+함께 고정한다.
+
+```bash
+chemiguard119 retriever-review pool-run \
+  --candidates /approved/private/retriever_qrel_candidates.jsonl \
+  --db /approved/private/chemiguard119.sqlite \
+  --retriever-model /approved/private/retriever.joblib \
+  --system-id baseline-lexical-hybrid \
+  --system-version evidence-hybrid-tfidf-v2@GIT_COMMIT \
+  --top-k 5 \
+  --output /approved/private/baseline_pool_run.json \
+  --json
+```
+
+```bash
+chemiguard119 retriever-review pool-audit \
+  --candidates /approved/private/retriever_qrel_candidates.jsonl \
+  --db /approved/private/chemiguard119.sqlite \
+  --system-run /approved/private/bm25_pool_run.json \
+  --system-run /approved/private/dense_pool_run.json \
+  --report /approved/private/retriever_pool_audit.json \
+  --json
+```
+
+모든 Top-K가 후보에 있으면 `COMPLETE_FOR_DECLARED_SYSTEMS`, 같은 CAS의 누락 문서가 있으면
+`POOL_EXPANSION_REQUIRED`, DB·질의·CAS·문서 ID가 맞지 않으면
+`BLOCKED_POOL_AUDIT`이다. 전자는 **선언한 시스템에 한정된 포함 검사**일 뿐 관련성이나 전체
+pool 완전성을 증명하지 않는다. 새 문서가 발견되면 검수 시작 전에 후보와 빈 시트를 다시
+생성해야 한다.
 
 ## 3. 합의 병합
 

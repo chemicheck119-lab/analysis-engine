@@ -862,9 +862,12 @@ def _e2e_review(args: argparse.Namespace) -> dict[str, Any]:
 def _retriever_review(args: argparse.Namespace) -> dict[str, Any]:
     from chemiguard119.retrieval_review import (
         assemble_review_batches,
+        audit_candidate_pool_coverage,
+        audit_review_sheet,
         create_review_batches,
         export_review_sheet,
         generate_qrel_candidate_pool,
+        generate_retriever_pool_run,
         merge_review_sheets,
     )
 
@@ -896,6 +899,30 @@ def _retriever_review(args: argparse.Namespace) -> dict[str, Any]:
             args.candidates,
             args.batch_dir,
             args.output,
+        )
+    if args.retriever_review_action == "status":
+        return audit_review_sheet(
+            args.candidates,
+            args.review_sheet,
+            actor_role=args.actor_role,
+            report_path=args.report,
+        )
+    if args.retriever_review_action == "pool-run":
+        return generate_retriever_pool_run(
+            args.candidates,
+            args.db,
+            args.retriever_model,
+            args.output,
+            system_id=args.system_id,
+            system_version=args.system_version,
+            top_k=args.top_k,
+        )
+    if args.retriever_review_action == "pool-audit":
+        return audit_candidate_pool_coverage(
+            args.candidates,
+            args.db,
+            args.system_run,
+            report_path=args.report,
         )
     if args.retriever_review_action == "merge":
         return merge_review_sheets(
@@ -1892,6 +1919,49 @@ def build_parser() -> argparse.ArgumentParser:
     retriever_review_assemble.add_argument("--batch-dir", type=_path, required=True)
     retriever_review_assemble.add_argument("--output", type=_path, required=True)
     _add_json_option(retriever_review_assemble)
+
+    retriever_review_status = retriever_review_actions.add_parser(
+        "status",
+        help="정답을 추론하지 않고 한 사람의 검수 진행률·무결성 감사",
+    )
+    retriever_review_status.add_argument("--candidates", type=_path, required=True)
+    retriever_review_status.add_argument("--review-sheet", type=_path, required=True)
+    retriever_review_status.add_argument(
+        "--actor-role",
+        choices=("LABELER", "REVIEWER"),
+        required=True,
+    )
+    retriever_review_status.add_argument("--report", type=_path)
+    _add_json_option(retriever_review_status)
+
+    retriever_review_pool_run = retriever_review_actions.add_parser(
+        "pool-run",
+        help="현재 Retriever Top-K의 qrel pool 감사용 실행 기록 생성",
+    )
+    retriever_review_pool_run.add_argument("--candidates", type=_path, required=True)
+    retriever_review_pool_run.add_argument("--db", type=_path, required=True)
+    retriever_review_pool_run.add_argument(
+        "--retriever-model", type=_path, required=True
+    )
+    retriever_review_pool_run.add_argument("--system-id", required=True)
+    retriever_review_pool_run.add_argument("--system-version", required=True)
+    retriever_review_pool_run.add_argument(
+        "--top-k", type=int, default=5, choices=range(1, 51)
+    )
+    retriever_review_pool_run.add_argument("--output", type=_path, required=True)
+    _add_json_option(retriever_review_pool_run)
+
+    retriever_review_pool_audit = retriever_review_actions.add_parser(
+        "pool-audit",
+        help="선언한 검색 시스템 Top-K의 qrel 검수 pool 포함 여부 감사",
+    )
+    retriever_review_pool_audit.add_argument("--candidates", type=_path, required=True)
+    retriever_review_pool_audit.add_argument("--db", type=_path, required=True)
+    retriever_review_pool_audit.add_argument(
+        "--system-run", type=_path, action="append", required=True
+    )
+    retriever_review_pool_audit.add_argument("--report", type=_path)
+    _add_json_option(retriever_review_pool_audit)
 
     retriever_review_merge = retriever_review_actions.add_parser(
         "merge",

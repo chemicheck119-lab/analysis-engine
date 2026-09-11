@@ -1,0 +1,69 @@
+{
+  "schema_version": "chemicheck119-evaluation-readiness-v1",
+  "checked_on": "2026-09-11",
+  "timezone": "Asia/Seoul",
+  "status": "PARTIAL_DEVELOPMENT_DEMO",
+  "source_commit": "d5d052556f1d58d70918e74fb7c36756d30ed36f",
+  "environment": {
+    "hardware": "Apple M4",
+    "os_arch": "Darwin arm64",
+    "python": "3.11.15",
+    "compute": "local_cpu"
+  },
+  "review_progress": {
+    "candidate_count": 171,
+    "evidence_judgment_count": 1848,
+    "started_rows": 0,
+    "approved_rows": 0,
+    "completed_cases": 0,
+    "status": "NOT_STARTED",
+    "batch_count": 12,
+    "batch_template_hash_matches": 12
+  },
+  "pool_audit": {
+    "status": "COMPLETE_FOR_DECLARED_SYSTEMS",
+    "declared_system_count": 1,
+    "top_k": 5,
+    "returned_occurrence_count": 803,
+    "empty_result_case_count": 1,
+    "missing_unique_case_evidence_pair_count": 0,
+    "blocker_count": 0,
+    "cas_hint_provided": true
+  },
+  "hashes": {
+    "candidates": "e9e7992bb7be67f6abdf0cdae6d3c67c362993d62a0b46483ca73c93e9ca6ffc",
+    "labeler_sheet": "881b4bdc622bd683d9e51214323dd3e77275ccb86567dbfb86e7577e27b10910",
+    "batch_manifest": "5d854c2a7ff8fa29485893c9c68babb2b978dd299beb29fe5e16baeb5e42143a",
+    "database": "ed81fe9aac45a38880920d967ce8f3954acabfedf7b2f6ea59464552e7958b91",
+    "resolver": "2696fa7f067163055ff556e5e12ccfa15e7dc08c9ff803838f0db074aa002dff",
+    "retriever": "2e93e066648890400b26f56b532d6ed608b828203f8668e4af3cf63de1bc544b",
+    "adopted_pool_run": "c65b5bd98d05a36782258488b55040c5efb4467c381f8254432a495e44d94c2c",
+    "pool_audit": "fa39e6a881c4c45791d46d5e3abea70295ea8c3b7773deebdb2e78b29c8f937b",
+    "review_audit": "ac78ab4443bc6aa9ab17b5f87ea3ed235f9238f7ba2fe6ce8af91e01cef37a88",
+    "review_source": "fe21cfe5ffa72fd4848f4a928d9cf3ac486011960e3a64e39b47ce8be43a202a",
+    "retrieval_source": "b7ddd786c2788d4e8283afddfb19f57bdda44e94f8bf256d32464d25a59d2e5d"
+  },
+  "superseded_run": {
+    "sha256": "484724df56038f678aac59fca9157edcaef4493395ccee556f65bbc4d4d7aa65",
+    "reason": "실행 revision 표기가 불완전해 전체 commit SHA로 재실행; 원본 보존"
+  },
+  "source_access": {
+    "official_url": "https://www.bigdata-119.kr/goods/goodsInfo?goods_mng_sn=5",
+    "displayed_size": "535.98KB",
+    "displayed_price_krw": 0,
+    "download_completed": false,
+    "login_required": true,
+    "gcs_inner_prefix_access": "HTTP_403_BILLING_DISABLED",
+    "gcs_original_presence": "UNKNOWN",
+    "notion_read_only": true
+  },
+  "cost": {
+    "new_paid_compute_jobs": 0,
+    "new_server_rental_krw": 0,
+    "gcs_metadata_request_cost_krw": null,
+    "prior_cumulative_cost_krw": null
+  },
+  "is_performance_result": false,
+  "decision": "검수 준비 도구 유지; 사람 정답과 Resolver 원본 확보 전 성능 비교·학습 보류",
+  "claim_limit": "한 검색기의 Top-K 포함 및 시트 진행률 검사다. 독립 정답, 관련성, 현장 정확도나 안전성 증명이 아니다."
+}
