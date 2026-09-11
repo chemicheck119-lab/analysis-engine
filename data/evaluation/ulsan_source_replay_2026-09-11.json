@@ -1,0 +1,149 @@
+{
+  "schema_version": "ulsan-fixed-resolver-source-replay-v1",
+  "created_at_utc": "2026-09-11T03:54:15.029334+00:00",
+  "status": "REFERENCE_AGGREGATES_MATCH",
+  "implementation_state": "부분 구현 또는 개발용 데모",
+  "task": "FIXED_MODEL_REPLAY_NO_TRAINING",
+  "environment": {
+    "system": "Darwin",
+    "machine": "arm64",
+    "python": "3.11.15"
+  },
+  "provenance": {
+    "archive_sha256": "d0ee041579a953084f8037763ac7d0a3d901d11278a6854d348374c69363f976",
+    "source_csv_sha256": "b7cabc5dba297d45dcea4150e9d9d6c41c51e3129eb9614f5e041bfa08077a5b",
+    "derived_csv_sha256": "5237194a1a22bf9fb3666a4009237d6bd243095e262baba3468874283f51d11c",
+    "intake_manifest_sha256": "5cf643ece3a6de06e4807695459c193a5d989b21e84f728b96a231c1d322c1ae",
+    "archive_manifest_sha256": "8412231a5170d2b8bf18e88a4da4dbbf2d5f9368e7010552769948f8ae80924b",
+    "model_sha256": "2696fa7f067163055ff556e5e12ccfa15e7dc08c9ff803838f0db074aa002dff",
+    "model_schema_version": "resolver-char-tfidf-v4-incident-catalog-expanded",
+    "model_training_year_max": 2019,
+    "model_recorded_training_source_sha256": "f013ebed301c5306178ad72f8dbbb62bdb5ecae1122ae3dfe7d1050f7ea0d765",
+    "reference_report_sha256": "221bf8884bcf70383101b4d9324dc11dfb9890197011f0dc77dde864aad3f670",
+    "reference_model_sha256": "e80d612bc3e44bddcb1b4466091a2f45e976e5997774875929e6612669b3f22a",
+    "same_model_bytes_as_reference": false,
+    "reference_processed_source_sha256": "f013ebed301c5306178ad72f8dbbb62bdb5ecae1122ae3dfe7d1050f7ea0d765",
+    "canonical_test_cases_sha256": "217bfa4aa6ff3ac2b98b20049096c76df7249747b8ae2d3c524ee6a0499f2f6a",
+    "canonical_unseen_cases_sha256": "6c17105cecc2c30254ef2297b94b2d414a8f11166215703d00d552bbd8b6a24a",
+    "canonical_past_records_sha256": "80e0b319ef02082bbd15c07b5d14b96519900536ae8cad63164b560bf9cdbc82"
+  },
+  "source_audit": {
+    "source_row_count": 1868,
+    "valid_alias_record_count": 1530,
+    "pre_ambiguity_filter_record_count": 1539,
+    "invalid_year_row_count": 0,
+    "invalid_or_composite_cas_row_count": 212,
+    "ambiguous_surface_count": 2,
+    "year_counts": {
+      "2015": 73,
+      "2016": 250,
+      "2017": 254,
+      "2018": 181,
+      "2019": 353,
+      "2020": 419
+    }
+  },
+  "split_audit": {
+    "past_year_max": 2019,
+    "test_year": 2020,
+    "past_record_count": 1111,
+    "test_case_count": 419,
+    "unseen_surface_case_count": 60,
+    "repeated_past_pair_case_count": 359,
+    "duplicate_test_pair_count": 0,
+    "is_new_secret_test": false,
+    "training_or_tuning_performed": false,
+    "source_record_recurrence_allowed": true,
+    "ambiguity_filter": "기존 보고서 재현을 위해 전체 기간의 다중 CAS 공유 표현을 평가에서 제외; 학습 없음"
+  },
+  "metrics": {
+    "all": {
+      "case_count": 419,
+      "top1_accuracy": 0.897375,
+      "top3_recall": 0.902148,
+      "mrr": 0.898966,
+      "wrong_unique_resolution_rate": 0,
+      "catalog_coverage_rate": 0.97136,
+      "catalog_missing_case_count": 12
+    },
+    "unseen_surface": {
+      "case_count": 60,
+      "top1_accuracy": 0.283333,
+      "top3_recall": 0.316667,
+      "mrr": 0.294444,
+      "wrong_unique_resolution_rate": 0,
+      "catalog_coverage_rate": 0.8,
+      "catalog_missing_case_count": 12
+    },
+    "unseen_cas": {
+      "case_count": 58,
+      "top1_accuracy": 0.275862,
+      "top3_recall": 0.310345,
+      "mrr": 0.287356,
+      "wrong_unique_resolution_rate": 0,
+      "catalog_coverage_rate": 0.793103,
+      "catalog_missing_case_count": 12
+    }
+  },
+  "wrong_unique_exact_candidate_count": 0,
+  "reference_comparison": {
+    "source_differences": [],
+    "metric_differences": {
+      "all": [],
+      "unseen_surface": [],
+      "unseen_cas": []
+    }
+  },
+  "timing_ms": {
+    "mean": 0.370348,
+    "p95": 3.026042
+  },
+  "timing_scope": "고정 artifact 메모리 로드 이후 후보 검색, STT/HTTP 제외, 속도 개선 비교 아님",
+  "adoption": {
+    "new_model_adopted": false,
+    "runtime_change_allowed": false,
+    "confirmation_or_rule_execution_performed": false
+  },
+  "source_permission": {
+    "internal_user_provided_data": true,
+    "redistribution_permission_verified": false
+  },
+  "claim_limit": "공식 사고표의 유효 단일 CAS·비모호 표현에 대한 고정 후보 검색 평가다. 현장 안전성·무전 정확도·독립 qrel 검증·새 모델 성능 개선이 아니다.",
+  "execution_code_commit": "c350017f2930ab554d8fe16f37ba0f8119e5172f",
+  "private_summary_sha256": "a7a629caefcbffd3d2c8e23a34b0aa3abf29800143abc6d3a67686cff899522f",
+  "code_sha256": {
+    "incident_replay": "2f459009b8d86bba6523fe667b8aebe4aa47c4801c274e555d46fe283aaf8b89",
+    "incident_adaptation": "9d6d254b8b719d54a5236bf01525e539f96427ec9f4e405f62986d471db3b14e",
+    "incident_source_intake": "d5750af0ee4238c927b35dc7577c454b379c5ada6ab91ea0d38ea5ff25a7d9d2",
+    "resolver": "b6a4947eab2de213725f99df9fbafe0da6feb8d4221234a5856fc2ba00f45f37",
+    "replay_script": "77461a22a3e3fb94437bd0c0b5294eb350e8ecaeabd7a42be67a55a48e5c8543"
+  },
+  "internal_regression": {
+    "case_count": 21,
+    "candidate_top1_hit_rate": 1,
+    "candidate_top3_recall": 1,
+    "report_sha256": "efff310fb9e3b3fac0f3c4bc42307e256adeeff814f9197533c38ffd7b7694b3",
+    "dataset_sha256": "1da04f5008a9b6d2b0d60e2bce656edbbe416f6094b0175b04eac09fccda3bff"
+  },
+  "internal_hint_safety": {
+    "case_count": 12,
+    "passed_count": 12,
+    "unsafe_auto_hint_count": 0,
+    "wrong_cas_auto_hint_count": 0,
+    "resolver_rule_eligibility_violation_count": 0,
+    "report_sha256": "c59276241350de79aebda14e0cf0e049d39d24cfe5ea922e3beb749d30c3eb74",
+    "dataset_sha256": "edb103038aa96d00995ba6daa0299be6b2f57a15788dcece8d4c3ff9abb6a060"
+  },
+  "local_tests_passed": 678,
+  "retriever_independent_review": {
+    "status": "DEFERRED_BY_USER",
+    "candidate_status": "DRAFT",
+    "human_labels_fabricated": false
+  },
+  "cost": {
+    "new_server_rental_krw": 0,
+    "new_gpu_jobs": 0,
+    "new_paid_llm_calls": 0,
+    "prior_cumulative_krw": null
+  }
+}
