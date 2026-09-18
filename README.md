@@ -2,6 +2,14 @@
 
 ### 화학사고 신고를 확인·근거·보류 카드로 바꾸는 모델 API
 
+## 2026-09-18 프로젝트 상태
+
+- **구현 완료:** Parser·Resolver·Retriever·결정적 Agent 정책·CAMEO gate·FastAPI·JSON/SSE action-brief 계약
+- **시연 가능:** 공개 합성 입력을 사용한 모델 API 로컬/preview 흐름
+- **운영 전제:** Backend BFF가 인증·incident scope·두 CAS 확인·revision을 관리해야 하며 모델 API를 브라우저에서 직접 호출하지 않음
+- **검증되지 않음:** 실제 119 신고 분포, 현장 무전, 기관 SOP 승인, 현장 안전성, 독립 Retriever 사람 검수
+- **채택하지 않음:** 실험 중인 Dense/RRF/Reranker와 Resolver 보정층은 현재 Sparse 운영 기본값을 대체하지 않음
+
 > “어떤 물질인지 먼저 확인하세요”, “이 물질의 공식 자료를 찾았습니다”, “아직 조합을 검토할 수 없습니다”처럼 지금 확인할 내용을 짧게 정리합니다. **현장 지휘·전술 결정을 대신하지 않습니다.**
 
 신고 음성은 `speech-service`의 Whisper가 글로 바꾸고, 이 저장소는 **전사문 → 신고 표현 정리 → 물질 후보 → 공식 근거 → 사람 확인 → 행동·인계 카드**를 담당합니다. Parser는 말을 정리하고, Resolver는 물질 후보를 찾고, Retriever는 자료를 찾습니다. 결정적 Agent 정책이 순서와 보류 조건을 관리합니다. 여러 LLM의 합의로 위험을 판단하는 구조가 아닙니다.
