@@ -1133,9 +1133,6 @@ class DashboardAnalysisBase(DashboardModel):
     facility_history: DashboardFacilityHistory
     evidence_cards: list[DashboardEvidenceCard] = Field(default_factory=list)
     grounded_rag: DashboardGroundedRag | None = None
-    # BFF 도입 전 기존 화면도 유지할 수 있도록 전환 기간에는 선택 필드다.
-    # 새 BE는 모델 API의 필수 agent snapshot을 그대로 투영해야 한다.
-    agent: DashboardOperationsAgentSnapshot | None = None
     confirmation_gate: DashboardConfirmationGate
     required_next_steps: list[str]
     provenance: DashboardProvenance

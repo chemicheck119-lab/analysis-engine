@@ -81,7 +81,6 @@ from chemiguard119.discovery import discover_substances
 from chemiguard119.database import connect_readonly
 from chemiguard119.material_ranker import ranking_model_metadata
 from chemiguard119.observability import configure_json_logging, emit_json_event
-from chemiguard119.operations import build_operations_agent_snapshot
 from chemiguard119.facility import search_facility_history
 from chemiguard119.evidence_assurance import (
     reference_assurance_configuration_status,
@@ -533,6 +532,8 @@ class ModelRuntime:
                 "route_provider_owner": "BACKEND_SERVER_SIDE",
                 "route_or_eta_inference_allowed": False,
                 "hazard_dispersion_model_available": False,
+                "included_in_incident_analysis_response": False,
+                "user_facing_agent_trace": False,
             },
             "conflict_review_capability": conflict_review_capability,
             "integrity": {
@@ -1023,21 +1024,6 @@ def _public_analysis_response(
     rule_result = rule_wrapper.get("result") or {}
     grounded_rag = rag_service.answer(public_evidence, rule_wrapper)
     processed_at = datetime.now(timezone.utc)
-    agent = build_operations_agent_snapshot(
-        analysis_state=state_value,
-        location=(
-            payload.location.model_dump(mode="python") if payload.location else None
-        ),
-        operations=payload.operations_context,
-        parser_output=parsed,
-        substance_candidates=pipeline_result.get("substance_candidates", []),
-        facility_history=facility_history,
-        evidence=public_evidence,
-        incident_confirmed=confirmation_gate["incident_confirmed"],
-        facility_confirmed=confirmation_gate["facility_confirmed"],
-        grounded_rag=grounded_rag,
-        processed_at=processed_at,
-    )
     elapsed_ms = (time.perf_counter() - started_at) * 1_000
     expert_reviewed = bool(
         rule_wrapper.get("executed") is True
@@ -1053,7 +1039,6 @@ def _public_analysis_response(
         model_outputs=model_outputs,
         evidence=public_evidence,
         grounded_rag=grounded_rag,
-        agent=agent,
         conflict_review=pipeline_result.get("rule_review", {}),
         confirmation_gate=confirmation_gate,
         required_next_steps=_required_next_steps(state_value),
@@ -1547,6 +1532,7 @@ def create_app(
     @application.post(
         "/api/v1/incidents/analyze",
         response_model=AnalysisResponse,
+        response_model_exclude_none=True,
         responses=STANDARD_ERROR_RESPONSES,
         tags=["analysis"],
         summary="사고 입력을 구조화하고 근거·Rule 검토 상태를 반환",
