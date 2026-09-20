@@ -446,6 +446,8 @@ def test_health_and_readiness_with_injected_runtime(runtime: ModelRuntime) -> No
             "route_provider_owner": "BACKEND_SERVER_SIDE",
             "route_or_eta_inference_allowed": False,
             "hazard_dispersion_model_available": False,
+            "included_in_incident_analysis_response": False,
+            "user_facing_agent_trace": False,
         },
         "conflict_review_capability": {
             "policy_mode": "PUBLIC_SOURCE_PILOT_V1",
@@ -1252,7 +1254,7 @@ def test_incident_agent_step_selects_confirmation_tools_and_resumes_from_memory(
     assert stub_pipeline_boundaries == []
 
 
-def test_incident_analysis_returns_nationwide_operations_agent_and_route_contract(
+def test_incident_analysis_omits_internal_agent_and_map_details_from_user_response(
     runtime: ModelRuntime,
     stub_pipeline_boundaries: list[dict[str, Any]],
 ) -> None:
@@ -1300,19 +1302,12 @@ def test_incident_analysis_returns_nationwide_operations_agent_and_route_contrac
         response = client.post("/api/v1/incidents/analyze", json=payload)
 
     assert response.status_code == 200
-    agent = response.json()["agent"]
-    assert agent["phase"] == "EN_ROUTE_TRIAGE"
-    assert agent["map_context"]["coverage_scope"] == "NATIONWIDE_KOREA"
-    assert agent["map_context"]["route"]["status"] == "AVAILABLE"
-    assert agent["map_context"]["route"]["eta_seconds"] == 480
-    assert agent["map_context"]["route"]["progress_ratio"] == 0.6
-    assert agent["map_context"]["route"]["progress_ratio_is_probability"] is False
-    assert agent["map_context"]["hazard_overlay_status"] == (
-        "NOT_COMPUTED_NO_VALIDATED_DISPERSION_MODEL"
-    )
-    assert agent["autonomous_risk_decision_allowed"] is False
-    assert len(agent["workflow"]) == 10
-    assert len(agent["tool_executions"]) == 8
+    body = response.json()
+    assert "agent" not in body
+    assert "map_context" not in response.text
+    assert "workflow" not in response.text
+    assert body["confirmation_gate"]["all_required_confirmed"] is False
+    assert body["required_next_steps"]
 
 
 def test_api_blocks_forged_risk_output_without_two_confirmations(

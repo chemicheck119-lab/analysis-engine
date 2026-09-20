@@ -331,122 +331,9 @@
         "title": "DashboardAgentRouteState",
         "type": "object"
       },
-      "DashboardAgentToolExecution": {
-        "additionalProperties": false,
-        "properties": {
-          "outputReference": {
-            "maxLength": 160,
-            "minLength": 1,
-            "title": "Outputreference",
-            "type": "string"
-          },
-          "status": {
-            "enum": [
-              "COMPLETED",
-              "WAITING",
-              "BLOCKED",
-              "FALLBACK",
-              "NOT_RUN",
-              "UNAVAILABLE"
-            ],
-            "title": "Status",
-            "type": "string"
-          },
-          "summary": {
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Summary",
-            "type": "string"
-          },
-          "toolId": {
-            "enum": [
-              "RULE_PARSER",
-              "SUBSTANCE_RESOLVER",
-              "FACILITY_HISTORY_SEARCH",
-              "HYBRID_EVIDENCE_RETRIEVER",
-              "CONFIRMATION_GATE",
-              "CAMEO_RULE_ENGINE",
-              "GROUNDED_RAG",
-              "SERVER_ROUTE_PROVIDER"
-            ],
-            "title": "Toolid",
-            "type": "string"
-          }
-        },
-        "required": [
-          "toolId",
-          "status",
-          "outputReference",
-          "summary"
-        ],
-        "title": "DashboardAgentToolExecution",
-        "type": "object"
-      },
-      "DashboardAgentWorkflowStep": {
-        "additionalProperties": false,
-        "properties": {
-          "detail": {
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Detail",
-            "type": "string"
-          },
-          "label": {
-            "maxLength": 120,
-            "minLength": 1,
-            "title": "Label",
-            "type": "string"
-          },
-          "status": {
-            "enum": [
-              "COMPLETED",
-              "IN_PROGRESS",
-              "WAITING",
-              "BLOCKED",
-              "NOT_APPLICABLE"
-            ],
-            "title": "Status",
-            "type": "string"
-          },
-          "stepId": {
-            "enum": [
-              "INCIDENT_INGESTION",
-              "INCIDENT_PARSING",
-              "INCIDENT_LOCATION",
-              "SUBSTANCE_RESOLUTION",
-              "FACILITY_HISTORY",
-              "EVIDENCE_RETRIEVAL",
-              "ON_SITE_CONFIRMATION",
-              "CONFLICT_SCREENING",
-              "GROUNDED_EXPLANATION",
-              "RESPONSE_RECORD"
-            ],
-            "title": "Stepid",
-            "type": "string"
-          }
-        },
-        "required": [
-          "stepId",
-          "label",
-          "status",
-          "detail"
-        ],
-        "title": "DashboardAgentWorkflowStep",
-        "type": "object"
-      },
       "DashboardAwaitingAnalysisResponse": {
         "additionalProperties": false,
         "properties": {
-          "agent": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/DashboardOperationsAgentSnapshot"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "analysisId": {
             "maxLength": 128,
             "minLength": 1,
@@ -564,16 +451,6 @@
       "DashboardCompletedAnalysisResponse": {
         "additionalProperties": false,
         "properties": {
-          "agent": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/DashboardOperationsAgentSnapshot"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "analysisId": {
             "maxLength": 128,
             "minLength": 1,
@@ -1867,16 +1744,6 @@
       "DashboardInconclusiveAnalysisResponse": {
         "additionalProperties": false,
         "properties": {
-          "agent": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/DashboardOperationsAgentSnapshot"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "analysisId": {
             "maxLength": 128,
             "minLength": 1,
@@ -2680,98 +2547,6 @@
           "value"
         ],
         "title": "DashboardNextBestCheckCandidateValue",
-        "type": "object"
-      },
-      "DashboardOperationsAgentSnapshot": {
-        "additionalProperties": false,
-        "properties": {
-          "agentType": {
-            "const": "DETERMINISTIC_FIELD_RESPONSE_ORCHESTRATOR",
-            "title": "Agenttype",
-            "type": "string"
-          },
-          "autonomousRiskDecisionAllowed": {
-            "const": false,
-            "title": "Autonomousriskdecisionallowed",
-            "type": "boolean"
-          },
-          "currentObjective": {
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Currentobjective",
-            "type": "string"
-          },
-          "finalDecisionAuthority": {
-            "const": "현장 지휘관",
-            "title": "Finaldecisionauthority",
-            "type": "string"
-          },
-          "mapContext": {
-            "$ref": "#/components/schemas/DashboardAgentMapContext"
-          },
-          "nextActions": {
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 8,
-            "minItems": 1,
-            "title": "Nextactions",
-            "type": "array"
-          },
-          "phase": {
-            "enum": [
-              "INCIDENT_INTAKE",
-              "EN_ROUTE_TRIAGE",
-              "ON_SCENE_CONFIRMATION",
-              "CONFLICT_SCREENING_COMPLETE",
-              "EVIDENCE_REVIEW_REQUIRED"
-            ],
-            "title": "Phase",
-            "type": "string"
-          },
-          "schemaVersion": {
-            "const": "chemicheck119-operations-agent-v1",
-            "title": "Schemaversion",
-            "type": "string"
-          },
-          "toolExecutions": {
-            "items": {
-              "$ref": "#/components/schemas/DashboardAgentToolExecution"
-            },
-            "maxItems": 8,
-            "minItems": 8,
-            "title": "Toolexecutions",
-            "type": "array"
-          },
-          "traceIsChainOfThought": {
-            "const": false,
-            "title": "Traceischainofthought",
-            "type": "boolean"
-          },
-          "workflow": {
-            "items": {
-              "$ref": "#/components/schemas/DashboardAgentWorkflowStep"
-            },
-            "maxItems": 10,
-            "minItems": 10,
-            "title": "Workflow",
-            "type": "array"
-          }
-        },
-        "required": [
-          "schemaVersion",
-          "agentType",
-          "phase",
-          "currentObjective",
-          "nextActions",
-          "workflow",
-          "toolExecutions",
-          "mapContext",
-          "autonomousRiskDecisionAllowed",
-          "finalDecisionAuthority",
-          "traceIsChainOfThought"
-        ],
-        "title": "DashboardOperationsAgentSnapshot",
         "type": "object"
       },
       "DashboardOperationsContext": {
