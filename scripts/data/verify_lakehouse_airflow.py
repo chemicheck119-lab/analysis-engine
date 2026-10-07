@@ -15,7 +15,7 @@ assert not bag.import_errors, "DAG_IMPORT_FAILED"
 DagBundlesManager().sync_bundles_to_db()
 sync_bag_to_db(bag, bundle_name="dags-folder", bundle_version=None)
 dag = bag.dags["chemicheck119_reference_lakehouse"]
-run = dag.test(logical_date=datetime(2026, 10, 7, 4, 0, tzinfo=timezone.utc))
+run = dag.test(logical_date=datetime.now(timezone.utc))
 assert str(run.state) == "success", "LOCAL_PROJECTION_DAG_FAILED"
 Path(sys.argv[1]).write_text(
     json.dumps(

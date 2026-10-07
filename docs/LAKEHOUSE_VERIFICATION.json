@@ -22,11 +22,12 @@
     "same_count_content_corruption_detected": true
   },
   "checks": {
-    "model_full_suite": "840 passed, 14 warnings (before final Trino comparison adjustment)",
+    "model_full_suite": "840 passed, 14 warnings (final code and tests)",
     "final_lakehouse_integration": "1 passed, 14 warnings",
     "frontend": "198 passed; contract/typecheck/hosting/build checks passed",
     "ruff": "passed",
-    "contract_snapshot": "passed"
+    "contract_snapshot": "passed",
+    "public_commit_only_suite": "830 passed, 14 warnings; git archive of the published commit, separate directory"
   },
   "unverified": [
     "real_full_source_approval",
