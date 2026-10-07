@@ -14,8 +14,13 @@ services:
       timeout: 2s
       retries: 20
   object-fixture:
-    # In-memory S3 test server, not a production object store.
-    image: motoserver/moto:5.1.14
+    # Local disk-backed S3 gateway; volume survives restart/recreation.
+    image: versity/versitygw:v1.8.0
+    command: [--port, ":5000", posix, /data]
+    environment:
+      ROOT_ACCESS_KEY: localfixture
+      ROOT_SECRET_KEY: localfixtureonly
+    volumes: ["reference-objects:/data"]
     ports: ['127.0.0.1:59000:5000']
   trino:
     image: trinodb/trino:483
@@ -24,3 +29,6 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
       object-fixture: {condition: service_started}
+
+volumes:
+  reference-objects:

@@ -44,7 +44,7 @@ Iceberg를 사고 요청 중 직접 조회하지 않는다. Trino 대조가 통�
 
 ## 로컬 실행
 
-저장소 루트에서 실행한다. 기존 환경과 다른 loopback 포트/독립 Compose 프로젝트다. Moto는 메모리 기반 S3 API fixture이며 내구성·상용 객체저장소 검증이 아니다. 실제 AWS 연결/비용은 없다. 재시작으로 fixture 객체가 사라지면 기존 receipt를 신뢰해 재사용하지 말고 새 disposable 환경/입력으로 재현한다.
+저장소 루트에서 실행한다. 기존 환경과 다른 loopback 포트/독립 Compose 프로젝트다. 2026-10-07부터 객체 저장소는 Versity Gateway의 named volume을 사용한다. 이전 Moto 객체를 백업·이관하고 restart/recreate 후 checksum을 확인했다. [실제 원천·파일 보존 검증](SOURCE_SERVICE_LOCAL.md)을 참고한다. 실제 AWS 연결/비용은 없다. volume 삭제·디스크 장애의 백업 보장을 뜻하지 않는다.
 
 ```sh
 uv pip install --python .venv/bin/python -e '.[dev,postgres]'

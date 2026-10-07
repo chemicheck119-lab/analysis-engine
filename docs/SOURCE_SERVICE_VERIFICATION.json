@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-07",
+  "scope": "LOCAL_ARCHIVED_REAL_KOSHA_WITH_SYNTHETIC_BASELINE",
+  "new_external_collection_verified": false,
+  "source_xml_count": 17,
+  "source_counts": {"input": 146, "normal": 94, "excluded": 52},
+  "exclusion_reasons": {"STRUCTURAL_PARENT_NO_DETAIL": 17, "NO_INFORMATION": 35},
+  "stored_including_synthetic_baseline": 96,
+  "actual_source_candidate_activated": false,
+  "service_screen_verified": "PENDING_HUMAN_REVIEW_NO_BODY",
+  "production_bff_rag_switched": false,
+  "preservation": {
+    "backend": "versitygw:v1.8.0_named_volume",
+    "original_objects": 545,
+    "original_bytes": 1525819,
+    "after_copy_sha256_matched": 545,
+    "after_restart_sha256_matched": 545,
+    "after_force_recreate_sha256_matched": 545,
+    "trino_postgres_matched_heads_at_preservation_check": 28
+  },
+  "python_local_postgres_test": "1 passed; unapproved hidden, approved fixture HTTP=DB, other CAS hidden, tampered approval 503",
+  "frontend": "pnpm check passed, 200 tests in 43 files plus contract/types/hosting/build checks",
+  "chemical_safety_or_operational_benefit_verified": false
+}
