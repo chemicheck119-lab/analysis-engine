@@ -10,7 +10,7 @@
 
 전체 DB·검색모델 빌더가 요구하는 다른 원천은 **합성 baseline**으로 명시한다. 저장 96 = 실제 메탄올 94 + 합성 기존 근거 2다. 이 어댑터는 provenance의 CAS만 제공하므로 합성 근거 2건을 실제 원천으로 표시하지 않는다. 원본·DB·모델 파일은 저장소 밖 private-data에 보관한다. 테스트용 baseline 기준 조정은 `pytest.MonkeyPatch.context()` 안에 한정하며 운영 기본값을 바꾸지 않는다. 이 준비 스크립트는 개발용이며 pytest와 저장소 tests를 필요로 한다.
 
-화면은 개발 서버의 `/main?referenceLab=1`에서만 켜진다. `/local-reference` 요청은 Vite proxy를 통해 loopback 어댑터(8004)로 전달된다. 승인되지 않은 후보는 본문 없이 대기 상태만 표시한다. 승인 파일 hash와 선택 버전이 맞지 않으면 503으로 차단한다. 연결 오류를 합성 데이터로 대체하지 않는다. 기존 사고 분석·두 CAS 게이트·전화 흐름은 별도다. **기존 Spring BFF/RAG가 새 근거로 답변한다는 검증은 하지 않았다.**
+화면은 `/main`의 기존 물질 검색과 대응 참고사항으로 통합했다. `VITE_ENABLE_APPROVED_REFERENCE=true`를 명시한 환경에서 켜며 `referenceLab` 매개변수는 필요하지 않다. `/local-reference` 요청은 Vite proxy를 통해 loopback 어댑터(8004)로 전달된다. 승인되지 않은 후보는 본문 없이 대기 상태만 표시한다. 승인 파일 hash와 선택 버전이 맞지 않으면 503으로 차단한다. 연결 오류를 합성 데이터로 대체하지 않는다. 기존 사고 분석·두 CAS 게이트·전화 흐름은 별도다. **기존 Spring BFF/RAG가 새 근거로 답변한다는 검증은 하지 않았다.**
 
 ## 명령
 
@@ -42,7 +42,7 @@ set +a
 .venv/bin/python scripts/data/publish_source_service.py --directory /Users/hywznn/Documents/chemicheck119-lab/private-data/source-service-20261007 --reviewer REVIEWER --note '검토한 제외 사유 및 로컬 조회 범위' --accept-expected-exclusions
 ```
 
-FE 개발 서버 `/main?referenceLab=1` → CAS 67-56-1 → 기준자료 조회. 승인 후 94개 원천 항목의 제목·본문·수집 시각·선택 버전을 확인한다. 자동 사고 대응 권고가 아니다. Kafka DAG는 이후 committed activation을 전달하며 Trino 대조는 별도 수행한다. 이번 화면은 PostgreSQL을 조회하므로 CDC 지연으로 원천 본문을 임의 대체하지 않는다.
+FE 개발 서버 `/main` → 기존 물질 검색에서 메틸 알코올 또는 CAS 67-56-1 → 검색. 승인 후 응급조치(4장)·화재(5장)·누출(6장)·노출방지(8장)·안정성(10장)을 항목별 원문으로 바로 보여준다. 전체 정상 94개 원천 중 해당 장의 항목만 사용하며, 없으면 미제공으로 표시한다. 검색은 현장 물질 확인 기록을 생성하지 않는다. 자유문장의 미확인 이명·혼합물 표현을 자동으로 CAS에 연결하지 않는다. 자동 사고 대응 권고가 아니다. Kafka DAG는 이후 committed activation을 전달하며 Trino 대조는 별도 수행한다. 이번 화면은 PostgreSQL을 조회하므로 CDC 지연으로 원천 본문을 임의 대체하지 않는다.
 
 ## 파일 보존 검증
 
