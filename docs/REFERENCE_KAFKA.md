@@ -84,3 +84,13 @@ user measurements. No commercial operation or field safety claim.
 Official references:
 - https://debezium.io/documentation/reference/stable/connectors/postgresql.html
 - https://kafka.apache.org/40/getting-started/docker/
+
+## Human new-release exercise
+
+`scripts/data/learn_kafka_release.py prepare --directory <fresh-local-directory>`
+uses explicitly synthetic test builders and confines reduced-size baseline checks
+to the prepare process. It stages two fixture records without approval. `inspect`
+prints SQL counts and selected state. Only a separately invoked `publish` with
+`--reviewer` and `--note` records explicit fixture review, activates the version and
+verifies PG usage. This is mechanics-only fixture approval, never chemical safety
+or production approval. Run using the model venv and local lakehouse environment.
