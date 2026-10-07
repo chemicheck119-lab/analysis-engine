@@ -478,6 +478,10 @@ CI·병합·공개 문서 배포 상태는 [이슈 #72](https://github.com/chemi
 
 ### 6.1 `POST /api/v1/incidents/analyze`
 
+일반 사고분석 응답은 상황실·현장 사용자가 확인할 사실, 물질 후보, 공식 근거,
+2-CAS 확인 상태와 다음 행동만 반환합니다. 내부 agent workflow, tool trace, 경로와 map
+context는 실행·감사 영역에만 보존하며 사용자 응답에는 포함하지 않습니다.
+
 상세 분석 DTO가 필요한 기존 연동점입니다. 새 카드 화면은 brief를 우선 사용합니다.
 한 번의 요청 안에서 파서, Resolver, Retriever, 시설 이력 검색과
 조건부 Rule Engine을 실행합니다.

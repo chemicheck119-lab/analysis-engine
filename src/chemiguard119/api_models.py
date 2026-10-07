@@ -1009,8 +1009,7 @@ class AnalysisResponse(StrictModel):
     model_outputs: dict[str, Any]
     evidence: list[dict[str, Any]]
     grounded_rag: GroundedRagAnswer | None = None
-    # 기존 v1 저장 응답도 검증할 수 있도록 계약상 선택 필드로 유지한다.
-    # 현재 FastAPI 구현은 모든 신규 분석에 snapshot을 항상 채운다.
+    # 기존 v1 저장 응답 검증용 호환 필드다. 신규 사용자 응답에는 포함하지 않는다.
     agent: OperationsAgentSnapshot | None = None
     conflict_review: ConflictReviewContract
     confirmation_gate: ConfirmationGateState
