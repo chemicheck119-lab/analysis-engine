@@ -1,5 +1,6 @@
 """Local approved-release WAL projection. Never used in the incident request path."""
 
+from contextlib import nullcontext
 import os
 import re
 
@@ -55,11 +56,35 @@ def initialize():
     catalog().create_namespace_if_not_exists("approved")
 
 
-def table_for(cat, stream):
+def active_namespace(db):
+    exists = db.execute(
+        "SELECT to_regclass('reference_lab.lake_recovery_head')"
+    ).fetchone()[0]
+    if not exists:
+        return "approved"
+    row = db.execute(
+        "SELECT namespace FROM reference_lab.lake_recovery_head WHERE singleton"
+    ).fetchone()
+    return row[0] if row else "approved"
+
+
+def receipt(db, activation_id, namespace):
+    if namespace == "approved":
+        return db.execute(
+            "SELECT snapshot_id,checksum FROM reference_lab.lake_receipts WHERE activation_id=%s",
+            (activation_id,),
+        ).fetchone()
+    return db.execute(
+        "SELECT snapshot_id,checksum FROM reference_lab.lake_recovery_receipts WHERE namespace=%s AND activation_id=%s",
+        (namespace, activation_id),
+    ).fetchone()
+
+
+def table_for(cat, stream, namespace="approved"):
     from pyiceberg.schema import Schema
     from pyiceberg.types import NestedField, StringType
 
-    identifier = ("approved", "s_" + stream)
+    identifier = (namespace, "s_" + stream)
     return cat.create_table_if_not_exists(
         identifier,
         Schema(
@@ -84,7 +109,8 @@ def fingerprint(rows):
     return batch.digest(sorted([list(row) for row in rows], key=lambda row: row[1]))
 
 
-def project(db, cat, activation_id, fault=None):
+def project(db, cat, activation_id, fault=None, namespace=None):
+    namespace = namespace or active_namespace(db)
     event = db.execute(
         "SELECT stream,version FROM reference_lab.activations WHERE activation_id=%s",
         (activation_id,),
@@ -92,10 +118,7 @@ def project(db, cat, activation_id, fault=None):
     if not event:
         raise batch.BatchError("CDC_ACTIVATION_NOT_FOUND")
     stream, version = event
-    if db.execute(
-        "SELECT 1 FROM reference_lab.lake_receipts WHERE activation_id=%s",
-        (activation_id,),
-    ).fetchone():
+    if receipt(db, activation_id, namespace):
         return
     rows = db.execute(
         "SELECT version,evidence_id,source_record_id,cas_number,title,body,document_version "
@@ -105,7 +128,7 @@ def project(db, cat, activation_id, fault=None):
     if not rows or len(rows) != len({row[1] for row in rows}):
         raise batch.BatchError("CDC_INVALID_RELEASE")
     checksum = fingerprint(rows)
-    table = table_for(cat, stream)
+    table = table_for(cat, stream, namespace)
     # Recover the commit/receipt gap without another overwrite or duplicate append.
     snapshot = next(
         (
@@ -131,10 +154,16 @@ def project(db, cat, activation_id, fault=None):
         raise batch.BatchError("ICEBERG_CONTENT_MISMATCH")
     if fault == "after_iceberg_commit":
         raise batch.BatchError("INJECTED_AFTER_ICEBERG_COMMIT")
-    db.execute(
-        "INSERT INTO reference_lab.lake_receipts VALUES(%s,%s,%s,%s,now())",
-        (activation_id, snapshot.snapshot_id, len(rows), checksum),
-    )
+    if namespace == "approved":
+        db.execute(
+            "INSERT INTO reference_lab.lake_receipts VALUES(%s,%s,%s,%s,now())",
+            (activation_id, snapshot.snapshot_id, len(rows), checksum),
+        )
+    else:
+        db.execute(
+            "INSERT INTO reference_lab.lake_recovery_receipts VALUES(%s,%s,%s,%s,%s,now())",
+            (namespace, activation_id, snapshot.snapshot_id, len(rows), checksum),
+        )
 
 
 def consume(fault=None):
@@ -196,17 +225,23 @@ def bootstrap():
     return len(ids)
 
 
-def verify_trino():
+def verify_trino(namespace=None, db=None):
     """Read receipt-selected snapshots, compare complete keys and content with PG."""
     from trino.dbapi import connect
 
     checked = 0
-    with pg.connection() as db:
+    with pg.connection() if db is None else nullcontext(db) as db:
         pg.lock(db, "lakehouse-consumer")
-        releases = db.execute(
-            "SELECT h.stream,h.version,r.snapshot_id,r.checksum FROM reference_lab.heads h "
-            "LEFT JOIN reference_lab.lake_receipts r USING(activation_id) ORDER BY h.stream"
+        namespace = namespace or active_namespace(db)
+        if not re.fullmatch(r"approved|recovery_[0-9a-f]{32}", namespace):
+            raise batch.BatchError("INVALID_LAKE_NAMESPACE")
+        heads = db.execute(
+            "SELECT stream,version,activation_id FROM reference_lab.heads ORDER BY stream"
         ).fetchall()
+        releases = []
+        for stream, version, activation_id in heads:
+            saved = receipt(db, activation_id, namespace)
+            releases.append((stream, version, *(saved or (None, None))))
         cursor = connect(host="127.0.0.1", port=58080, user="local-fixture").cursor()
         for stream, version, snapshot_id, checksum in releases:
             if snapshot_id is None:
@@ -214,7 +249,7 @@ def verify_trino():
             if not re.fullmatch(r"[0-9a-f]{64}", stream):
                 raise batch.BatchError("INVALID_RELEASE_STREAM")
             cursor.execute(
-                f"SELECT {','.join(FIELDS)} FROM reference.approved.s_{stream} "
+                f"SELECT {','.join(FIELDS)} FROM reference.{namespace}.s_{stream} "
                 f"FOR VERSION AS OF {int(snapshot_id)} ORDER BY evidence_id"
             )
             actual = [tuple(row) for row in cursor.fetchall()]
@@ -233,13 +268,52 @@ def verify_trino():
     return {"checked_heads": checked, "status": "MATCHED"}
 
 
+def recover(fault=None):
+    """Rebuild current approved heads in a fresh namespace; retain old history.
+
+    Full Trino reconciliation precedes atomic projection pointer publication.
+    This restores current data, never claims restoration of lost snapshots.
+    """
+    import uuid
+
+    namespace = "recovery_" + uuid.uuid4().hex
+    cat = catalog()
+    with pg.connection() as db:
+        pg.lock(db, "lakehouse-consumer")
+        db.execute("""CREATE TABLE IF NOT EXISTS reference_lab.lake_recovery_head (
+            singleton boolean PRIMARY KEY CHECK(singleton), namespace text NOT NULL)""")
+        db.execute("""CREATE TABLE IF NOT EXISTS reference_lab.lake_recovery_receipts (
+            namespace text NOT NULL, activation_id text REFERENCES reference_lab.activations,
+            snapshot_id bigint NOT NULL, row_count integer NOT NULL, checksum text NOT NULL,
+            at timestamptz NOT NULL, PRIMARY KEY(namespace,activation_id))""")
+        heads = db.execute(
+            "SELECT stream,activation_id FROM reference_lab.heads ORDER BY stream"
+        ).fetchall()
+        if not heads:
+            raise batch.BatchError("RECOVERY_NO_APPROVED_HEADS")
+        for stream, _ in heads:
+            pg.lock(db, stream)
+        cat.create_namespace(namespace)
+        for _, activation_id in heads:
+            project(db, cat, activation_id, namespace=namespace)
+        result = verify_trino(namespace=namespace, db=db)
+        if fault == "before_publish":
+            raise batch.BatchError("INJECTED_RECOVERY_BEFORE_PUBLISH")
+        db.execute(
+            "INSERT INTO reference_lab.lake_recovery_head VALUES(true,%s) ON CONFLICT(singleton) DO UPDATE SET namespace=excluded.namespace",
+            (namespace,),
+        )
+    return {**result, "namespace": namespace, "scope": "CURRENT_APPROVED_HEADS_ONLY"}
+
+
 def main():
     import argparse
     import json
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "command", choices=["init", "bootstrap", "consume", "verify", "status"]
+        "command",
+        choices=["init", "bootstrap", "consume", "verify", "status", "recover"],
     )
     args = parser.parse_args()
     if args.command == "init":
@@ -247,6 +321,8 @@ def main():
         result = {"initialized": True}
     elif args.command == "bootstrap":
         result = {"bootstrapped_heads": bootstrap()}
+    elif args.command == "recover":
+        result = recover()
     elif args.command == "consume":
         result = consume()
     elif args.command == "verify":

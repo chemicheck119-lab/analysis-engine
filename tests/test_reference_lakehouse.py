@@ -26,9 +26,11 @@ def trino_rows(stream, snapshot_id=None):
     from trino.dbapi import connect
 
     cursor = connect(host="127.0.0.1", port=58080, user="local-fixture").cursor()
+    with pg.connection() as db:
+        namespace = lake.active_namespace(db)
     travel = f" FOR VERSION AS OF {snapshot_id}" if snapshot_id else ""
     cursor.execute(
-        f"SELECT {','.join(lake.FIELDS)} FROM reference.approved.s_{stream}{travel} ORDER BY evidence_id"
+        f"SELECT {','.join(lake.FIELDS)} FROM reference.{namespace}.s_{stream}{travel} ORDER BY evidence_id"
     )
     return [tuple(row) for row in cursor.fetchall()]
 
@@ -44,7 +46,9 @@ def test_wal_projection_crash_replay_trino_and_rollback(setup):
     assert not lake.catalog().table_exists(("approved", "s_" + stream))
     old = activate(p)
     lake.consume()
-    table = lake.table_for(lake.catalog(), stream)
+    with pg.connection() as db:
+        namespace = lake.active_namespace(db)
+    table = lake.table_for(lake.catalog(), stream, namespace)
     first_snapshot = table.current_snapshot().snapshot_id
     original = trino_rows(stream)
     assert len(original) == 2
@@ -71,8 +75,10 @@ def test_wal_projection_crash_replay_trino_and_rollback(setup):
     assert [r[:6] for r in trino_rows(stream)] == snapshot(root)[1]
     with pg.connection() as db:
         receipts = db.execute(
-            "SELECT count(*) FROM reference_lab.lake_receipts r JOIN reference_lab.activations a USING(activation_id) WHERE a.stream=%s",
-            (stream,),
+            "SELECT count(*) FROM reference_lab.lake_receipts r JOIN reference_lab.activations a USING(activation_id) WHERE a.stream=%s"
+            if namespace == "approved"
+            else "SELECT count(*) FROM reference_lab.lake_recovery_receipts r JOIN reference_lab.activations a USING(activation_id) WHERE a.stream=%s AND namespace=%s",
+            (stream,) if namespace == "approved" else (stream, namespace),
         ).fetchone()[0]
     assert lake.verify_trino()["status"] == "MATCHED"
     # Same row count, altered source content must not pass reconciliation.
@@ -97,3 +103,25 @@ def test_wal_projection_crash_replay_trino_and_rollback(setup):
     assert lake.verify_trino()["status"] == "MATCHED"
     assert receipts == 3
     assert len(table.refresh().snapshots()) == 5
+
+
+def test_recovery_failure_preserves_service_and_projection(setup):
+    root, spec, _, _ = setup
+    lake.initialize()
+    activate(staged(root, spec, "recovery-input"))
+    lake.consume()
+    before = snapshot(root)
+    with pg.connection() as db:
+        namespace = lake.active_namespace(db)
+    with pytest.raises(batch.BatchError, match="INJECTED_RECOVERY_BEFORE_PUBLISH"):
+        lake.recover(fault="before_publish")
+    with pg.connection() as db:
+        assert lake.active_namespace(db) == namespace
+    assert snapshot(root) == before
+    assert lake.verify_trino()["status"] == "MATCHED"
+    recovered = lake.recover()
+    assert recovered["status"] == "MATCHED"
+    assert recovered["namespace"] != namespace
+    assert snapshot(root) == before
+    lake.consume()
+    assert lake.verify_trino()["status"] == "MATCHED"
