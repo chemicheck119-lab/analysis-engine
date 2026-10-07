@@ -19,7 +19,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["httpx2==2.7.0", "pytest==9.0.3", "ruff==0.12.0"]
-data = ["pandas>=2.2,<4"]
+postgres = ["psycopg[binary]>=3.2,<4"]
+data = ["pandas>=2.2,<4", "xlrd==2.0.2"]
 finetune = ["mlx-lm[train]>=0.31.3; platform_system == 'Darwin' and platform_machine == 'arm64'"]
 
 [project.scripts]
@@ -42,3 +43,6 @@ target-version = "py311"
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.setuptools.package-data]
+chemiguard119 = ["sql/*.sql"]

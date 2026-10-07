@@ -11,7 +11,7 @@ from chemiguard119.kosha_client import KoshaApiError, KoshaMsdsClient
 SEARCH_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
 <response>
   <header><resultCode>00</resultCode><resultMsg>NORMAL SERVICE.</resultMsg></header>
-  <body><items>
+  <body><totalCount>2</totalCount><numOfRows>100</numOfRows><pageNo>1</pageNo><items>
     <item>
       <lastDate>2026-07-01</lastDate>
       <casNo>67-56-1</casNo>
@@ -54,11 +54,11 @@ def test_collect_exact_cas_and_selected_sections() -> None:
 
     def fetch(url: str, _timeout: float) -> bytes:
         urls.append(url)
-        if "/getChemList?" in url:
+        if "/getChemList001?" in url:
             return SEARCH_XML
-        if "/getChemDetail06?" in url:
+        if "/getChemDetail061?" in url:
             return _detail_xml(6)
-        if "/getChemDetail10?" in url:
+        if "/getChemDetail101?" in url:
             return _detail_xml(10)
         raise AssertionError(url)
 
@@ -86,6 +86,11 @@ def test_collect_exact_cas_and_selected_sections() -> None:
     )
     assert len({row["레코드ID"] for row in result["records"]}) == 2
 
+    assert urllib.parse.urlsplit(urls[0]).path == "/B552468/msdschem1/getChemList001"
+    assert [urllib.parse.urlsplit(url).path for url in urls[1:]] == [
+        "/B552468/msdschem1/getChemDetail061",
+        "/B552468/msdschem1/getChemDetail101",
+    ]
     search_query = urllib.parse.parse_qs(urllib.parse.urlsplit(urls[0]).query)
     assert search_query["searchCnd"] == ["1"]
     assert search_query["searchWrd"] == ["67-56-1"]
@@ -98,7 +103,7 @@ def test_encoded_service_key_is_not_double_encoded() -> None:
     def fetch(url: str, _timeout: float) -> bytes:
         nonlocal requested_url
         requested_url = url
-        return b"<response><header><resultCode>00</resultCode></header></response>"
+        return b"<response><header><resultCode>00</resultCode></header><totalCount>0</totalCount><numOfRows>100</numOfRows><pageNo>1</pageNo></response>"
 
     client = KoshaMsdsClient("abc%2B123%3D", fetch_xml=fetch)
     result = client.collect_cas("67-56-1", sections=(1,))
@@ -109,7 +114,7 @@ def test_encoded_service_key_is_not_double_encoded() -> None:
 
 
 def test_ambiguous_exact_cas_is_not_selected_automatically() -> None:
-    xml = b"""<response><header><resultCode>00</resultCode></header><items>
+    xml = b"""<response><header><resultCode>00</resultCode></header><totalCount>2</totalCount><numOfRows>100</numOfRows><pageNo>1</pageNo><items>
     <item><casNo>67-56-1</casNo><chemId>A</chemId></item>
     <item><casNo>67-56-1</casNo><chemId>B</chemId></item>
     </items></response>"""
@@ -201,3 +206,48 @@ def test_invalid_cas_is_rejected_before_request() -> None:
         client.search_by_cas("67-56-2")
 
     assert client.request_count == 0
+
+
+def test_later_page_ambiguity_is_not_silently_selected():
+    calls = []
+
+    def fetch(url, _timeout):
+        page = int(urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)["pageNo"][0])
+        calls.append(page)
+        items = (
+            [("67-56-1", "A")] + [("64-17-5", f"OTHER-{n}") for n in range(99)]
+            if page == 1
+            else [("67-56-1", "B")]
+        )
+        body = "".join(
+            f"<item><casNo>{cas}</casNo><chemId>{chem}</chemId></item>"
+            for cas, chem in items
+        )
+        return f"<response><header><resultCode>00</resultCode></header><totalCount>101</totalCount><numOfRows>100</numOfRows><pageNo>{page}</pageNo><items>{body}</items></response>".encode()
+
+    client = KoshaMsdsClient("fixture", fetch_xml=fetch)
+    result = client.collect_cas("67-56-1")
+    assert result["status"] == "AMBIGUOUS_EXACT_CAS"
+    assert result["records"] == []
+    assert calls == [1, 2]
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    ["", "<totalCount>101</totalCount><numOfRows>100</numOfRows><pageNo>1</pageNo>"],
+)
+def test_missing_or_truncated_list_metadata_fails_closed(metadata):
+    xml = f"<response><header><resultCode>00</resultCode></header>{metadata}<item><casNo>67-56-1</casNo><chemId>A</chemId></item></response>".encode()
+    client = KoshaMsdsClient("fixture", fetch_xml=lambda *_: xml)
+    with pytest.raises(KoshaApiError):
+        client.collect_cas("67-56-1")
+    assert client.request_count == 1
+
+
+def test_invalid_detail_hierarchy_is_not_collected():
+    from test_kosha_client import _detail_xml
+
+    payload = _detail_xml(6).replace(b"<lev>1</lev>", b"<lev>9</lev>")
+    client = KoshaMsdsClient("fixture", fetch_xml=lambda *_: payload)
+    with pytest.raises(KoshaApiError, match="hierarchy"):
+        client.fetch_section("000001", 6)
