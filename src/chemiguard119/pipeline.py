@@ -20,6 +20,7 @@ from typing import Any, Callable, Sequence
 from chemiguard119.incident import deterministic_parse, validate_parser_output
 from chemiguard119.paths import CONFIG_DIR
 from chemiguard119.resolver import select_evidence_cas_hint
+from chemiguard119.response_retrieval import select_response_evidence
 from chemiguard119.retrieval import (
     CAS_EVIDENCE_NOT_LOADED_STATUS,
     INVALID_CAS_HINT_STATUS,
@@ -524,6 +525,16 @@ def analyze_incident(
                 cas_hint=target["cas_hint"],
                 top_k=evidence_top_k,
             )
+            if target["cas_basis"] == "RESPONDER_CONFIRMED" and retriever_artifact.get(
+                "rows"
+            ):
+                retrieval = select_response_evidence(
+                    retrieval,
+                    retriever_artifact,
+                    parsed,
+                    target["cas_hint"],
+                    evidence_top_k,
+                )
         except Exception:
             # 외부 검색 장애의 예외·주소·내부 메시지를 응답에 노출하지 않는다.
             # 검색 실패를 다른 CAS 문서나 생성 답변으로 대체하지 않고 빈 근거로

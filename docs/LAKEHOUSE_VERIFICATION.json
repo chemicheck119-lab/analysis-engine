@@ -1,0 +1,50 @@
+{
+  "scope": "LOCAL_SYNTHETIC_ONLY",
+  "executed_by": "AI_AGENT",
+  "user_direct_execution_verified": false,
+  "components": {
+    "postgres": "17",
+    "pyiceberg": "0.10.0",
+    "trino": "483",
+    "object_storage": "Moto S3 API fixture"
+  },
+  "scenarios": {
+    "unapproved_staging_not_projected": true,
+    "normal_rows": 2,
+    "same_version_new_snapshot_count": 0,
+    "next_version_rows": 3,
+    "commit_receipt_gap_recovered_without_new_snapshot": true,
+    "previous_snapshot_rows": 2,
+    "rollback_rows": 2,
+    "receipt_count": 3,
+    "retained_snapshot_count": 5,
+    "sql_full_key_and_content_equal": true,
+    "same_count_content_corruption_detected": true
+  },
+  "checks": {
+    "model_full_suite": "840 passed, 14 warnings (final code and tests)",
+    "final_lakehouse_integration": "1 passed, 14 warnings",
+    "frontend": "198 passed; contract/typecheck/hosting/build checks passed",
+    "ruff": "passed",
+    "contract_snapshot": "passed",
+    "public_commit_only_suite": "830 passed, 14 warnings; git archive of the published commit, separate directory"
+  },
+  "unverified": [
+    "real_full_source_approval",
+    "incident_runtime_export_switch",
+    "live_BFF_model_UI_end_to_end",
+    "schema_evolution",
+    "source_semantic_delete_update",
+    "slot_loss_recovery",
+    "field_expert_review",
+    "human_time_or_service_benefit"
+  ],
+  "production_changed": false,
+  "actual_API_collection_in_this_run": false,
+  "commands": [
+    "source local/lakehouse/env.example",
+    ".venv/bin/python -m pytest tests/test_reference_lakehouse.py",
+    ".venv/bin/python -m chemiguard119.reference_lakehouse consume",
+    ".venv/bin/python -m chemiguard119.reference_lakehouse verify"
+  ]
+}

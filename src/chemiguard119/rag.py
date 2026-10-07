@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from itertools import zip_longest
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping
 from urllib.parse import urlsplit
@@ -161,11 +162,13 @@ def _collect_sources(
             }
         )
         seen.add("RULE_RESULT")
-    for target in evidence:
-        retrieval = target.get("retrieval")
-        if not isinstance(retrieval, Mapping):
-            continue
-        for item in retrieval.get("results") or []:
+    groups = [
+        target["retrieval"].get("results") or []
+        for target in evidence
+        if isinstance(target.get("retrieval"), Mapping)
+    ]
+    for batch in zip_longest(*groups):
+        for item in batch:
             if not isinstance(item, Mapping):
                 continue
             source_id = str(item.get("evidence_id") or "").strip()
@@ -222,9 +225,35 @@ def _empty_answer(status: str, mode: str) -> dict[str, Any]:
     }
 
 
+def _response_limitations(evidence: list[dict[str, Any]]) -> list[str]:
+    notes = []
+    labels = {4: "응급조치", 5: "화재 대응", 6: "누출 대응", 8: "노출방지·보호구"}
+    for target in evidence:
+        retrieval = target.get("retrieval") or {}
+        role = {"INCIDENT": "사고물질", "FACILITY": "시설물질"}.get(
+            target.get("role"), "물질"
+        )
+        if retrieval.get("exposure_route_missing"):
+            note = "자료 확인: 노출 경로를 확인해주세요. 눈·피부·흡입·섭취를 임의로 선택하지 않았습니다."
+            if note not in notes:
+                notes.append(note)
+        missing = retrieval.get("missing_response_chapters") or []
+        if missing:
+            notes.append(
+                f"자료 확인: {role}의 "
+                + ", ".join(labels.get(chapter, str(chapter)) for chapter in missing)
+                + " 자료가 연결되지 않았습니다. 현장 제품의 원문 MSDS를 확인해주세요."
+            )
+    return notes[:3]
+
+
 def _extractive_statements(sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
     statements: list[dict[str, Any]] = []
-    for source in sources[:4]:
+    selected = [source for source in sources if source["source_id"] != "RULE_RESULT"][
+        :3
+    ]
+    selected += [source for source in sources if source["source_id"] == "RULE_RESULT"]
+    for source in selected:
         if source["source_id"] == "RULE_RESULT":
             rule_payload = json.loads(source["text"])
             brief = str(rule_payload.get("brief_text") or "").strip()
@@ -366,9 +395,17 @@ class GroundedRagService:
         if self.config.mode == "off":
             return _empty_answer("DISABLED", self.config.mode)
 
+        def with_response_notes(answer):
+            answer["limitations"] = (
+                _response_limitations(evidence) + answer["limitations"]
+            )[:5]
+            return answer
+
         sources = _collect_sources(evidence, rule_review)
         if not sources:
-            return _empty_answer("NO_GROUNDED_EVIDENCE", self.config.mode)
+            return with_response_notes(
+                _empty_answer("NO_GROUNDED_EVIDENCE", self.config.mode)
+            )
         if self.config.mode != "llm" or not self.config.model:
             answer = self._fallback(
                 sources,
@@ -382,7 +419,7 @@ class GroundedRagService:
                 ),
             )
             answer["latency_ms"] = round((time.perf_counter() - started) * 1_000, 3)
-            return answer
+            return with_response_notes(answer)
 
         try:
             statements = self._generate(sources, rule_review)
@@ -390,7 +427,7 @@ class GroundedRagService:
             # 외부 서버의 세부 예외·주소·응답은 공개 계약이나 로그로 전달하지 않는다.
             answer = self._fallback(sources, reason="LLM_REQUEST_OR_OUTPUT_FAILED")
             answer["latency_ms"] = round((time.perf_counter() - started) * 1_000, 3)
-            return answer
+            return with_response_notes(answer)
 
         cited_ids = {source_id for row in statements for source_id in row["source_ids"]}
         answer = _empty_answer("COMPLETED", self.config.mode)
@@ -407,7 +444,7 @@ class GroundedRagService:
                 "latency_ms": round((time.perf_counter() - started) * 1_000, 3),
             }
         )
-        return answer
+        return with_response_notes(answer)
 
     def _fallback(
         self, sources: list[dict[str, Any]], *, reason: str

@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-07",
+  "scope": "LOCAL_ARCHIVED_REAL_KOSHA_WITH_SYNTHETIC_BASELINE",
+  "new_external_collection_verified": false,
+  "source_xml_count": 17,
+  "source_counts": {
+    "input": 146,
+    "normal": 94,
+    "excluded": 52
+  },
+  "exclusion_reasons": {
+    "STRUCTURAL_PARENT_NO_DETAIL": 17,
+    "NO_INFORMATION": 35
+  },
+  "stored_including_synthetic_baseline": 96,
+  "actual_source_candidate_activated": false,
+  "service_screen_verified": "EXISTING_NAME_OR_CAS_SEARCH_TO_PENDING_SOURCE_GUIDANCE",
+  "production_bff_rag_switched": false,
+  "preservation": {
+    "backend": "versitygw:v1.8.0_named_volume",
+    "original_objects": 545,
+    "original_bytes": 1525819,
+    "after_copy_sha256_matched": 545,
+    "after_restart_sha256_matched": 545,
+    "after_force_recreate_sha256_matched": 545,
+    "trino_postgres_matched_heads_at_preservation_check": 28
+  },
+  "python_local_postgres_test": "2 passed; approved section originals preserved, exact CAS/name retrieval, missing sections explicit, mixture not inferred, unapproved/tampered data blocked",
+  "frontend": "pnpm check passed, 202 tests in 43 files plus contract/types/hosting/build checks",
+  "chemical_safety_or_operational_benefit_verified": false,
+  "user_workflow": {
+    "separate_reference_input_removed": true,
+    "standalone_search_without_incident": true,
+    "confirmed_incident_cas_triggers_reference_lookup": true,
+    "guidance_generation": "original source extraction only; no LLM safety decision",
+    "live_reference_data_scope": "one archived KOSHA chemical; pending human approval"
+  }
+}

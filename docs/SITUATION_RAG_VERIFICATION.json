@@ -1,0 +1,189 @@
+{
+  "scope": "LOCAL_REAL_MODEL_STEP_SYNTHETIC_REQUESTS_EXTRACTIVE",
+  "runtime_unchanged": true,
+  "runtime_hashes": {
+    "chemiguard119.sqlite": "ed81fe9aac45a38880920d967ce8f3954acabfedf7b2f6ea59464552e7958b91",
+    "resolver.joblib": "2696fa7f067163055ff556e5e12ccfa15e7dc08c9ff803838f0db074aa002dff",
+    "retriever.joblib": "a74ed41d6f9dc750c24e9a4c36946bc7b5c0207f1018775ac99e6af39f13d4d9"
+  },
+  "script_sha256": "2ad44672f6382317087485b55d35445d09a9c5525dd0304f9ea737faf74da99b",
+  "results": [
+    {
+      "scenario": "unconfirmed",
+      "http_status": 200,
+      "agent_status": "WAITING_FOR_HUMAN",
+      "rag_status": "NOT_RUN_REQUIRES_CONFIRMED_PAIR",
+      "statement_count": 0,
+      "citation_ids_valid": true,
+      "citation_titles": [],
+      "citation_ids": [],
+      "citation_cas": [],
+      "semantic_grounding_verified": false,
+      "field_relevance_reviewed": false,
+      "response_notes": []
+    },
+    {
+      "scenario": "one_confirmed",
+      "http_status": 200,
+      "agent_status": "WAITING_FOR_HUMAN",
+      "rag_status": "NOT_RUN_REQUIRES_CONFIRMED_PAIR",
+      "statement_count": 0,
+      "citation_ids_valid": true,
+      "citation_titles": [],
+      "citation_ids": [],
+      "citation_cas": [],
+      "semantic_grounding_verified": false,
+      "field_relevance_reviewed": false,
+      "response_notes": []
+    },
+    {
+      "scenario": "leak",
+      "http_status": 200,
+      "agent_status": "GOAL_COMPLETED",
+      "rag_status": "FALLBACK_EXTRACTIVE",
+      "statement_count": 5,
+      "citation_ids_valid": true,
+      "citation_titles": [
+        "확인된 두 물질의 CAMEO 충돌 스크리닝",
+        "차아염소산나트륨 MSDS 06장 인체를 보호하기 위해 필요한 조치사항 및 보호구",
+        "염화수소 MSDS 06장 인체를 보호하기 위해 필요한 조치사항 및 보호구",
+        "차아염소산나트륨 MSDS 08장 적절한 공학적 관리"
+      ],
+      "citation_ids": [
+        "KOSHA:MSDS000032",
+        "KOSHA:MSDS000616",
+        "KOSHA:MSDS000626",
+        "RULE_RESULT"
+      ],
+      "citation_cas": [
+        "7647-01-0",
+        "7681-52-9"
+      ],
+      "semantic_grounding_verified": false,
+      "field_relevance_reviewed": false,
+      "response_notes": []
+    },
+    {
+      "scenario": "fire",
+      "http_status": 200,
+      "agent_status": "GOAL_COMPLETED",
+      "rag_status": "FALLBACK_EXTRACTIVE",
+      "statement_count": 5,
+      "citation_ids_valid": true,
+      "citation_titles": [
+        "확인된 두 물질의 CAMEO 충돌 스크리닝",
+        "차아염소산나트륨 MSDS 05장 적절한(부적절한) 소화제",
+        "염화수소 MSDS 05장 화재진압시 착용할 보호구 및 예방조치",
+        "차아염소산나트륨 MSDS 08장 적절한 공학적 관리"
+      ],
+      "citation_ids": [
+        "KOSHA:MSDS000031",
+        "KOSHA:MSDS000613",
+        "KOSHA:MSDS000626",
+        "RULE_RESULT"
+      ],
+      "citation_cas": [
+        "7647-01-0",
+        "7681-52-9"
+      ],
+      "semantic_grounding_verified": false,
+      "field_relevance_reviewed": false,
+      "response_notes": []
+    },
+    {
+      "scenario": "exposure_unknown_route",
+      "http_status": 200,
+      "agent_status": "GOAL_COMPLETED",
+      "rag_status": "FALLBACK_EXTRACTIVE",
+      "statement_count": 5,
+      "citation_ids_valid": true,
+      "citation_titles": [
+        "확인된 두 물질의 CAMEO 충돌 스크리닝",
+        "차아염소산나트륨 MSDS 08장 적절한 공학적 관리",
+        "염화수소 MSDS 08장 적절한 공학적 관리",
+        "차아염소산나트륨 MSDS 08장 호흡기 보호"
+      ],
+      "citation_ids": [
+        "KOSHA:MSDS000042",
+        "KOSHA:MSDS000626",
+        "KOSHA:MSDS000628",
+        "RULE_RESULT"
+      ],
+      "citation_cas": [
+        "7647-01-0",
+        "7681-52-9"
+      ],
+      "semantic_grounding_verified": false,
+      "field_relevance_reviewed": false,
+      "response_notes": [
+        "자료 확인: 노출 경로를 확인해주세요. 눈·피부·흡입·섭취를 임의로 선택하지 않았습니다.",
+        "자료 확인: 사고물질의 응급조치 자료가 연결되지 않았습니다. 현장 제품의 원문 MSDS를 확인해주세요.",
+        "자료 확인: 시설물질의 응급조치 자료가 연결되지 않았습니다. 현장 제품의 원문 MSDS를 확인해주세요."
+      ]
+    },
+    {
+      "scenario": "exposure",
+      "http_status": 200,
+      "agent_status": "GOAL_COMPLETED",
+      "rag_status": "FALLBACK_EXTRACTIVE",
+      "statement_count": 5,
+      "citation_ids_valid": true,
+      "citation_titles": [
+        "확인된 두 물질의 CAMEO 충돌 스크리닝",
+        "차아염소산나트륨 MSDS 04장 피부에 접촉했을 때",
+        "염화수소 MSDS 04장 피부에 접촉했을 때",
+        "차아염소산나트륨 MSDS 08장 적절한 공학적 관리"
+      ],
+      "citation_ids": [
+        "KOSHA:MSDS000025",
+        "KOSHA:MSDS000609",
+        "KOSHA:MSDS000626",
+        "RULE_RESULT"
+      ],
+      "citation_cas": [
+        "7647-01-0",
+        "7681-52-9"
+      ],
+      "semantic_grounding_verified": false,
+      "field_relevance_reviewed": false,
+      "response_notes": []
+    }
+  ],
+  "live_call_verified": false,
+  "bff_frontend_e2e_verified": false,
+  "source_section_relevance_verified": false,
+  "section_selection_contract_verified": true,
+  "candidate_preparation": {
+    "status": "UNAPPROVED_LOCAL_CANDIDATE",
+    "baseline_hashes": {
+      "chemiguard119.sqlite": "ed81fe9aac45a38880920d967ce8f3954acabfedf7b2f6ea59464552e7958b91",
+      "resolver.joblib": "2696fa7f067163055ff556e5e12ccfa15e7dc08c9ff803838f0db074aa002dff",
+      "retriever.joblib": "2e93e066648890400b26f56b532d6ed608b828203f8668e4af3cf63de1bc544b"
+    },
+    "runtime_hashes": {
+      "chemiguard119.sqlite": "ed81fe9aac45a38880920d967ce8f3954acabfedf7b2f6ea59464552e7958b91",
+      "resolver.joblib": "2696fa7f067163055ff556e5e12ccfa15e7dc08c9ff803838f0db074aa002dff",
+      "retriever.joblib": "a74ed41d6f9dc750c24e9a4c36946bc7b5c0207f1018775ac99e6af39f13d4d9"
+    },
+    "changed_records": 764,
+    "database_changed_records": 0,
+    "previous_source_label": "KOSHA MSDS OpenAPI via data.go.kr",
+    "source_url": "https://www.data.go.kr/data/15157612/openapi.do",
+    "source_url_scope": "SOURCE_SERVICE_PORTAL_NOT_ITEM_DEEP_LINK",
+    "publisher_dates_changed": false,
+    "raw_source_recollected": false,
+    "service_activated": false,
+    "script_sha256": "a8a516eac3b6289ccc5cf2508368c04cd61b49123b8bf1ccabdb25b7ca759519"
+  },
+  "tests": {
+    "model_passed": 828,
+    "postgres_skipped": 7,
+    "existing_deprecation_warnings": 1,
+    "frontend_passed": 196,
+    "frontend_check": "contract/typecheck/tests/hosting/all builds passed",
+    "ruff": "passed",
+    "compileall": "passed",
+    "model_log_sha256": "2c3ee28fc2963e7a637bfdb2620be7d4ddb854145ddeac7617028163071da5f3",
+    "front_log_sha256": "25d714d1711830800bdb4a9c26f6bf9a5b809618a6eb25d72d4581fb5dda55b1"
+  }
+}

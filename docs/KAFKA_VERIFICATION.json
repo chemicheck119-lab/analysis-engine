@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-07",
+  "scope": "LOCAL_SYNTHETIC_POSTGRES_DEBEZIUM_KAFKA_ICEBERG_TRINO",
+  "executed_by": "AI_AGENT",
+  "user_direct_kafka_execution_verified": false,
+  "debezium_version": "3.3.2.Final",
+  "kafka_image": "apache/kafka:4.0.2",
+  "connector_status": "RUNNING",
+  "task_status": "RUNNING",
+  "publication_tables": ["reference_lab.activations"],
+  "tests_passed": 2,
+  "scenarios": [
+    "initial_snapshot_events_consumed",
+    "unapproved_staging_no_release_event",
+    "receipt_committed_offset_not_committed_replay_no_new_snapshot",
+    "iceberg_commit_receipt_gap_replay_reuses_snapshot",
+    "service_data_unchanged_by_consumer_failure",
+    "full_trino_reconciliation_matched",
+    "second_consume_no_unread_records",
+    "delete_and_unrelated_source_rejected"
+  ],
+  "log": "/tmp/chemicheck119-kafka-tests.log",
+  "production_modified": false,
+  "live_service_integration_verified": false,
+  "broker_restart_verified": false,
+  "durable_object_storage": false
+}

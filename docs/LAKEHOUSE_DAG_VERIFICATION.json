@@ -1,0 +1,13 @@
+{
+  "scope": "LOCAL_SYNTHETIC_WAL_ICEBERG_TRINO",
+  "state": "success",
+  "tasks": [
+    "consume_committed_releases",
+    "compare_trino_with_postgres"
+  ],
+  "schedule": null,
+  "production_changed": false,
+  "existing_incident_runtime_changed": false,
+  "executed_by": "AI_AGENT",
+  "user_direct_execution_verified": false
+}

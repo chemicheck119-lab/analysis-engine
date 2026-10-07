@@ -86,6 +86,27 @@ def test_extractive_mode_returns_rule_and_official_evidence() -> None:
     GroundedRagAnswer.model_validate(answer)
 
 
+def test_both_confirmed_materials_have_citations_before_more_rows_from_one_material() -> (
+    None
+):
+    from copy import deepcopy
+
+    evidence = _evidence()
+    first = evidence[0]["retrieval"]["results"][0]
+    evidence[0]["retrieval"]["results"] = [
+        dict(first, evidence_id=f"I-{i}") for i in range(5)
+    ]
+    second = deepcopy(first)
+    second.update(evidence_id="F-1", cas_number="7647-01-0", title="시설물질 응급조치")
+    evidence.append({"role": "FACILITY", "retrieval": {"results": [second]}})
+    answer = GroundedRagService(RagConfig(mode="extractive")).answer(
+        evidence, _rule_review()
+    )
+    assert [s["source_ids"] for s in answer["statements"][:2]] == [["I-0"], ["F-1"]]
+    assert "RULE_RESULT" in {c["source_id"] for c in answer["citations"]}
+    GroundedRagAnswer.model_validate(answer)
+
+
 def test_completed_rule_without_public_urls_does_not_create_fake_citation() -> None:
     review = _rule_review()
     review["result"]["evidence_urls"] = []
@@ -269,3 +290,16 @@ def test_metadata_never_exposes_endpoint_or_api_key() -> None:
     assert metadata["model"] == "small-grounded-model"
     assert "private-llm" not in serialized
     assert "top-secret" not in serialized
+
+
+def test_missing_response_sections_and_unknown_route_are_visible_in_existing_contract():
+    evidence = _evidence()
+    evidence[0]["retrieval"].update(
+        exposure_route_missing=True, missing_response_chapters=[4]
+    )
+    answer = GroundedRagService(RagConfig(mode="extractive")).answer(
+        evidence, _rule_review()
+    )
+    assert any("노출 경로를 확인" in note for note in answer["limitations"])
+    assert any("사고물질의 응급조치" in note for note in answer["limitations"])
+    GroundedRagAnswer.model_validate(answer)

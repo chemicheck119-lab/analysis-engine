@@ -19,10 +19,10 @@ from typing import Any
 from chemiguard119.utils import normalize_cas, valid_cas_checksum
 
 
-KOSHA_API_BASE_URL = "https://apis.data.go.kr/B552468/msdschem"
+KOSHA_API_BASE_URL = "https://apis.data.go.kr/B552468/msdschem1"
 KOSHA_SOURCE_PAGE = "https://www.data.go.kr/data/15157612/openapi.do"
-KOSHA_SEARCH_PATH = "/getChemList"
-KOSHA_DETAIL_PATH_TEMPLATE = "/getChemDetail{section:02d}"
+KOSHA_SEARCH_PATH = "/getChemList001"
+KOSHA_DETAIL_PATH_TEMPLATE = "/getChemDetail{section:02d}1"
 KOSHA_DETAIL_SECTIONS = tuple(range(1, 17))
 KOSHA_MAX_XML_RESPONSE_BYTES = 10 * 1024 * 1024
 KOSHA_STAGING_COLUMNS = (
@@ -139,6 +139,10 @@ class KoshaMsdsClient:
         self._sleep = sleep
         self._has_requested = False
         self.request_count = 0
+        self.retry_count = 0
+        self._last_page_metadata = {}
+        self._search_pages = 0
+        self._source_total_count = 0
 
     @staticmethod
     def _default_fetch_xml(url: str, timeout_seconds: float) -> bytes:
@@ -172,6 +176,8 @@ class KoshaMsdsClient:
                 self._sleep(self._request_interval_seconds)
             self._has_requested = True
             self.request_count += 1
+            if attempt:
+                self.retry_count += 1
             try:
                 payload = self._fetch_xml(url, self._timeout_seconds)
                 upper_payload = payload.upper()
@@ -191,6 +197,15 @@ class KoshaMsdsClient:
                         f"KOSHA_API_{result_code}",
                         result_message or "KOSHA API가 오류를 반환했습니다.",
                     )
+                if root.tag.rsplit("}", 1)[-1] != "response":
+                    raise KoshaApiError(
+                        "KOSHA_RESPONSE_CONTRACT_ERROR", "unexpected XML root"
+                    )
+                if path == KOSHA_SEARCH_PATH:
+                    self._last_page_metadata = {
+                        name: _element_text(root, name)
+                        for name in ("totalCount", "numOfRows", "pageNo")
+                    }
                 return [
                     _item_dict(item)
                     for item in root.iter()
@@ -226,16 +241,62 @@ class KoshaMsdsClient:
                 "INVALID_CAS_NUMBER",
                 f"CAS 형식 또는 체크섬이 유효하지 않습니다: {cas!r}",
             )
-        items = self._request_items(
-            KOSHA_SEARCH_PATH,
-            {
-                "searchWrd": cas,
-                "searchCnd": "1",
-                "numOfRows": "100",
-                "pageNo": "1",
-            },
+        collected = []
+        total = None
+        self._search_pages = 0
+        for page in range(1, 11):
+            items = self._request_items(
+                KOSHA_SEARCH_PATH,
+                {
+                    "searchWrd": cas,
+                    "searchCnd": "1",
+                    "numOfRows": "100",
+                    "pageNo": str(page),
+                },
+            )
+            try:
+                meta = {
+                    name: int(value) for name, value in self._last_page_metadata.items()
+                }
+                count, size, echoed_page = (
+                    meta["totalCount"],
+                    meta["numOfRows"],
+                    meta["pageNo"],
+                )
+            except (KeyError, ValueError):
+                raise KoshaApiError(
+                    "KOSHA_PAGINATION_CONTRACT_ERROR",
+                    "missing/invalid pagination metadata",
+                ) from None
+            if (
+                count < 0
+                or size <= 0
+                or size > 100
+                or echoed_page != page
+                or (total is not None and count != total)
+            ):
+                raise KoshaApiError(
+                    "KOSHA_PAGINATION_CONTRACT_ERROR",
+                    "inconsistent pagination metadata",
+                )
+            total = count
+            remaining = max(0, total - len(collected))
+            if len(items) != min(size, remaining):
+                raise KoshaApiError(
+                    "KOSHA_PAGINATION_INCOMPLETE", "page item count mismatch"
+                )
+            collected.extend(items)
+            self._search_pages = page
+            self._source_total_count = total
+            if len(collected) == total:
+                return [
+                    item
+                    for item in collected
+                    if normalize_cas(item.get("casNo")) == cas
+                ]
+        raise KoshaApiError(
+            "KOSHA_PAGINATION_LIMIT_EXCEEDED", "bounded page limit reached"
         )
-        return [item for item in items if normalize_cas(item.get("casNo")) == cas]
 
     def fetch_section(self, chem_id: str, section: int) -> list[dict[str, str]]:
         chemical_id = (chem_id or "").strip()
@@ -249,10 +310,26 @@ class KoshaMsdsClient:
                 "KOSHA_SECTION_INVALID",
                 f"MSDS 장번호는 1~16이어야 합니다: {section}",
             )
-        return self._request_items(
+        items = self._request_items(
             KOSHA_DETAIL_PATH_TEMPLATE.format(section=section),
             {"chemId": chemical_id},
         )
+        for item in items:
+            try:
+                valid_order = int(item.get("ordrIdx", "")) >= 0
+            except ValueError:
+                valid_order = False
+            if (
+                not item.get("msdsItemCode")
+                or not item.get("msdsItemNameKor")
+                or item.get("lev") not in {"1", "2", "3"}
+                or not valid_order
+            ):
+                raise KoshaApiError(
+                    "KOSHA_DETAIL_CONTRACT_ERROR",
+                    "missing or invalid detail identity/hierarchy",
+                )
+        return items
 
     def collect_cas(
         self,
@@ -336,6 +413,8 @@ class KoshaMsdsClient:
             "chemical_name_ko": selected.get("chemNameKor", "").strip(),
             "last_date": selected.get("lastDate", "").strip(),
             "section_item_counts": section_item_counts,
+            "search_pages": self._search_pages,
+            "source_total_count": self._source_total_count,
             "request_count": self.request_count - request_count_before,
             "records": records,
         }
